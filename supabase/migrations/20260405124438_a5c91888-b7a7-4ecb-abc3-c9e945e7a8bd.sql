@@ -1,0 +1,1 @@
+ALTER TABLE public.htf_analyses ADD COLUMN bias TEXT NOT NULL DEFAULT 'Neutral';

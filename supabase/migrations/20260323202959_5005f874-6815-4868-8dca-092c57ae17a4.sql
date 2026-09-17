@@ -1,0 +1,1 @@
+ALTER TABLE public.accounts ADD COLUMN risk_pct numeric DEFAULT 1;

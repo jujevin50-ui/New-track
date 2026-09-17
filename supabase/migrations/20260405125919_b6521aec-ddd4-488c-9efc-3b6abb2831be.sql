@@ -1,0 +1,1 @@
+ALTER TABLE public.daily_analyses ADD COLUMN screenshots text[] DEFAULT '{}';

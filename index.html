@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <script>
+      // When a new service worker takes over (skipWaiting + clientsClaim on
+      // deploy), reload so the page picks up the freshly built assets instead
+      // of staying on a stale shell that references removed JS/CSS chunks.
+      if ('serviceWorker' in navigator) {
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (refreshing) return;
+          refreshing = true;
+          window.location.reload();
+        });
+      }
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trading Journal</title>
+    <meta name="description" content="Journal de trading professionnel">
+    <meta name="author" content="Lovable" />
+    <meta name="theme-color" content="#7c3aed" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="icon" type="image/svg+xml" href="/goggins.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
+    <link rel="shortcut icon" href="/icons/favicon-32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/4ad930fa-7184-42c3-ad4f-19a7a5b28bd1/id-preview-967e7dde--5276bea4-ce2d-45a7-a22a-6ecc61185439.lovable.app-1772963925254.png">
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@Lovable" />
+    <meta name="twitter:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/4ad930fa-7184-42c3-ad4f-19a7a5b28bd1/id-preview-967e7dde--5276bea4-ce2d-45a7-a22a-6ecc61185439.lovable.app-1772963925254.png">
+    <meta property="og:title" content="Trading Journal">
+    <meta name="twitter:title" content="Trading Journal">
+    <meta property="og:description" content="Journal de trading professionnel">
+    <meta name="twitter:description" content="Journal de trading professionnel">
+</head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

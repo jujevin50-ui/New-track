@@ -1,0 +1,1 @@
+ALTER TABLE public.backtest_trades ADD COLUMN account_id uuid REFERENCES public.accounts(id) ON DELETE CASCADE;

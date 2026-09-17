@@ -1,0 +1,1 @@
+ALTER TABLE public.daily_analyses ADD COLUMN pair text NOT NULL DEFAULT 'EURUSD';
