@@ -124,22 +124,18 @@ function TradeCountSlider({ limits, value, onChange }: { limits: readonly TradeL
 
 function ChartCard({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) {
   return (
-    <div className={`group flex flex-col rounded-2xl border border-border/60 bg-card p-4 ${className ?? ''}`}>
-      <div className="flex items-center gap-2 px-1 pb-3 shrink-0">
-        <span className="relative flex h-1.5 w-1.5 shrink-0">
-          <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-50 group-hover:animate-ping" />
-          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary/70" />
-        </span>
-        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider group-hover:text-foreground transition-colors">{title}</span>
+    <div className={`flex flex-col rounded-xl border border-border/50 bg-card shadow-sm hover:shadow-md hover:border-border transition-shadow p-5 ${className ?? ''}`}>
+      <div className="flex items-center justify-between pb-4 mb-1 border-b border-border/40 shrink-0">
+        <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.1em]">{title}</span>
       </div>
-      <div className="flex-1">{children}</div>
+      <div className="flex-1 pt-2">{children}</div>
     </div>
   );
 }
 
 function Panel({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-2xl border border-border/60 bg-card p-5 ${className ?? ''}`}>
+    <div className={`rounded-xl border border-border/50 bg-card shadow-sm hover:border-border transition-colors p-5 ${className ?? ''}`}>
       {children}
     </div>
   );
@@ -488,17 +484,7 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
   }
 
   return (
-    <div className="w-full space-y-4 pb-8">
-
-      {/* ── Watermark ── */}
-      <div className="flex items-center justify-center h-16 sm:h-24 pointer-events-none select-none">
-        <span
-          className="whitespace-nowrap pl-[0.5em] text-5xl sm:text-7xl font-bold uppercase tracking-[0.5em] text-foreground/[0.05]"
-          style={{ fontFamily: "'Oswald', sans-serif" }}
-        >
-          Focus
-        </span>
-      </div>
+    <div className="w-full space-y-5 pb-10">
 
       {/* ── Account chips ── */}
       <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
@@ -576,7 +562,7 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
       {/* ══════════════════════════════════════════
           SECTION 1 — Hero: balance + win rate + metrics
       ══════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
         {/* Balance */}
         <Panel className="flex flex-col justify-between">
@@ -676,14 +662,14 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
           SECTION 2 — Account equity curves ($ + %) grouped on one row
       ══════════════════════════════════════════ */}
       <SectionLabel>Performance</SectionLabel>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <ChartCard title="Equity Curve ($)">
-          <div className="h-[300px]">
+          <div className="h-[340px]">
             <EquityCurveChart data={chartData.equityCurve} medianLineVisible />
           </div>
         </ChartCard>
         <ChartCard title="Performance (%)">
-          <div className="h-[300px]">
+          <div className="h-[340px]">
             <EquityCurvePercentChart data={chartData.equityCurvePercent} medianLineVisible accentColor="hsl(255,92%,68%)" />
           </div>
         </ChartCard>
@@ -693,21 +679,21 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
           Account charts — 2 per row
       ══════════════════════════════════════════ */}
       <SectionLabel>Trade Analysis</SectionLabel>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <ChartCard title="Profit Per Trade">
-          <div className="h-[280px]"><ProfitPerTradeChart trades={trades} accounts={accounts} medianLineVisible /></div>
+          <div className="h-[300px]"><ProfitPerTradeChart trades={trades} accounts={accounts} medianLineVisible /></div>
         </ChartCard>
         <ChartCard title="Drawdown">
-          <div className="h-[280px]"><DrawdownChart data={chartData.drawdownData} medianLineVisible /></div>
+          <div className="h-[300px]"><DrawdownChart data={chartData.drawdownData} medianLineVisible /></div>
         </ChartCard>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <ChartCard title="Pair Performance">
-          <div className="h-[280px]"><PairPerformanceChart data={pairPerformancePercent} medianLineVisible /></div>
+          <div className="h-[300px]"><PairPerformanceChart data={pairPerformancePercent} medianLineVisible /></div>
         </ChartCard>
         <ChartCard title="Profit by Month">
-          <div className="h-[280px]"><ProfitByMonthChart data={chartData.profitByMonth} medianLineVisible usePercent /></div>
+          <div className="h-[300px]"><ProfitByMonthChart data={chartData.profitByMonth} medianLineVisible usePercent /></div>
         </ChartCard>
       </div>
       </>
@@ -719,7 +705,7 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
           GLOBAL VIEW — metrics only (no % charts)
       ══════════════════════════════════════════ */}
       <SectionLabel>Global Overview</SectionLabel>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         {[
           { label: 'Total Balance', value: `$${fmt(globalSummary.totalBalance)}`,                                                          cls: 'text-foreground' },
           { label: 'Total P&L',     value: `${globalSummary.pnl >= 0 ? '+' : ''}$${fmt(globalSummary.pnl)}`,                                cls: globalSummary.pnl >= 0 ? 'text-profit' : 'text-loss' },

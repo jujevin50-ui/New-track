@@ -4,7 +4,6 @@ import { TopNav } from './TopNav';
 import { Account, AccountStatus } from '@/types/account';
 import { Input } from '@/components/ui/input';
 import { Search, CheckCircle2 } from 'lucide-react';
-import { StrategyStreakBadge } from './StrategyStreakBadge';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -78,7 +77,6 @@ export function AppLayout({ children, accounts, activeAccountId, onSelectAccount
 
       <div className="flex-1 flex flex-col min-w-0">
         <header className="relative h-14 flex items-center gap-2 px-3 md:px-5 shrink-0 bg-background sticky top-0 z-20 mt-16">
-          <StrategyStreakBadge />
           <div className="flex-1" />
           {accounts.length > 0 && (
             <div className="flex items-center gap-2">

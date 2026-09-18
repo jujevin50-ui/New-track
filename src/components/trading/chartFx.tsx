@@ -1,35 +1,41 @@
 import React from 'react';
 
-/* ── Shared futuristic chart effects ─────────────────────────────────
-   Glassmorphism tooltip, neon glow SVG filter, pulsing "live" end-dot,
-   and hover cursors — used by every dashboard chart. */
+/* ── Shared "trading terminal" chart effects ─────────────────────────
+   Clean, low-noise tooltip and hover cursors — used by every dashboard
+   chart. Kept deliberately sober: solid surface, thin border, minimal
+   shadow, no neon/glow — closer to a professional analytics terminal. */
 
 export const glassTooltip: React.CSSProperties = {
-  backgroundColor: 'hsla(240, 18%, 7%, 0.8)',
-  backdropFilter: 'blur(14px)',
-  WebkitBackdropFilter: 'blur(14px)',
-  border: '1px solid hsla(255, 92%, 68%, 0.25)',
-  borderRadius: '14px',
+  backgroundColor: 'hsl(240, 12%, 9%)',
+  border: '1px solid hsla(0, 0%, 100%, 0.1)',
+  borderRadius: '8px',
   fontSize: '12px',
-  boxShadow: '0 12px 40px hsla(0, 0%, 0%, 0.55), 0 0 24px hsla(255, 92%, 68%, 0.1)',
+  boxShadow: '0 4px 16px hsla(0, 0%, 0%, 0.35)',
   color: 'hsl(0, 0%, 96%)',
-  padding: '10px 14px',
+  padding: '8px 12px',
 };
 
 export const tooltipLabelStyle: React.CSSProperties = {
   color: 'hsl(215, 15%, 65%)',
   fontWeight: 600,
+  fontSize: 11,
+  textTransform: 'uppercase',
+  letterSpacing: '0.04em',
   marginBottom: 4,
 };
 
-export const tooltipItemStyle: React.CSSProperties = { color: 'hsl(0, 0%, 96%)' };
+export const tooltipItemStyle: React.CSSProperties = { color: 'hsl(0, 0%, 96%)', fontWeight: 600 };
 
-export const lineCursor = { stroke: 'hsla(255, 92%, 68%, 0.35)', strokeWidth: 1, strokeDasharray: '4 4' };
-export const barCursor = { fill: 'hsla(255, 92%, 68%, 0.06)' };
+export const lineCursor = { stroke: 'hsla(215, 15%, 55%, 0.3)', strokeWidth: 1, strokeDasharray: '3 3' };
+export const barCursor = { fill: 'hsla(215, 15%, 55%, 0.06)' };
 
-/** Neon glow — place inside <defs>, apply with filter={`url(#id)`} */
-export const Glow = ({ id, strength = 3.5 }: { id: string; strength?: number }) => (
-  <filter id={id} x="-60%" y="-60%" width="220%" height="220%">
+/**
+ * Kept for backwards compatibility with chart files that still apply
+ * `filter={url(#id)}`. Strength is reduced to near-zero so lines render
+ * crisp and flat instead of glowing — a subtle, professional finish.
+ */
+export const Glow = ({ id, strength = 0.6 }: { id: string; strength?: number }) => (
+  <filter id={id} x="-20%" y="-20%" width="140%" height="140%">
     <feGaussianBlur stdDeviation={strength} result="blur" />
     <feMerge>
       <feMergeNode in="blur" />
@@ -38,18 +44,15 @@ export const Glow = ({ id, strength = 3.5 }: { id: string; strength?: number }) 
   </filter>
 );
 
-/** Pulsing dot rendered only on a series' last point — marks "now" */
+/** Static end-of-series marker — no pulse/animation, just a clean ring */
 export const makePulseDot = (lastIndex: number, color: string) =>
   (props: any) => {
     const { cx, cy, index } = props;
     if (index !== lastIndex || cx == null || cy == null) return <g key={`pd-${index}`} />;
     return (
       <g key={`pd-${index}`}>
-        <circle cx={cx} cy={cy} r={9} fill={color} opacity={0.2}>
-          <animate attributeName="r" values="4;13;4" dur="2.2s" repeatCount="indefinite" />
-          <animate attributeName="opacity" values="0.35;0;0.35" dur="2.2s" repeatCount="indefinite" />
-        </circle>
-        <circle cx={cx} cy={cy} r={3.5} fill={color} stroke="hsl(240, 18%, 8%)" strokeWidth={1.5} />
+        <circle cx={cx} cy={cy} r={5} fill={color} opacity={0.15} />
+        <circle cx={cx} cy={cy} r={3} fill={color} stroke="hsl(240, 12%, 9%)" strokeWidth={1.5} />
       </g>
     );
   };
