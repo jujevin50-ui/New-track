@@ -556,15 +556,12 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
       {/* ── Filters ── */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight">{activeAccount.name}</h1>
-            {(activeAccount.broker || activeAccount.currency) && (
-              <span className="text-[11px] text-muted-foreground bg-secondary border border-border/50 px-2.5 py-1 rounded-lg font-medium">
-                {[activeAccount.broker, activeAccount.currency].filter(Boolean).join(' · ')}
-              </span>
-            )}
+          <div className="flex items-center gap-2 mb-1">
+            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: ACCENT.balance }} />
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.14em]">Active Account</span>
           </div>
-          <div className="flex items-center gap-1 mt-2">
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground leading-none">{activeAccount.name}</h1>
+          <div className="flex items-center gap-1 mt-3">
             {CATEGORIES.map(cat => (
               <button key={cat} onClick={() => setCategory(cat)}
                 className={`h-6 px-2.5 text-[11px] rounded-md font-medium transition-colors ${categoryFilter === cat ? 'bg-secondary border border-border/60 text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60 border border-transparent'}`}>

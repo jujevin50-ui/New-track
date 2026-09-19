@@ -60,7 +60,7 @@ const Accounts = ({ accounts, activeAccountId, onSelectAccount, onAdd, onUpdate,
   const [editAccount, setEditAccount] = useState<Account | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState<AccountFormData>(emptyForm);
-  const [filterStatus, setFilterStatus] = useState<AccountStatus | 'all'>('all');
+  const [filterStatus, setFilterStatus] = useState<AccountStatus | 'all'>('active');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [customBrokers, setCustomBrokers] = useState<string[]>([]);
 
