@@ -157,7 +157,11 @@ export function AppLayout({ children, accounts, activeAccountId, onSelectAccount
       )}
 
       <div className="flex-1 flex flex-col min-w-0">
-        <main key={location.pathname} className="flex-1 overflow-auto p-4 md:p-6 pt-36 animate-page-in">
+        <main
+          key={location.pathname}
+          className="flex-1 overflow-auto px-4 md:px-6 pb-4 md:pb-6 animate-page-in"
+          style={{ paddingTop: 150 }}
+        >
           {children}
         </main>
       </div>
