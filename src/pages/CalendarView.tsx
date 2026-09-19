@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useTrades } from '@/hooks/useTrades';
 import { useCalendarConfig, CALENDAR_WIDGET_DEFS } from '@/hooks/useDashboardConfig';
 import { useEventColors } from '@/hooks/useEventColors';
@@ -57,10 +58,18 @@ const CalendarView = ({ activeAccount, accounts }: CalendarViewProps) => {
   const { colors: evtColors } = useEventColors();
   const { getJournal, saveJournal, deleteJournal } = useDailyJournal();
 
+  // Navigated here from Dashboard's "Global > Monthly Metrics" table with a target month
+  const location = useLocation();
+  const targetMonth = location.state as { year?: number; month?: number } | null;
+
   const [editMode,       setEditMode]       = useState(false);
   const [journalDate,    setJournalDate]    = useState<string | null>(null);
-  const [currentDate,    setCurrentDate]    = useState(new Date());
-  const [viewYear,       setViewYear]       = useState(new Date().getFullYear());
+  const [currentDate,    setCurrentDate]    = useState(() =>
+    targetMonth?.year !== undefined && targetMonth?.month !== undefined
+      ? new Date(targetMonth.year, targetMonth.month, 1)
+      : new Date()
+  );
+  const [viewYear,       setViewYear]       = useState(() => targetMonth?.year ?? new Date().getFullYear());
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>(() =>
     (localStorage.getItem('category-filter') as CategoryFilter) || 'All'
   );

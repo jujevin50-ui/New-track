@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCountUp } from '@/hooks/useCountUp';
 import { useTrades } from '@/hooks/useTrades';
 import { Trade, getNetResult, getTradeR } from '@/types/trade';
@@ -204,6 +205,7 @@ function isoWeek(dateStr: string): string {
 // ─── Dashboard ────────────────────────────────────────────────────
 
 const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
+  const navigate = useNavigate();
   const { getRiskForDrawdown } = useRiskTable();
   const { updateAccount } = useAccounts();
   const lastAppliedRiskRef = useRef<number | null>(null);
@@ -451,7 +453,14 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
   const winRateColor = stats.winRate >= 50 ? 'hsl(142,71%,45%)' : 'hsl(0,84%,60%)';
   const pfColor = stats.profitFactor >= 1 ? 'hsl(142,71%,45%)' : 'hsl(0,84%,60%)';
 
-  const renderMetricsTable = (rows: typeof monthlyMetrics, header: string) => (
+  const goToMonth = (key: string) => {
+    const [y, m] = key.split('-').map(Number);
+    navigate('/calendar', { state: { year: y, month: m - 1 } });
+  };
+
+  const renderMetricsTable = (rows: typeof monthlyMetrics, header: string) => {
+    const isMonthly = header === 'Month';
+    return (
     <Panel className="!p-0 overflow-hidden">
       {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground p-5">No trades yet</p>
@@ -470,7 +479,12 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
             </thead>
             <tbody className="divide-y divide-border/30">
               {rows.map(r => (
-                <tr key={r.key} className="hover:bg-secondary/40 transition-colors">
+                <tr
+                  key={r.key}
+                  onClick={isMonthly ? () => goToMonth(r.key) : undefined}
+                  className={`hover:bg-secondary/40 transition-colors ${isMonthly ? 'cursor-pointer' : ''}`}
+                  title={isMonthly ? `Voir ${r.label} dans le calendrier` : undefined}
+                >
                   <td className="px-4 py-3 font-semibold text-foreground whitespace-nowrap">{r.label}</td>
                   <td className="px-4 py-3 text-right font-mono tabular-nums text-muted-foreground">{r.trades}</td>
                   <td className="px-4 py-3 text-right font-mono tabular-nums font-semibold" style={{ color: r.winRate >= 50 ? 'hsl(142,71%,45%)' : 'hsl(0,84%,60%)' }}>{r.winRate.toFixed(0)}%</td>
@@ -484,7 +498,8 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
         </div>
       )}
     </Panel>
-  );
+    );
+  };
 
   if (!activeAccount) {
     return (

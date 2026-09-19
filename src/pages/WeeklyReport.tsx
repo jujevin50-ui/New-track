@@ -231,7 +231,7 @@ const WeeklyReport = ({ activeAccount, accounts }: WeeklyReportPageProps) => {
     setView('all');
   };
 
-  const handleDownloadPDF = async (weekKey?: string, reportData?: WeeklyReportData, wTrades?: Trade[]) => {
+  const handleDownloadPDF = async (weekKey?: string, reportData?: WeeklyReportData, wTrades?: Trade[], mode: 'download' | 'view' = 'download') => {
     const targetWeekKey = weekKey || currentWeekKey;
     const targetData = reportData || formData;
     const targetRange = getWeekRange(targetWeekKey);
@@ -325,8 +325,14 @@ const WeeklyReport = ({ activeAccount, accounts }: WeeklyReportPageProps) => {
       const lines = pdf.splitTextToSize(field.value || '(Not specified)', contentW - 12);
       checkPage(lines.length * 5); pdf.text(lines, margin + 8, y); y += lines.length * 5 + 4;
     }
-    pdf.save(`weekly-report-${targetWeekKey}.pdf`);
-    toast.success('PDF downloaded');
+    if (mode === 'view') {
+      const blobUrl = pdf.output('bloburl') as unknown as string;
+      window.open(blobUrl, '_blank');
+      toast.success('PDF opened');
+    } else {
+      pdf.save(`weekly-report-${targetWeekKey}.pdf`);
+      toast.success('PDF downloaded');
+    }
   };
 
   // ── Helpers ──────────────────────────────────────────────────────────
@@ -423,20 +429,36 @@ const WeeklyReport = ({ activeAccount, accounts }: WeeklyReportPageProps) => {
                     <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground text-center">{monthName}</p>
                     <div className="rounded-2xl border border-border/60 bg-card divide-y divide-border/40 overflow-hidden">
                       {weeks.map(w => (
-                        <button key={w.weekKey}
-                          onClick={() => { setCurrentWeekKey(w.weekKey); setView('edit'); }}
+                        <div key={w.weekKey}
                           className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-secondary/40 transition-colors">
-                          <div className="flex items-center gap-3">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground w-9 text-left">W{w.weekNum}</span>
+                          <button
+                            onClick={() => { setCurrentWeekKey(w.weekKey); setView('edit'); }}
+                            className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                          >
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground w-9 text-left shrink-0">W{w.weekNum}</span>
                             <span className="text-sm font-medium text-foreground">
                               {MONTHS_SHORT[w.start.getUTCMonth()]} {w.start.getUTCDate()}
                             </span>
-                            {w.hasReport && <span className="h-1.5 w-1.5 rounded-full bg-primary" title="Report saved" />}
+                            {w.hasReport && <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" title="Report saved" />}
+                          </button>
+                          <div className="flex items-center gap-3 shrink-0">
+                            <span className="text-sm font-mono text-muted-foreground tabular-nums">
+                              {w.tradeCount} trade{w.tradeCount !== 1 ? 's' : ''}
+                            </span>
+                            {w.hasReport && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDownloadPDF(w.weekKey, reports[w.weekKey], getWeekTrades(w.weekKey), 'view');
+                                }}
+                                title="View PDF report"
+                                className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                              </button>
+                            )}
                           </div>
-                          <span className="text-sm font-mono text-muted-foreground tabular-nums">
-                            {w.tradeCount} trade{w.tradeCount !== 1 ? 's' : ''}
-                          </span>
-                        </button>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -520,6 +542,9 @@ const WeeklyReport = ({ activeAccount, accounts }: WeeklyReportPageProps) => {
           <div className="flex items-center gap-2 max-w-3xl mx-auto">
             <Button size="sm" onClick={handleSave} className="gap-1.5 text-xs">
               <Save className="h-3.5 w-3.5" />Save Report
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => handleDownloadPDF(undefined, undefined, undefined, 'view')} className="gap-1.5 text-xs">
+              <Eye className="h-3.5 w-3.5" />View PDF
             </Button>
             <Button variant="outline" size="sm" onClick={() => handleDownloadPDF()} className="gap-1.5 text-xs">
               <Download className="h-3.5 w-3.5" />Export PDF
