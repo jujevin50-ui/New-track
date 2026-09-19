@@ -13,7 +13,7 @@ import PairPerformanceChart from '@/components/trading/PairPerformanceChart';
 import ProfitByMonthChart from '@/components/trading/ProfitByMonthChart';
 import { useRiskTable } from '@/hooks/useRiskTable';
 import { useAccounts } from '@/hooks/useAccounts';
-import { Wallet, Target, Gauge, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 
 // ─── Palette (fintech terminal, coherent accent per metric) ───────
 const ACCENT = {
@@ -132,38 +132,51 @@ function TradeCountSlider({ limits, value, onChange }: { limits: readonly TradeL
 
 // ─── Layout helpers ───────────────────────────────────────────────
 
-function ChartCard({ title, children, className, accent, icon: Icon }: { title: string; children: React.ReactNode; className?: string; accent?: string; icon?: React.ComponentType<{ className?: string; style?: React.CSSProperties }> }) {
+function ChartCard({ title, children, className, action }: { title: string; children: React.ReactNode; className?: string; action?: React.ReactNode }) {
   return (
-    <div
-      className={`relative flex flex-col rounded-lg border border-border/60 bg-card p-5 ${className ?? ''}`}
-    >
-      <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full" style={{ backgroundColor: accent || 'hsl(var(--border))' }} />
-      <div className="flex items-center justify-between pb-3.5 mb-3 border-b border-border/50 shrink-0 pl-2">
-        <div className="flex items-center gap-2">
-          {Icon && <Icon className="h-3.5 w-3.5" style={{ color: accent }} />}
-          <span className="text-[11px] font-bold text-foreground/75 uppercase tracking-[0.12em]">{title}</span>
-        </div>
+    <div className={`flex flex-col rounded-2xl border border-border/60 bg-card p-5 ${className ?? ''}`}>
+      <div className="flex items-center justify-between mb-4 shrink-0">
+        <span className="text-[15px] font-semibold text-foreground">{title}</span>
+        {action}
       </div>
-      <div className="flex-1 pl-2">{children}</div>
+      <div className="flex-1">{children}</div>
     </div>
   );
 }
 
-function Panel({ children, className, accent }: { children: React.ReactNode; className?: string; accent?: string }) {
+function Panel({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div
-      className={`relative rounded-lg border border-border/60 bg-card p-5 overflow-hidden ${className ?? ''}`}
-    >
-      {accent && <span className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ backgroundColor: accent }} />}
-      <div className={accent ? 'pl-2' : ''}>{children}</div>
+    <div className={`rounded-2xl border border-border/60 bg-card p-5 ${className ?? ''}`}>
+      {children}
     </div>
   );
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-baseline gap-3 w-full mt-7 mb-2.5 pb-2 border-b-2 border-foreground/10">
+    <div className="flex items-baseline gap-3 w-full mt-7 mb-2.5">
       <span className="text-[13px] font-extrabold uppercase tracking-[0.1em] text-foreground">{children}</span>
+    </div>
+  );
+}
+
+/** Reference-style KPI card: label + trend badge top row, big number, muted subtitle. */
+function KpiCard({ label, value, prefix, badge, badgeUp, sub }: { label: string; value: string; prefix?: string; badge?: string; badgeUp?: boolean; sub?: string }) {
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card p-5">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-[13px] font-medium text-muted-foreground">{label}</span>
+        {badge && (
+          <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full ${badgeUp ? 'bg-[hsla(142,71%,45%,0.12)] text-profit' : 'bg-[hsla(0,84%,60%,0.12)] text-loss'}`}>
+            {badgeUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+            {badge}
+          </span>
+        )}
+      </div>
+      <p className="text-[26px] font-bold font-mono tabular-nums text-foreground leading-none">
+        {prefix && <span className="text-muted-foreground mr-0.5">{prefix}</span>}{value}
+      </p>
+      {sub && <p className="text-[12px] text-muted-foreground mt-2.5">{sub}</p>}
     </div>
   );
 }
@@ -591,96 +604,124 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
       {view === 'account' && (
       <>
       {/* ══════════════════════════════════════════
-          SECTION 1 — KPI ribbon (compact, single unified card)
+          SECTION 1 — KPI cards (4 separate cards, reference layout)
       ══════════════════════════════════════════ */}
-      <div className="rounded-lg border border-border/60 bg-card overflow-hidden">
-        <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-border/50">
-
-          {/* Balance */}
-          <div className="p-4 lg:p-5">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-1.5">
-                <Wallet className="h-3 w-3" style={{ color: ACCENT.balance }} />
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Balance</span>
-              </div>
-              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded
-                ${activeAccount.category === 'Prop Firm' ? 'bg-[hsla(255,92%,68%,0.12)] text-balance'
-                  : activeAccount.category === 'Demo' ? 'bg-[hsla(25,95%,53%,0.12)] text-drawdown'
-                  : 'bg-[hsla(142,71%,45%,0.12)] text-profit'}`}>
-                {activeAccount.category}
-              </span>
-            </div>
-            <p className="text-2xl font-bold font-mono tabular-nums text-foreground leading-tight">${fmt(balanceAnimated)}</p>
-            <p className={`text-[11px] font-semibold font-mono mt-1 ${stats.totalProfit >= 0 ? 'text-profit' : 'text-loss'}`}>
-              {stats.totalProfit >= 0 ? '+' : ''}${fmt(stats.totalProfit)} ({stats.profitPercent >= 0 ? '+' : ''}{stats.profitPercent.toFixed(2)}%)
-            </p>
-          </div>
-
-          {/* Today P&L */}
-          <div className="p-4 lg:p-5">
-            <div className="flex items-center gap-1.5 mb-2">
-              {todayRawPnL >= 0 ? <ArrowUpRight className="h-3 w-3 text-profit" /> : <ArrowDownRight className="h-3 w-3 text-loss" />}
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Today P&amp;L</span>
-            </div>
-            <p className={`text-2xl font-bold font-mono tabular-nums leading-tight ${todayRawPnL >= 0 ? 'text-profit' : 'text-loss'}`}>
-              {todayRawPnL >= 0 ? '+' : ''}${fmt(todayRawPnL)}
-            </p>
-            <p className="text-[11px] text-muted-foreground font-mono mt-1">Initial ${fmt(initialBalance)}</p>
-          </div>
-
-          {/* Win Rate */}
-          <div className="p-4 lg:p-5">
-            <div className="flex items-center gap-1.5 mb-2">
-              <Target className="h-3 w-3" style={{ color: winRateColor }} />
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Win Rate</span>
-            </div>
-            <p className="text-2xl font-bold font-mono tabular-nums leading-tight" style={{ color: winRateColor }}>{stats.winRate.toFixed(1)}%</p>
-            <p className="text-[11px] text-muted-foreground font-mono mt-1">{stats.wins}W · {stats.losses}L · {stats.totalTrades} total</p>
-          </div>
-
-          {/* Profit Factor */}
-          <div className="p-4 lg:p-5">
-            <div className="flex items-center gap-1.5 mb-2">
-              <Gauge className="h-3 w-3" style={{ color: pfColor }} />
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Profit Factor</span>
-            </div>
-            <p className="text-2xl font-bold font-mono tabular-nums leading-tight" style={{ color: pfColor }}>
-              {stats.profitFactor === Infinity ? '∞' : stats.profitFactor.toFixed(2)}
-            </p>
-            <p className="text-[11px] font-mono mt-1">
-              <span className="text-profit">+${fmt(stats.avgWin)}</span>
-              <span className="text-muted-foreground"> / </span>
-              <span className="text-loss">-${fmt(stats.avgLoss)}</span>
-            </p>
-          </div>
-        </div>
-
-        {/* Consistency — secondary strip */}
-        <div className="border-t border-border/50 px-4 lg:px-5 py-3 flex items-center gap-3 bg-secondary/20">
-          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider shrink-0">Consistency</span>
-          <div className="flex-1 max-w-[200px]">
-            <RiskBar usedPct={consistencyScore} invert />
-          </div>
-          <span className="text-xs font-bold font-mono shrink-0" style={{ color: consistencyScore >= 60 ? 'hsl(142,71%,45%)' : consistencyScore >= 40 ? 'hsl(43,96%,56%)' : 'hsl(0,84%,60%)' }}>
-            {consistencyScore.toFixed(0)}%
-          </span>
-          <span className="text-[11px] text-muted-foreground shrink-0 hidden sm:inline ml-auto">
-            {Object.values(dailyPnL).filter(d => d > 0).length}/{Object.values(dailyPnL).length} profitable days
-          </span>
-        </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard
+          label="Balance"
+          prefix="$"
+          value={fmt(balanceAnimated)}
+          badge={`${stats.profitPercent >= 0 ? '+' : ''}${stats.profitPercent.toFixed(1)}%`}
+          badgeUp={stats.profitPercent >= 0}
+          sub={`${stats.totalProfit >= 0 ? '+' : ''}$${fmt(stats.totalProfit)} net`}
+        />
+        <KpiCard
+          label="Today P&L"
+          prefix="$"
+          value={`${todayRawPnL >= 0 ? '+' : '-'}${fmt(Math.abs(todayRawPnL))}`}
+          badge={`${todayRawPnL >= 0 ? '+' : ''}${(initialBalance > 0 ? (todayRawPnL / initialBalance) * 100 : 0).toFixed(2)}%`}
+          badgeUp={todayRawPnL >= 0}
+          sub={`Initial $${fmt(initialBalance)}`}
+        />
+        <KpiCard
+          label="Win Rate"
+          value={`${stats.winRate.toFixed(1)}%`}
+          badge={`${consistencyScore.toFixed(0)}% consistency`}
+          badgeUp={consistencyScore >= 50}
+          sub={`${stats.wins}W · ${stats.losses}L · ${stats.totalTrades} total`}
+        />
+        <KpiCard
+          label="Profit Factor"
+          value={stats.profitFactor === Infinity ? '∞' : stats.profitFactor.toFixed(2)}
+          badge={`${stats.profitFactor - 1 >= 0 ? '+' : ''}${(stats.profitFactor === Infinity ? 0 : stats.profitFactor - 1).toFixed(2)} vs 1.00`}
+          badgeUp={stats.profitFactor >= 1}
+          sub={`+$${fmt(stats.avgWin)} / -$${fmt(stats.avgLoss)} avg`}
+        />
       </div>
 
       {/* ══════════════════════════════════════════
-          SECTION 2 — Account equity curves ($ + %) grouped on one row
+          SECTION 2 — Activity heatmap + Equity performance
+      ══════════════════════════════════════════ */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <ChartCard title="Trading Activity" action={<span className="text-[11px] text-muted-foreground">Daily P&amp;L</span>}>
+          <div className="h-[300px] flex flex-col justify-center gap-4">
+            <CalendarHeatmap dailyPnL={dailyPnL} />
+            <div className="flex items-center gap-1.5 pt-3 border-t border-border/40 text-[10px] text-muted-foreground">
+              <span>Loss</span>
+              <div className="flex gap-[2px]">
+                {[0.85, 0.55, 0.3].map(o => <div key={`l${o}`} className="w-3 h-3 rounded-[2px]" style={{ backgroundColor: `hsla(0,84%,60%,${o})` }} />)}
+                <div className="w-3 h-3 rounded-[2px] bg-white/[0.06]" />
+                {[0.3, 0.55, 0.85].map(o => <div key={`p${o}`} className="w-3 h-3 rounded-[2px]" style={{ backgroundColor: `hsla(142,71%,45%,${o})` }} />)}
+              </div>
+              <span>Profit</span>
+            </div>
+          </div>
+        </ChartCard>
+        <ChartCard title="Equity Performance" action={<span className="text-[11px] text-muted-foreground">Balance · Average</span>}>
+          <div className="h-[300px]">
+            <EquityCurveChart data={chartData.equityCurve} medianLineVisible accentColor={ACCENT.balance} />
+          </div>
+        </ChartCard>
+      </div>
+
+      {/* ══════════════════════════════════════════
+          SECTION 3 — Last trades + monthly preview
+      ══════════════════════════════════════════ */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <ChartCard title="Last 5 Trades" action={
+          <button onClick={() => navigate('/trades')} className="text-[11px] font-medium text-primary hover:underline">View All</button>
+        }>
+          <div>
+            {[...trades].slice(-5).reverse().map(t => {
+              const net = getNetResult(t);
+              return (
+                <div key={t.id} className="flex items-center justify-between py-2.5 border-b border-border/30 last:border-0">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className={`h-2 w-2 rounded-full shrink-0 ${net >= 0 ? 'bg-profit' : 'bg-loss'}`} />
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-semibold text-foreground truncate">{t.pair}</p>
+                      <p className="text-[11px] text-muted-foreground">{t.type} · {t.date}</p>
+                    </div>
+                  </div>
+                  <p className={`text-[13px] font-bold font-mono tabular-nums shrink-0 ${net >= 0 ? 'text-profit' : 'text-loss'}`}>{net >= 0 ? '+' : ''}${fmt(net)}</p>
+                </div>
+              );
+            })}
+            {trades.length === 0 && <p className="text-sm text-muted-foreground py-8 text-center">No trades yet</p>}
+          </div>
+        </ChartCard>
+        <ChartCard title="Monthly Performance" action={
+          <button onClick={() => setDashView('global')} className="text-[11px] font-medium text-primary hover:underline">View All</button>
+        }>
+          <div>
+            {[...monthlyMetrics].slice(-5).reverse().map(r => (
+              <div key={r.key} className="flex items-center justify-between py-2.5 border-b border-border/30 last:border-0">
+                <p className="text-[13px] font-semibold text-foreground">{r.label}</p>
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] text-muted-foreground font-mono hidden sm:inline">{r.trades} trades</span>
+                  <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${r.pnl >= 0 ? 'bg-[hsla(142,71%,45%,0.12)] text-profit' : 'bg-[hsla(0,84%,60%,0.12)] text-loss'}`}>
+                    {r.pnl >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                    {r.pnl >= 0 ? '+' : ''}${fmt(r.pnl)}
+                  </span>
+                </div>
+              </div>
+            ))}
+            {monthlyMetrics.length === 0 && <p className="text-sm text-muted-foreground py-8 text-center">No data yet</p>}
+          </div>
+        </ChartCard>
+      </div>
+
+      {/* ══════════════════════════════════════════
+          SECTION 4 — Account equity curves ($ + %) grouped on one row
       ══════════════════════════════════════════ */}
       <SectionLabel>Performance</SectionLabel>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ChartCard title="Equity Curve ($)" accent={ACCENT.balance} icon={Wallet}>
+        <ChartCard title="Equity Curve ($)">
           <div className="h-[340px]">
             <EquityCurveChart data={chartData.equityCurve} medianLineVisible accentColor={ACCENT.balance} />
           </div>
         </ChartCard>
-        <ChartCard title="Performance (%)" accent={ACCENT.teal} icon={Gauge}>
+        <ChartCard title="Performance (%)">
           <div className="h-[340px]">
             <EquityCurvePercentChart data={chartData.equityCurvePercent} medianLineVisible accentColor={ACCENT.teal} />
           </div>
@@ -692,19 +733,19 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
       ══════════════════════════════════════════ */}
       <SectionLabel>Trade Analysis</SectionLabel>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ChartCard title="Profit Per Trade" accent="hsl(142,71%,45%)">
+        <ChartCard title="Profit Per Trade">
           <div className="h-[300px]"><ProfitPerTradeChart trades={trades} accounts={accounts} medianLineVisible /></div>
         </ChartCard>
-        <ChartCard title="Drawdown" accent={ACCENT.rose}>
+        <ChartCard title="Drawdown">
           <div className="h-[300px]"><DrawdownChart data={chartData.drawdownData} medianLineVisible accentColor={ACCENT.rose} /></div>
         </ChartCard>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ChartCard title="Pair Performance" accent={ACCENT.balance}>
+        <ChartCard title="Pair Performance">
           <div className="h-[300px]"><PairPerformanceChart data={pairPerformancePercent} medianLineVisible accentColor={ACCENT.balance} /></div>
         </ChartCard>
-        <ChartCard title="Profit by Month" accent="hsl(142,71%,45%)">
+        <ChartCard title="Profit by Month">
           <div className="h-[300px]"><ProfitByMonthChart data={chartData.profitByMonth} medianLineVisible usePercent /></div>
         </ChartCard>
       </div>
@@ -719,13 +760,13 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
       <SectionLabel>Global Overview</SectionLabel>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {[
-          { label: 'Sum of Account %', value: `${sumAccountPct >= 0 ? '+' : ''}${sumAccountPct.toFixed(2)}%`,                              cls: sumAccountPct >= 0 ? 'text-profit' : 'text-loss',                     accent: sumAccountPct >= 0 ? 'hsl(142,71%,45%)' : 'hsl(0,84%,60%)' },
-          { label: 'Win Rate',      value: `${globalSummary.winRate.toFixed(1)}%`,                                                          cls: globalSummary.winRate >= 50 ? 'text-profit' : 'text-loss',            accent: globalSummary.winRate >= 50 ? 'hsl(142,71%,45%)' : 'hsl(0,84%,60%)' },
-          { label: 'Profit Factor', value: globalSummary.profitFactor === Infinity ? '∞' : globalSummary.profitFactor.toFixed(2),          cls: globalSummary.profitFactor >= 1 ? 'text-profit' : 'text-loss',        accent: globalSummary.profitFactor >= 1 ? 'hsl(142,71%,45%)' : 'hsl(0,84%,60%)' },
-          { label: 'Avg RR',        value: `${globalSummary.avgR.toFixed(2)}R`,                                                             cls: globalSummary.avgR >= 1 ? 'text-profit' : 'text-foreground',          accent: ACCENT.teal },
-          { label: 'Total Trades',  value: globalSummary.totalTrades.toString(),                                                            cls: 'text-foreground',  accent: 'hsl(var(--muted-foreground))' },
-        ].map(({ label, value, cls, accent }) => (
-          <Panel key={label} accent={accent} className="flex flex-col gap-1.5">
+          { label: 'Sum of Account %', value: `${sumAccountPct >= 0 ? '+' : ''}${sumAccountPct.toFixed(2)}%`,                              cls: sumAccountPct >= 0 ? 'text-profit' : 'text-loss' },
+          { label: 'Win Rate',      value: `${globalSummary.winRate.toFixed(1)}%`,                                                          cls: globalSummary.winRate >= 50 ? 'text-profit' : 'text-loss' },
+          { label: 'Profit Factor', value: globalSummary.profitFactor === Infinity ? '∞' : globalSummary.profitFactor.toFixed(2),          cls: globalSummary.profitFactor >= 1 ? 'text-profit' : 'text-loss' },
+          { label: 'Avg RR',        value: `${globalSummary.avgR.toFixed(2)}R`,                                                             cls: globalSummary.avgR >= 1 ? 'text-profit' : 'text-foreground' },
+          { label: 'Total Trades',  value: globalSummary.totalTrades.toString(),                                                            cls: 'text-foreground' },
+        ].map(({ label, value, cls }) => (
+          <Panel key={label} className="flex flex-col gap-1.5">
             <span className="text-[10px] font-bold text-foreground/70 uppercase tracking-widest">{label}</span>
             <p className={`text-2xl font-bold font-mono tabular-nums ${cls}`}>{value}</p>
           </Panel>
