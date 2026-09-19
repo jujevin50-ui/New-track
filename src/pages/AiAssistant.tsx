@@ -155,7 +155,7 @@ export default function AiAssistant({ activeAccount }: Props) {
   };
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-7rem)] max-w-6xl mx-auto">
+    <div className="flex gap-4 h-[calc(100vh-9rem)] max-w-6xl mx-auto">
       <div className="w-60 shrink-0 flex flex-col border border-border rounded-xl bg-card/40 overflow-hidden">
         <div className="p-3 border-b border-border flex items-center justify-between shrink-0">
           <span className="text-sm font-medium flex items-center gap-2">

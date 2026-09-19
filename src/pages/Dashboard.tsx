@@ -519,38 +519,40 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
     <div className="w-full space-y-5 pb-10">
 
       {/* ── Account chips ── */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
-        {accountCards.map(a => {
-          const isActive = a.id === activeAccount.id;
-          const dot = CAT_DOT[a.category] || 'bg-muted-foreground';
-          return (
-            <div key={a.id} className={`shrink-0 flex items-center gap-3 px-3.5 py-2 rounded-xl border transition-all cursor-default
-              ${isActive ? 'border-primary/40 bg-primary/5 shadow-[0_0_0_1px_hsl(var(--primary)/0.15)]' : 'border-border/50 bg-card hover:border-border'}`}>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${dot}`} />
-                  <span className="text-[11px] font-semibold text-foreground truncate max-w-[88px] leading-none">{a.name}</span>
+      <div className="rounded-xl border border-border/60 bg-card/40 p-3">
+        <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
+          {accountCards.map(a => {
+            const isActive = a.id === activeAccount.id;
+            const dot = CAT_DOT[a.category] || 'bg-muted-foreground';
+            return (
+              <div key={a.id} className={`shrink-0 flex items-center gap-3 px-3.5 py-2 rounded-xl border transition-all cursor-default
+                ${isActive ? 'border-primary/40 bg-primary/5 shadow-[0_0_0_1px_hsl(var(--primary)/0.15)]' : 'border-border/50 bg-card hover:border-border'}`}>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${dot}`} />
+                    <span className="text-[11px] font-semibold text-foreground truncate max-w-[88px] leading-none">{a.name}</span>
+                  </div>
+                  <p className="text-[9px] text-muted-foreground truncate max-w-[88px]">{[a.broker, a.currency].filter(Boolean).join(' · ') || a.category}</p>
                 </div>
-                <p className="text-[9px] text-muted-foreground truncate max-w-[88px]">{[a.broker, a.currency].filter(Boolean).join(' · ') || a.category}</p>
+                <div className="h-7 w-px bg-border/40 shrink-0" />
+                <div className="shrink-0">
+                  <p className={`text-[15px] font-bold font-mono tabular-nums leading-tight ${a.pnl >= 0 ? 'text-profit' : 'text-loss'}`}>{a.pnl >= 0 ? '+' : ''}{a.pct.toFixed(1)}%</p>
+                </div>
+                <div className="h-7 w-px bg-border/40 shrink-0" />
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {a.liveCount > 0 && (
+                    <span className="relative flex h-3.5 w-3.5 items-center justify-center">
+                      <span className="absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75 animate-ping" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-yellow-400" />
+                    </span>
+                  )}
+                  <span className="text-[13px] font-bold font-mono text-foreground tabular-nums leading-tight">{a.liveCount}</span>
+                  <span className="text-[9px] text-muted-foreground uppercase tracking-wider leading-tight">open</span>
+                </div>
               </div>
-              <div className="h-7 w-px bg-border/40 shrink-0" />
-              <div className="shrink-0">
-                <p className={`text-[15px] font-bold font-mono tabular-nums leading-tight ${a.pnl >= 0 ? 'text-profit' : 'text-loss'}`}>{a.pnl >= 0 ? '+' : ''}{a.pct.toFixed(1)}%</p>
-              </div>
-              <div className="h-7 w-px bg-border/40 shrink-0" />
-              <div className="flex items-center gap-1.5 shrink-0">
-                {a.liveCount > 0 && (
-                  <span className="relative flex h-3.5 w-3.5 items-center justify-center">
-                    <span className="absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75 animate-ping" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-yellow-400" />
-                  </span>
-                )}
-                <span className="text-[13px] font-bold font-mono text-foreground tabular-nums leading-tight">{a.liveCount}</span>
-                <span className="text-[9px] text-muted-foreground uppercase tracking-wider leading-tight">open</span>
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       {/* ── Filters ── */}
