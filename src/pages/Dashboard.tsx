@@ -446,6 +446,9 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
     }),
   [accounts, rawAllTrades]);
 
+  // Somme des % de performance de chaque compte (remplace Total Balance / Total P&L dans Global Overview)
+  const sumAccountPct = useMemo(() => accountCards.reduce((s, a) => s + a.pct, 0), [accountCards]);
+
   const balanceAnimated    = useCountUp(stats.currentBalance, 900, 150);
   const fmt  = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const fmtK = (n: number) => Math.abs(n) >= 1000 ? `${(n / 1000).toFixed(1)}K` : Math.abs(n).toFixed(2);
@@ -744,10 +747,9 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
           GLOBAL VIEW — metrics only (no % charts)
       ══════════════════════════════════════════ */}
       <SectionLabel>Global Overview</SectionLabel>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {[
-          { label: 'Total Balance', value: `$${fmt(globalSummary.totalBalance)}`,                                                          cls: 'text-foreground',  accent: ACCENT.balance },
-          { label: 'Total P&L',     value: `${globalSummary.pnl >= 0 ? '+' : ''}$${fmt(globalSummary.pnl)}`,                                cls: globalSummary.pnl >= 0 ? 'text-profit' : 'text-loss',                 accent: globalSummary.pnl >= 0 ? 'hsl(142,71%,45%)' : 'hsl(0,84%,60%)' },
+          { label: 'Sum of Account %', value: `${sumAccountPct >= 0 ? '+' : ''}${sumAccountPct.toFixed(2)}%`,                              cls: sumAccountPct >= 0 ? 'text-profit' : 'text-loss',                     accent: sumAccountPct >= 0 ? 'hsl(142,71%,45%)' : 'hsl(0,84%,60%)' },
           { label: 'Win Rate',      value: `${globalSummary.winRate.toFixed(1)}%`,                                                          cls: globalSummary.winRate >= 50 ? 'text-profit' : 'text-loss',            accent: globalSummary.winRate >= 50 ? 'hsl(142,71%,45%)' : 'hsl(0,84%,60%)' },
           { label: 'Profit Factor', value: globalSummary.profitFactor === Infinity ? '∞' : globalSummary.profitFactor.toFixed(2),          cls: globalSummary.profitFactor >= 1 ? 'text-profit' : 'text-loss',        accent: globalSummary.profitFactor >= 1 ? 'hsl(142,71%,45%)' : 'hsl(0,84%,60%)' },
           { label: 'Avg RR',        value: `${globalSummary.avgR.toFixed(2)}R`,                                                             cls: globalSummary.avgR >= 1 ? 'text-profit' : 'text-foreground',          accent: ACCENT.teal },

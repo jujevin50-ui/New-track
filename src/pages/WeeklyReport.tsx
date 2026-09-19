@@ -106,7 +106,7 @@ const WeeklyReport = ({ activeAccount, accounts }: WeeklyReportPageProps) => {
   const weekTrades = useMemo(() => {
     const startStr = weekRange.start.toISOString().slice(0, 10);
     const endStr = weekRange.end.toISOString().slice(0, 10);
-    const source = activeAccount?.id === 'all' ? allTrades : trades;
+    const source = allTrades; // filtre de compte volontairement ignoré ici
     return source.filter(t => t.date >= startStr && t.date <= endStr)
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [trades, allTrades, weekRange, activeAccount]);
@@ -115,7 +115,7 @@ const WeeklyReport = ({ activeAccount, accounts }: WeeklyReportPageProps) => {
     const range = getWeekRange(weekKey);
     const startStr = range.start.toISOString().slice(0, 10);
     const endStr = range.end.toISOString().slice(0, 10);
-    const source = activeAccount?.id === 'all' ? allTrades : trades;
+    const source = allTrades; // filtre de compte volontairement ignoré ici
     return source.filter(t => t.date >= startStr && t.date <= endStr);
   };
 
@@ -384,7 +384,7 @@ const WeeklyReport = ({ activeAccount, accounts }: WeeklyReportPageProps) => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-bold tracking-tight">Weekly Report</h1>
-          <p className="text-xs text-muted-foreground">{activeAccount.name}</p>
+          <p className="text-xs text-muted-foreground">All Accounts</p>
         </div>
         <div className="flex items-center rounded-lg border border-border overflow-hidden">
           <button onClick={() => setView('edit')}

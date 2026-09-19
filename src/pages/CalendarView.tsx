@@ -9,11 +9,10 @@ import { Account } from '@/types/account';
 import { Trade, getNetResult } from '@/types/trade';
 import {
   ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Target, BarChart3,
-  EyeOff, CheckCircle2, XCircle, Flame, Zap, CalendarDays, LayoutGrid, Table2,
+  EyeOff, CheckCircle2, XCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { WidgetColorPicker } from '@/components/trading/WidgetColorPicker';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 interface CalendarViewProps { activeAccount: Account | null; accounts: Account[] }
 
@@ -279,98 +278,6 @@ const CalendarView = ({ activeAccount, accounts }: CalendarViewProps) => {
 
   const hiddenWidgets = configs.filter(c => !c.visible);
 
-  /* ──────────────────────── MINI MONTH (annual view) ──────────────────────── */
-  const MiniMonth = ({ mi }: { mi: number }) => {
-    const mst = getMonthlyStats(viewYear, mi);
-    const fd2 = new Date(viewYear, mi, 1).getDay();
-    const dim = new Date(viewYear, mi + 1, 0).getDate();
-    const so  = fd2 === 0 ? 6 : fd2 - 1;
-    const days: (number | null)[] = [...Array(so).fill(null)];
-    for (let d = 1; d <= dim; d++) days.push(d);
-    while (days.length % 7 !== 0) days.push(null);
-    const mMax = Math.max(...days.filter(Boolean).map(d => {
-      const ds = dateStr(viewYear, mi, d!);
-      return Math.abs(dailyPnL[ds]?.pnl || 0);
-    }), 1);
-    const mc = mst.totalPnl > 0 ? '142,71%,45%' : mst.totalPnl < 0 ? '0,84%,60%' : null;
-    const isCurMonth = today.getFullYear() === viewYear && today.getMonth() === mi;
-    return (
-      <div
-        onClick={() => { setCurrentDate(new Date(viewYear, mi, 1)); }}
-        className={`group relative bg-card/70 backdrop-blur-sm border rounded-2xl overflow-hidden cursor-pointer day-glow
-          transition-all duration-300 hover:-translate-y-1 hover:scale-[1.015]
-          ${isCurMonth ? 'border-primary/50' : 'border-border/60 hover:border-primary/40'}`}
-        style={{ '--cell-glow': mc ? `hsla(${mc},0.4)` : 'hsl(var(--primary) / 0.3)' } as React.CSSProperties}
-      >
-        {/* performance accent line */}
-        <div className="h-[3px] w-full transition-all duration-500 group-hover:h-[5px]"
-          style={{ background: mc
-            ? `linear-gradient(90deg, hsla(${mc},0.95), hsla(${mc},0.15))`
-            : 'hsl(var(--border) / 0.4)' }} />
-
-        {isCurMonth && (
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,hsl(var(--primary)/0.10),transparent_60%)] pointer-events-none" />
-        )}
-
-        <div className="px-3 py-2 border-b border-border/50 flex items-center justify-between relative">
-          <span className="text-xs font-bold tracking-tight group-hover:text-primary transition-colors flex items-center gap-1.5">
-            {isCurMonth && (
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full rounded-full bg-primary animate-glow-pulse" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
-              </span>
-            )}
-            {MONTHS_SHORT[mi]}
-          </span>
-          <div className="text-right">
-            {mst.totalPnl !== 0 ? (
-              <>
-                <span className={`text-xs font-black font-mono ${mst.totalPnl > 0 ? 'text-profit' : 'text-loss'}`}>
-                  {mst.totalPnl >= 0 ? '+' : ''}{mst.totalPct.toFixed(1)}%
-                </span>
-                <span className="text-[9px] text-muted-foreground font-mono ml-1">
-                  {mst.totalPnl >= 0 ? '+' : ''}{mst.totalPnl.toFixed(0)}$
-                </span>
-              </>
-            ) : <span className="text-[10px] text-muted-foreground/40">—</span>}
-          </div>
-        </div>
-        <div className="p-2 relative">
-          <div className="grid grid-cols-7 gap-px mb-1">
-            {['M','T','W','T','F','S','S'].map((d, i) => (
-              <div key={i} className="text-center text-[7px] text-muted-foreground/50">{d}</div>
-            ))}
-          </div>
-          <div className="grid grid-cols-7 gap-px">
-            {days.map((d, i) => {
-              if (!d) return <div key={i} className="h-[18px]" />;
-              const ds   = dateStr(viewYear, mi, d);
-              const data = dailyPnL[ds];
-              const isT  = today.getFullYear() === viewYear && today.getMonth() === mi && today.getDate() === d;
-              const intens = data ? Math.min(Math.abs(data.pnl) / mMax, 1) * 0.6 + 0.2 : 0;
-              return (
-                <div key={i} onClick={e => { e.stopPropagation(); setJournalDate(ds); }}
-                  className="h-[18px] flex items-center justify-center rounded-sm transition-all duration-200 hover:scale-125 hover:z-10 hover:ring-1 hover:ring-primary/60"
-                  style={{ backgroundColor: data ? pnlColor(data.pnl, intens) : undefined }}
-                  title={data ? `${data.pnl >= 0 ? '+' : ''}${data.pnl.toFixed(2)}$ (${data.count} trades)` : ds}>
-                  <span className={`text-[8px] leading-none ${isT ? 'font-black text-primary' : 'text-foreground/60'}`}>{d}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-        {mst.totalTrades > 0 && (
-          <div className="px-3 pb-2 flex justify-between text-[8px] text-muted-foreground relative">
-            <span className="text-profit font-semibold">{mst.winDays}d+</span>
-            <span>{mst.totalTrades}tr</span>
-            <span>WR {mst.winRate.toFixed(0)}%</span>
-            <span className="text-loss font-semibold">{mst.lossDays}d-</span>
-          </div>
-        )}
-      </div>
-    );
-  };
-
   /* ══════════════════════════════ RENDER ══════════════════════════════ */
   return (
     <div className="w-full max-w-5xl mx-auto space-y-4 animate-page-in">
@@ -402,16 +309,9 @@ const CalendarView = ({ activeAccount, accounts }: CalendarViewProps) => {
         ))}
       </div>
 
-      <Tabs defaultValue="monthly" className="space-y-4">
-        <TabsList className="h-9 bg-secondary/60 backdrop-blur-sm border border-border/40">
-          <TabsTrigger value="monthly" className="text-xs gap-1.5"><CalendarDays className="h-3.5 w-3.5" />Monthly</TabsTrigger>
-          <TabsTrigger value="annual"  className="text-xs gap-1.5"><LayoutGrid className="h-3.5 w-3.5" />Annual</TabsTrigger>
-          <TabsTrigger value="table"   className="text-xs gap-1.5"><Table2 className="h-3.5 w-3.5" />Year Table</TabsTrigger>
-        </TabsList>
-
-        {/* ═══════════════════════ MONTHLY ═══════════════════════ */}
-        <TabsContent value="monthly" className="space-y-0">
-          <div className="relative rounded-2xl border border-border bg-card overflow-hidden">
+      {/* ═══════════════════════ MONTHLY ═══════════════════════ */}
+      <div className="space-y-4">
+        <div className="relative rounded-2xl border border-border bg-card overflow-hidden">
 
             {/* Ambient glows */}
             <div className="absolute inset-x-0 top-0 h-48 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--primary)/0.12),transparent_60%)] pointer-events-none" />
@@ -556,203 +456,8 @@ const CalendarView = ({ activeAccount, accounts }: CalendarViewProps) => {
               ))}
             </div>
           </div>
-        </TabsContent>
+        </div>
 
-        {/* ═══════════════════════ ANNUAL ═══════════════════════ */}
-        <TabsContent value="annual" className="space-y-4">
-          {/* Year hero strip */}
-          <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary/10 via-card to-card px-5 py-4">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--primary)/0.15),transparent_55%)] pointer-events-none" />
-            <div className="relative flex items-center justify-between">
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg transition-transform hover:-translate-x-0.5" onClick={() => setViewYear(y => y - 1)}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <div key={viewYear} className="flex items-center gap-5 animate-number-in">
-                <h2 className="text-2xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground via-primary to-foreground animate-gradient-x">
-                  {viewYear}
-                </h2>
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  <span className={`text-base font-black font-mono ${ys.pnl >= 0 ? 'text-profit' : 'text-loss'}`}>
-                    {ys.pnl >= 0 ? '+' : ''}{ys.pct.toFixed(2)}%
-                  </span>
-                  <span className="font-mono">{ys.trades} trades</span>
-                  <span className="font-mono">WR {ys.winRate.toFixed(1)}%</span>
-                </div>
-              </div>
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg transition-transform hover:translate-x-0.5" onClick={() => setViewYear(y => y + 1)}>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          <div key={`annual-${viewYear}`} className="grid grid-cols-3 md:grid-cols-4 gap-3">
-            {Array.from({ length: 12 }, (_, i) => (
-              <div key={i} className="animate-pop-in" style={{ animationDelay: `${i * 50}ms` }}>
-                <MiniMonth mi={i} />
-              </div>
-            ))}
-          </div>
-        </TabsContent>
-
-        {/* ═══════════════════════ YEAR TABLE ═══════════════════════ */}
-        <TabsContent value="table" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg transition-transform hover:-translate-x-0.5" onClick={() => setViewYear(y => y - 1)}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <div key={viewYear} className="text-center animate-number-in">
-              <h2 className="text-sm font-black tracking-tight">Summary {viewYear}</h2>
-              {categoryFilter !== 'Demo' && (
-                <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60">Demo excluded</p>
-              )}
-            </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg transition-transform hover:translate-x-0.5" onClick={() => setViewYear(y => y + 1)}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* Year hero stats */}
-          <div key={`hero-${viewYear}`} className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className={`relative overflow-hidden rounded-2xl border-2 p-5 shine animate-pop-in day-glow transition-all duration-300 hover:-translate-y-1 ${
-              ysTable.pnl > 0 ? 'border-profit/30 bg-profit/5' : ysTable.pnl < 0 ? 'border-loss/30 bg-loss/5' : 'border-border bg-card'
-            }`}
-              style={{ '--cell-glow': ysTable.pnl > 0 ? 'hsl(var(--profit) / 0.35)' : ysTable.pnl < 0 ? 'hsl(var(--loss) / 0.35)' : 'hsl(var(--primary) / 0.25)' } as React.CSSProperties}>
-              <div className={`absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_top_right,${
-                ysTable.pnl >= 0 ? 'hsl(var(--profit)/0.12)' : 'hsl(var(--loss)/0.12)'
-              },transparent_60%)]`} />
-              <p className="relative text-[9px] uppercase tracking-widest text-muted-foreground">Yearly P&L</p>
-              <p className={`relative text-3xl font-black font-mono mt-1 bg-clip-text text-transparent bg-gradient-to-r ${
-                ysTable.pnl > 0 ? 'from-profit to-emerald-300' : ysTable.pnl < 0 ? 'from-loss to-rose-300' : 'from-foreground to-foreground'
-              }`}>
-                {ysTable.pnl >= 0 ? '+' : ''}{ysTable.pct.toFixed(2)}%
-              </p>
-              <p className="relative text-xs text-muted-foreground font-mono">{ysTable.pnl >= 0 ? '+' : ''}{ysTable.pnl.toFixed(0)}$</p>
-            </div>
-            {[
-              { label: 'Total Trades', value: String(ysTable.trades) },
-              { label: 'Win Rate', value: `${ysTable.winRate.toFixed(1)}%` },
-              { label: 'W / L', value: <><span className="text-profit">{ysTable.w}</span><span className="text-muted-foreground"> / </span><span className="text-loss">{ysTable.l}</span></> },
-            ].map((s, i) => (
-              <div key={i} className="rounded-2xl border border-border bg-card/70 backdrop-blur-sm p-5 animate-pop-in day-glow transition-all duration-300 hover:-translate-y-1 hover:border-primary/40"
-                style={{ animationDelay: `${(i + 1) * 70}ms` } as React.CSSProperties}>
-                <p className="text-[9px] uppercase tracking-widest text-muted-foreground">{s.label}</p>
-                <p className="text-2xl font-black font-mono mt-1">{s.value}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Monthly breakdown table */}
-          <div className="bg-card border border-border rounded-2xl overflow-hidden">
-            <div className="px-5 py-3 border-b border-border flex items-center gap-2">
-              <BarChart3 className="h-3 w-3 text-primary" />
-              <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Monthly Breakdown</h3>
-            </div>
-            <div key={`table-${viewYear}`} className="divide-y divide-border/50">
-              {Array.from({ length: 12 }, (_, i) => {
-                const mst = getMonthlyStatsTable(viewYear, i);
-                const maxPct = Math.max(...Array.from({ length: 12 }, (_, j) => Math.abs(getMonthlyStatsTable(viewYear, j).totalPct)), 0.1);
-                const barW = Math.min(Math.abs(mst.totalPct) / maxPct * 100, 100);
-                const noData = mst.totalTrades === 0;
-                return (
-                  <div key={i}
-                    onClick={() => { setCurrentDate(new Date(viewYear, i, 1)); }}
-                    className="group grid grid-cols-[120px_1fr_90px_70px_60px_50px_50px] items-center px-5 py-3 hover:bg-accent/20 transition-all duration-200 hover:pl-6 cursor-pointer gap-3 animate-fade-in-up"
-                    style={{ animationDelay: `${i * 35}ms` }}>
-                    <span className="text-xs font-semibold group-hover:text-primary transition-colors">{MONTHS[i]}</span>
-                    {/* Bar */}
-                    <div className="h-4 bg-secondary/40 rounded-full overflow-hidden">
-                      {!noData && (
-                        <div className="h-full rounded-full animate-bar-grow transition-all group-hover:brightness-125"
-                          style={{
-                            width: `${barW}%`,
-                            animationDelay: `${200 + i * 60}ms`,
-                            background: pnlGradient(mst.totalPct, 0.75),
-                            boxShadow: `0 0 10px ${pnlColor(mst.totalPct, 0.35)}`,
-                          }} />
-                      )}
-                    </div>
-                    <span className={`text-sm font-bold font-mono text-right ${noData ? 'text-muted-foreground/30' : mst.totalPct >= 0 ? 'text-profit' : 'text-loss'}`}>
-                      {noData ? '—' : `${mst.totalPct >= 0 ? '+' : ''}${mst.totalPct.toFixed(2)}%`}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground text-right font-mono">
-                      {!noData && `${mst.totalPnl >= 0 ? '+' : ''}${mst.totalPnl.toFixed(0)}$`}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground text-center">{noData ? '—' : `${mst.totalTrades}tr`}</span>
-                    <span className={`text-[10px] text-center ${noData ? 'text-muted-foreground/30' : 'text-profit'}`}>{noData ? '—' : `${mst.winDays}d+`}</span>
-                    <span className={`text-[10px] text-center ${noData ? 'text-muted-foreground/30' : 'text-loss'}`}>{noData ? '—' : `${mst.lossDays}d-`}</span>
-                  </div>
-                );
-              })}
-            </div>
-            {/* Total row */}
-            <div className="relative grid grid-cols-[120px_1fr_90px_70px_60px_50px_50px] items-center px-5 py-4 border-t border-border gap-3 overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-secondary/30 to-transparent pointer-events-none" />
-              <span className="relative text-xs font-black uppercase tracking-wider">TOTAL {viewYear}</span>
-              <div />
-              <span className={`relative text-sm font-black font-mono text-right ${ysTable.pnl >= 0 ? 'text-profit' : 'text-loss'}`}>
-                {ysTable.pnl >= 0 ? '+' : ''}{ysTable.pct.toFixed(2)}%
-              </span>
-              <span className="relative text-[10px] text-muted-foreground text-right font-mono font-semibold">
-                {ysTable.pnl >= 0 ? '+' : ''}{ysTable.pnl.toFixed(0)}$
-              </span>
-              <span className="relative text-[10px] text-muted-foreground text-center font-semibold">{ysTable.trades}tr</span>
-              <span className="relative text-[10px] text-profit text-center font-semibold">{ysTable.w}W</span>
-              <span className="relative text-[10px] text-loss text-center font-semibold">{ysTable.l}L</span>
-            </div>
-          </div>
-
-          {/* Heatmap */}
-          <div className="bg-card border border-border rounded-2xl p-5 overflow-x-auto">
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-4 flex items-center gap-1.5">
-              <Flame className="h-3 w-3 text-[hsl(25,95%,53%)]" />Heatmap
-            </p>
-            <div key={`heat-${viewYear}`} className="flex gap-1 items-start">
-              <div className="flex flex-col gap-1 mr-1 shrink-0">
-                {['Mon','','Wed','','Fri','','Sun'].map((d, i) => (
-                  <div key={i} className="h-[11px] text-[9px] text-muted-foreground/50 leading-none flex items-center">{d}</div>
-                ))}
-              </div>
-              {heatmapData.map((wk, wi) => (
-                <div key={wi} className="flex flex-col gap-1 shrink-0 animate-fade-in" style={{ animationDelay: `${Math.min(wi * 12, 650)}ms` }}>
-                  {wk.map((day, di) => {
-                    if (!day.inYear) return <div key={di} className="h-[11px] w-[11px]" />;
-                    const has = day.pnl !== undefined;
-                    const intens = has ? Math.min(Math.abs(day.pnl!) / heatMaxPnl, 1) * 0.7 + 0.25 : 0;
-                    const isT = day.date === today.toISOString().slice(0, 10);
-                    return (
-                      <div key={di}
-                        onClick={() => setJournalDate(day.date)}
-                        className={`h-[11px] w-[11px] rounded-[2px] cursor-pointer transition-all duration-200 hover:scale-150 hover:z-10 hover:rounded-[3px]
-                          ${!has ? 'bg-secondary/60 hover:bg-secondary' : ''}
-                          ${isT ? 'ring-1 ring-primary animate-ring-pulse' : ''}`}
-                        style={has ? {
-                          backgroundColor: pnlColor(day.pnl!, intens),
-                          boxShadow: intens > 0.7 ? `0 0 6px ${pnlColor(day.pnl!, 0.5)}` : undefined,
-                        } : undefined}
-                        title={has
-                          ? `${day.date} · ${day.pnl! >= 0 ? '+' : ''}${day.pnl!.toFixed(2)}$ (${day.count} trades)`
-                          : day.date}
-                      />
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
-            <div className="flex items-center gap-3 mt-4 pt-3 border-t border-border/40">
-              <span className="text-[10px] text-muted-foreground">Less</span>
-              {[0.15, 0.3, 0.5, 0.7, 0.9].map(o => (
-                <div key={o} className="h-[11px] w-[11px] rounded-[2px]" style={{ backgroundColor: `hsla(142,71%,45%,${o})` }} />
-              ))}
-              <span className="text-[10px] text-muted-foreground">More (profit)</span>
-              <div className="mx-2 h-3 w-px bg-border" />
-              {[0.15, 0.3, 0.5, 0.7, 0.9].map(o => (
-                <div key={o} className="h-[11px] w-[11px] rounded-[2px]" style={{ backgroundColor: `hsla(0,84%,60%,${o})` }} />
-              ))}
-              <span className="text-[10px] text-muted-foreground">More (loss)</span>
-            </div>
-          </div>
-        </TabsContent>
-      </Tabs>
 
       {journalDate && (
         <DailyJournalDialog
