@@ -29,6 +29,47 @@ export const tooltipItemStyle: React.CSSProperties = { color: 'hsl(0, 0%, 96%)',
 export const lineCursor = { stroke: 'hsla(215, 15%, 55%, 0.3)', strokeWidth: 1, strokeDasharray: '3 3' };
 export const barCursor = { fill: 'hsla(215, 15%, 55%, 0.06)' };
 
+/* ── Shared grid / axis / reference-line kit ─────────────────────────
+   Applied identically across every chart so the dashboard reads as one
+   coherent instrument panel rather than six differently-tuned charts. */
+
+const AXIS_FONT = 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace';
+
+/** Solid, faint horizontal-only gridlines — a flatter, more "terminal" read than dashed. */
+export const gridProps = {
+  stroke: 'hsla(215,15%,50%,0.12)',
+  strokeWidth: 1,
+  vertical: false as const,
+};
+
+/** Numeric axis ticks — tabular monospace, quiet color. */
+export const axisTick = {
+  fontSize: 10,
+  fill: 'hsla(215,15%,58%,0.8)',
+  fontFamily: AXIS_FONT,
+};
+
+/** Category axis ticks (e.g. pair names) — slightly brighter, still monospace. */
+export const catAxisTick = {
+  fontSize: 11,
+  fill: 'hsl(0,0%,78%)',
+  fontWeight: 500,
+  fontFamily: AXIS_FONT,
+};
+
+export const chartMargin = { top: 12, right: 8, left: 0, bottom: 4 };
+
+/** Zero baseline reference line. */
+export const zeroLine = { stroke: 'hsla(215,15%,55%,0.4)', strokeWidth: 1 };
+
+/** Dotted running-average line, tinted to the chart's accent when given. */
+export const medianLineStyle = (color?: string) => ({
+  stroke: color || 'hsl(38,92%,50%)',
+  strokeWidth: 1,
+  strokeDasharray: '4 4',
+  strokeOpacity: 0.75,
+});
+
 /**
  * Kept for backwards compatibility with chart files that still apply
  * `filter={url(#id)}`. Strength is reduced to near-zero so lines render

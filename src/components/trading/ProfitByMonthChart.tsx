@@ -1,7 +1,7 @@
 import { useId, useMemo } from 'react';
 import { ComposedChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid, Line, ReferenceLine } from 'recharts';
 import { niceTicks, niceDomain } from '@/lib/chartTicks';
-import { glassTooltip, tooltipLabelStyle, tooltipItemStyle, barCursor, Glow } from './chartFx';
+import { glassTooltip, tooltipLabelStyle, tooltipItemStyle, barCursor, Glow, gridProps, axisTick, chartMargin, zeroLine, medianLineStyle } from './chartFx';
 
 interface Props {
   data: { month: string; profit: number; count: number }[];
@@ -37,9 +37,9 @@ const ProfitByMonthChart = ({ data, accentColor, medianLineColor, medianLineVisi
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <ComposedChart data={dataAvg} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
+      <ComposedChart data={dataAvg} margin={chartMargin}>
         <defs>
-          <Glow id={`glow-${uid}`} strength={3} />
+          <Glow id={`glow-${uid}`} strength={0.7} />
           <linearGradient id={`monthProfit-${uid}`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={profitColor} stopOpacity={1} />
             <stop offset="100%" stopColor={profitColor} stopOpacity={0.4} />
@@ -49,15 +49,15 @@ const ProfitByMonthChart = ({ data, accentColor, medianLineColor, medianLineVisi
             <stop offset="100%" stopColor={lossColor} stopOpacity={1} />
           </linearGradient>
         </defs>
-        <CartesianGrid stroke="hsla(215,15%,55%,0.14)" strokeWidth={1} strokeDasharray="3 6" vertical={false} />
-        <ReferenceLine y={0} stroke="hsla(215,15%,55%,0.45)" strokeWidth={1} />
+        <CartesianGrid {...gridProps} />
+        <ReferenceLine y={0} {...zeroLine} />
         {medianLineVisible !== false && (
-          <Line type="monotone" dataKey="avgLine" stroke={medianLineColor || 'hsl(38,92%,50%)'} strokeWidth={1} strokeDasharray="5 5" strokeOpacity={0.8} dot={false} connectNulls />
+          <Line type="monotone" dataKey="avgLine" {...medianLineStyle(medianLineColor)} dot={false} connectNulls />
         )}
-        <XAxis dataKey="month" tick={{ fontSize: 10, fill: 'hsla(215, 15%, 55%, 0.7)' }} tickLine={false} axisLine={false} />
-        <YAxis domain={domain} ticks={ticks} tick={{ fontSize: 10, fill: 'hsla(215, 15%, 55%, 0.7)' }} tickLine={false} axisLine={false} tickFormatter={v => usePercent ? `${v.toFixed(v < 1 && v > -1 ? 1 : 0)}%` : `$${v}`} />
+        <XAxis dataKey="month" tick={axisTick} tickLine={false} axisLine={false} />
+        <YAxis domain={domain} ticks={ticks} tick={axisTick} tickLine={false} axisLine={false} tickFormatter={v => usePercent ? `${v.toFixed(v < 1 && v > -1 ? 1 : 0)}%` : `$${v}`} />
         <Tooltip cursor={barCursor} contentStyle={glassTooltip} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} formatter={(value: number, _: string, entry: any) => [usePercent ? `${value.toFixed(2)}% (${entry.payload.count} trades)` : `$${value.toFixed(2)} (${entry.payload.count} trades)`, 'Profit']} />
-        <Bar dataKey="profit" radius={[6, 6, 0, 0]} barSize={14}>
+        <Bar dataKey="profit" radius={[3, 3, 0, 0]} barSize={20}>
           {data.map((entry, index) => (
             <Cell
               key={index}

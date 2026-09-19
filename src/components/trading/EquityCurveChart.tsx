@@ -1,7 +1,7 @@
 import { useId, useMemo } from 'react';
 import { ComposedChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Line } from 'recharts';
 import { niceTicks, niceDomain } from '@/lib/chartTicks';
-import { glassTooltip, tooltipLabelStyle, tooltipItemStyle, lineCursor, Glow, makePulseDot } from './chartFx';
+import { glassTooltip, tooltipLabelStyle, tooltipItemStyle, lineCursor, Glow, makePulseDot, gridProps, axisTick, chartMargin, medianLineStyle } from './chartFx';
 
 interface EquityCurveChartProps {
   data: { date: string; balance: number; isLive?: boolean }[];
@@ -49,26 +49,26 @@ const EquityCurveChart = ({ data, accentColor, liveColor, medianLineColor, media
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
+      <ComposedChart data={chartData} margin={chartMargin}>
         <defs>
           <Glow id={`glow-${uid}`} />
           <linearGradient id={`balGrad-${uid}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity={0.55} />
+            <stop offset="0%" stopColor={color} stopOpacity={0.4} />
             <stop offset="55%" stopColor={color} stopOpacity={0.16} />
             <stop offset="100%" stopColor={color} stopOpacity={0.02} />
           </linearGradient>
           <linearGradient id={`liveGrad-${uid}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={live} stopOpacity={0.55} />
+            <stop offset="0%" stopColor={live} stopOpacity={0.4} />
             <stop offset="55%" stopColor={live} stopOpacity={0.16} />
             <stop offset="100%" stopColor={live} stopOpacity={0.02} />
           </linearGradient>
         </defs>
-        <CartesianGrid stroke="hsla(215,15%,55%,0.14)" strokeWidth={1} strokeDasharray="3 6" vertical={false} />
+        <CartesianGrid {...gridProps} />
         {medianLineVisible !== false && (
-          <Line type="monotone" dataKey="avgLine" stroke={medianLineColor || 'hsl(38,92%,50%)'} strokeWidth={1} strokeDasharray="5 5" strokeOpacity={0.8} dot={false} connectNulls />
+          <Line type="monotone" dataKey="avgLine" {...medianLineStyle(medianLineColor)} dot={false} connectNulls />
         )}
-        <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'hsla(215, 15%, 55%, 0.7)' }} tickLine={false} axisLine={false} />
-        <YAxis domain={domain} ticks={ticks} tick={{ fontSize: 10, fill: 'hsla(215, 15%, 55%, 0.7)' }} tickLine={false} axisLine={false} tickFormatter={v => `$${v.toLocaleString()}`} />
+        <XAxis dataKey="date" tick={axisTick} tickLine={false} axisLine={false} />
+        <YAxis domain={domain} ticks={ticks} tick={axisTick} tickLine={false} axisLine={false} tickFormatter={v => `$${v.toLocaleString()}`} />
         <Tooltip
           cursor={lineCursor}
           contentStyle={glassTooltip}
@@ -79,11 +79,11 @@ const EquityCurveChart = ({ data, accentColor, liveColor, medianLineColor, media
             name === 'balanceLive' ? 'Balance (Live 🔴)' : 'Balance',
           ]}
         />
-        <Area type="linear" dataKey="balanceClosed" stroke={color} fill={`url(#balGrad-${uid})`} strokeWidth={2.5} filter={`url(#glow-${uid})`}
+        <Area type="monotone" dataKey="balanceClosed" stroke={color} fill={`url(#balGrad-${uid})`} strokeWidth={2} filter={`url(#glow-${uid})`}
           dot={hasLive ? false : makePulseDot(data.length - 1, color)}
           activeDot={{ r: 4, fill: color, stroke: color, strokeWidth: 2 }} connectNulls={false} />
         {hasLive && (
-          <Area type="linear" dataKey="balanceLive" stroke={live} fill={`url(#liveGrad-${uid})`} strokeWidth={2.5} strokeDasharray="6 3" filter={`url(#glow-${uid})`}
+          <Area type="monotone" dataKey="balanceLive" stroke={live} fill={`url(#liveGrad-${uid})`} strokeWidth={2} strokeDasharray="6 3" filter={`url(#glow-${uid})`}
             dot={makePulseDot(data.length - 1, live)}
             activeDot={{ r: 4, fill: live, stroke: live, strokeWidth: 2 }} connectNulls={false} />
         )}
