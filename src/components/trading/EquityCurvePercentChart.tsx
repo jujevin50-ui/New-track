@@ -50,9 +50,9 @@ const EquityCurvePercentChart = ({ data, accentColor, liveColor, medianLineColor
     );
   }
 
-  const pctValues = data.map(d => d.percent);
-  const maxPct = Math.max(...pctValues);
-  const maxPctIdx = pctValues.indexOf(maxPct);
+  const pctValues = data.map(d => d.percent).filter(v => Number.isFinite(v));
+  const maxPct = pctValues.length ? Math.max(...pctValues) : 0;
+  const maxPctIdx = pctValues.length ? data.findIndex(d => d.percent === maxPct) : -1;
   const lastPoint = data[data.length - 1];
 
   return (
@@ -85,18 +85,18 @@ const EquityCurvePercentChart = ({ data, accentColor, liveColor, medianLineColor
           ]}
         />
         <Area type="monotone" dataKey="percentClosed" stroke={color} strokeWidth={2} fill={`url(#pctGrad-${uid})`} filter={`url(#glow-${uid})`}
-          dot={hasLive ? makeTurningPointDots(data, 'percentClosed', color, false) : makeTurningPointDots(data, 'percent', color)}
+          dot={hasLive ? makeTurningPointDots(chartData, 'percentClosed', color, false) : makeTurningPointDots(chartData, 'percentClosed', color)}
           activeDot={{ r: 4, stroke: color, fill: 'hsl(220, 18%, 10%)' }} connectNulls={false} />
         {hasLive && (
           <Area type="monotone" dataKey="percentLive" stroke={live} strokeWidth={2} strokeDasharray="6 3" fill={`url(#pctLiveGrad-${uid})`} filter={`url(#glow-${uid})`}
-            dot={makeTurningPointDots(data, 'percentLive', live)}
+            dot={makeTurningPointDots(chartData, 'percentLive', live)}
             activeDot={{ r: 4, stroke: live, fill: 'hsl(220, 18%, 10%)' }} connectNulls={false} />
         )}
-        {maxPctIdx !== data.length - 1 && (
+        {maxPctIdx !== -1 && maxPctIdx !== data.length - 1 && (
           <ReferenceDot x={data[maxPctIdx].date} y={maxPct} r={2.5} fill={color} stroke="none"
             label={{ value: `${maxPct.toFixed(1)}%`, position: 'top', fill: color, fontSize: 10, fontWeight: 700 }} />
         )}
-        {lastPoint && (
+        {lastPoint && Number.isFinite(lastPoint.percent) && (
           <ReferenceDot x={lastPoint.date} y={lastPoint.percent} r={0}
             label={{ value: `${lastPoint.percent.toFixed(1)}%`, position: 'top', fill: hasLive ? live : color, fontSize: 10, fontWeight: 700 }} />
         )}

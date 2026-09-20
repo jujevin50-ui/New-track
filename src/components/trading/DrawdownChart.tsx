@@ -31,9 +31,9 @@ const DrawdownChart = ({ data, accentColor, medianLineColor, medianLineVisible }
     );
   }
 
-  const ddValues = data.map(d => d.drawdown);
-  const worstDd = Math.min(...ddValues);
-  const worstDdIdx = ddValues.indexOf(worstDd);
+  const ddValues = data.map(d => d.drawdown).filter(v => Number.isFinite(v));
+  const worstDd = ddValues.length ? Math.min(...ddValues) : 0;
+  const worstDdIdx = ddValues.length ? data.findIndex(d => d.drawdown === worstDd) : -1;
 
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -55,9 +55,9 @@ const DrawdownChart = ({ data, accentColor, medianLineColor, medianLineVisible }
         <YAxis domain={domain} ticks={ticks} tick={axisTick} tickLine={false} axisLine={false} tickFormatter={v => `${v.toFixed(v < 1 ? 1 : 0)}%`} />
         <Tooltip cursor={lineCursor} contentStyle={glassTooltip} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} formatter={(value: number) => [`${value.toFixed(2)}%`, 'Drawdown']} />
         <Area type="monotone" dataKey="drawdown" stroke={color} fill={`url(#ddGrad-${uid})`} strokeWidth={2} filter={`url(#glow-${uid})`}
-          dot={makeTurningPointDots(data, 'drawdown', color)}
+          dot={makeTurningPointDots(dataAvg, 'drawdown', color)}
           activeDot={{ r: 4, fill: color, stroke: color, strokeWidth: 2 }} />
-        {worstDd < 0 && (
+        {worstDdIdx !== -1 && worstDd < 0 && (
           <ReferenceDot x={data[worstDdIdx].date} y={worstDd} r={2.5} fill={color} stroke="none"
             label={{ value: `${worstDd.toFixed(1)}%`, position: 'bottom', fill: color, fontSize: 10, fontWeight: 700 }} />
         )}

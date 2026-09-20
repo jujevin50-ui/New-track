@@ -39,10 +39,10 @@ const EquityCurveChart = ({ data, accentColor, liveColor, medianLineColor, media
     );
   }
 
-  const values = data.map(d => d.balance);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const maxIdx = values.indexOf(max);
+  const values = data.map(d => d.balance).filter(v => Number.isFinite(v));
+  const min = values.length ? Math.min(...values) : 0;
+  const max = values.length ? Math.max(...values) : 0;
+  const maxIdx = values.length ? data.findIndex(d => d.balance === max) : -1;
   const lastPoint = data[data.length - 1];
   const spread = max - min || min * 0.02;
   const padding = spread * 0.15;
@@ -82,18 +82,18 @@ const EquityCurveChart = ({ data, accentColor, liveColor, medianLineColor, media
           ]}
         />
         <Area type="monotone" dataKey="balanceClosed" stroke={color} fill={`url(#balGrad-${uid})`} strokeWidth={2} filter={`url(#glow-${uid})`}
-          dot={hasLive ? makeTurningPointDots(data, 'balanceClosed', color, false) : makeTurningPointDots(data, 'balance', color)}
+          dot={hasLive ? makeTurningPointDots(chartData, 'balanceClosed', color, false) : makeTurningPointDots(chartData, 'balanceClosed', color)}
           activeDot={{ r: 4, fill: color, stroke: color, strokeWidth: 2 }} connectNulls={false} />
         {hasLive && (
           <Area type="monotone" dataKey="balanceLive" stroke={live} fill={`url(#liveGrad-${uid})`} strokeWidth={2} strokeDasharray="6 3" filter={`url(#glow-${uid})`}
-            dot={makeTurningPointDots(data, 'balanceLive', live)}
+            dot={makeTurningPointDots(chartData, 'balanceLive', live)}
             activeDot={{ r: 4, fill: live, stroke: live, strokeWidth: 2 }} connectNulls={false} />
         )}
-        {maxIdx !== data.length - 1 && (
+        {maxIdx !== -1 && maxIdx !== data.length - 1 && (
           <ReferenceDot x={data[maxIdx].date} y={max} r={2.5} fill={color} stroke="none"
             label={{ value: `$${max.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, position: 'top', fill: color, fontSize: 10, fontWeight: 700 }} />
         )}
-        {lastPoint && (
+        {lastPoint && Number.isFinite(lastPoint.balance) && (
           <ReferenceDot x={lastPoint.date} y={lastPoint.balance} r={0}
             label={{ value: `$${lastPoint.balance.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, position: 'top', fill: hasLive ? live : color, fontSize: 10, fontWeight: 700 }} />
         )}
