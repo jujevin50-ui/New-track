@@ -223,14 +223,31 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
   const { updateAccount } = useAccounts();
   const lastAppliedRiskRef = useRef<number | null>(null);
   const { trades: rawTrades, allTrades: rawAllTrades } = useTrades(activeAccount?.id || null, activeAccount?.initialBalance || 0);
-  const [dateRange, setDateRange] = useState<DateRange>({ from: '', to: '' });
+  const [dateRange, setDateRangeState] = useState<DateRange>(() => {
+    try {
+      const saved = localStorage.getItem('dashboard-date-range');
+      return saved ? JSON.parse(saved) : { from: '', to: '' };
+    } catch { return { from: '', to: '' }; }
+  });
+  const setDateRange = useCallback((range: DateRange) => {
+    setDateRangeState(range);
+    localStorage.setItem('dashboard-date-range', JSON.stringify(range));
+  }, []);
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>(
     () => (localStorage.getItem('category-filter') as CategoryFilter) || 'All'
   );
   const setCategory = useCallback((cat: CategoryFilter) => {
     setCategoryFilter(cat); localStorage.setItem('category-filter', cat);
   }, []);
-  const [tradeLimit, setTradeLimit] = useState<number | null>(null);
+  const [tradeLimit, setTradeLimitState] = useState<number | null>(() => {
+    const saved = localStorage.getItem('dashboard-trade-limit');
+    return saved ? Number(saved) : null;
+  });
+  const setTradeLimit = useCallback((limit: number | null) => {
+    setTradeLimitState(limit);
+    if (limit === null) localStorage.removeItem('dashboard-trade-limit');
+    else localStorage.setItem('dashboard-trade-limit', String(limit));
+  }, []);
   const [view, setView] = useState<'account' | 'global'>(
     () => (localStorage.getItem('dashboard-view') as 'account' | 'global') || 'account'
   );
