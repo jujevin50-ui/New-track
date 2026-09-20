@@ -499,7 +499,7 @@ const WeeklyReport = ({ activeAccount, accounts }: WeeklyReportPageProps) => {
         </div>
       ) : view === 'gallery' ? (
         /* ══════════════ PDF GALLERY · browse reports left/right ══════════════ */
-        <div className="max-w-4xl mx-auto space-y-3">
+        <div className="max-w-6xl mx-auto space-y-3">
           {reportedWeekKeys.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-[50vh] gap-2 text-center">
               <FileText className="h-8 w-8 text-muted-foreground/40" />
@@ -534,7 +534,7 @@ const WeeklyReport = ({ activeAccount, accounts }: WeeklyReportPageProps) => {
               </div>
 
               {/* PDF preview */}
-              <div className="relative rounded-xl border border-border/60 bg-card overflow-hidden h-[75vh]">
+              <div className="relative rounded-xl border border-border/60 bg-card overflow-hidden" style={{ height: 'calc(100vh - 11rem)' }}>
                 {galleryLoading || !galleryUrl ? (
                   <div className="absolute inset-0 flex items-center justify-center gap-2 text-muted-foreground text-sm">
                     <div className="h-4 w-4 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
