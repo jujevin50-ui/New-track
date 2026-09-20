@@ -23,7 +23,7 @@ export function WelcomeSplash({ name, onDone }: WelcomeSplashProps) {
     <div
       className={`fixed inset-0 z-[200] flex items-center justify-center bg-background transition-opacity duration-500 ease-out ${fading ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
     >
-      <div className="animate-fade-in-up px-6">
+      <div className="animate-welcome-slide px-6">
         <span className="text-3xl md:text-5xl font-extrabold uppercase tracking-tight whitespace-nowrap bg-gradient-to-r from-foreground via-foreground to-foreground/50 bg-clip-text text-transparent">
           Welcome Back {name || 'Trader'}
         </span>
