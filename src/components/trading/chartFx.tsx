@@ -97,3 +97,36 @@ export const makePulseDot = (lastIndex: number, color: string) =>
       </g>
     );
   };
+
+/**
+ * Dots wherever the line changes direction (a local peak or trough versus its
+ * neighbors) plus a highlighted marker on the very last point — so a glance
+ * at the chart shows exactly where the trend turned, not just its endpoint.
+ */
+export const makeTurningPointDots = (data: Array<Record<string, any>>, key: string, color: string, showLastHighlight: boolean = true) =>
+  (props: any) => {
+    const { cx, cy, index } = props;
+    if (cx == null || cy == null) return <g key={`tp-${index}`} />;
+
+    const lastIndex = data.length - 1;
+    if (showLastHighlight && index === lastIndex) {
+      return (
+        <g key={`tp-${index}`}>
+          <circle cx={cx} cy={cy} r={5} fill={color} opacity={0.15} />
+          <circle cx={cx} cy={cy} r={3} fill={color} stroke="hsl(240, 12%, 9%)" strokeWidth={1.5} />
+        </g>
+      );
+    }
+    if (index <= 0 || index >= lastIndex) return <g key={`tp-${index}`} />;
+
+    const prev = data[index - 1]?.[key];
+    const curr = data[index]?.[key];
+    const next = data[index + 1]?.[key];
+    if (prev == null || curr == null || next == null) return <g key={`tp-${index}`} />;
+
+    const isPeak   = curr > prev && curr >= next;
+    const isTrough = curr < prev && curr <= next;
+    if (!isPeak && !isTrough) return <g key={`tp-${index}`} />;
+
+    return <circle key={`tp-${index}`} cx={cx} cy={cy} r={2.5} fill={color} stroke="hsl(240, 12%, 9%)" strokeWidth={1.2} />;
+  };

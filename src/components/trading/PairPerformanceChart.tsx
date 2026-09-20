@@ -1,5 +1,5 @@
 import { useId, useMemo } from 'react';
-import { ComposedChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid, ReferenceLine } from 'recharts';
+import { ComposedChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid, ReferenceLine, LabelList } from 'recharts';
 import { niceTicks, niceDomain } from '@/lib/chartTicks';
 import { glassTooltip, tooltipLabelStyle, tooltipItemStyle, barCursor, Glow, gridProps, axisTick, catAxisTick, zeroLine, medianLineStyle } from './chartFx';
 
@@ -52,6 +52,9 @@ const PairPerformanceChart = ({ data, accentColor, medianLineColor, medianLineVi
         <YAxis dataKey="pair" type="category" tick={catAxisTick} tickLine={false} axisLine={false} width={70} />
         <Tooltip cursor={barCursor} contentStyle={glassTooltip} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} formatter={(value: number) => [`${value >= 0 ? '+' : ''}${value.toFixed(2)}%`, 'Performance']} />
         <Bar dataKey="percent" radius={[0, 3, 3, 0]} barSize={16}>
+          <LabelList dataKey="percent" position="right"
+            formatter={(v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`}
+            style={{ fontSize: 10, fontWeight: 700, fill: 'hsla(0,0%,90%,0.9)' }} />
           {sorted.map((entry, index) => (
             <Cell
               key={index}

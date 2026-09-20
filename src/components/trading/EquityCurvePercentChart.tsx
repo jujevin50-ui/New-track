@@ -1,7 +1,7 @@
 import { useMemo, useId } from 'react';
 import { ComposedChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Line, ReferenceLine, ReferenceDot } from 'recharts';
 import { niceTicks, niceDomain } from '@/lib/chartTicks';
-import { glassTooltip, tooltipLabelStyle, tooltipItemStyle, lineCursor, Glow, makePulseDot, gridProps, axisTick, chartMargin, zeroLine, medianLineStyle } from './chartFx';
+import { glassTooltip, tooltipLabelStyle, tooltipItemStyle, lineCursor, Glow, makePulseDot, makeTurningPointDots, gridProps, axisTick, chartMargin, zeroLine, medianLineStyle } from './chartFx';
 
 interface Props {
   data: { date: string; percent: number; isLive?: boolean }[];
@@ -85,11 +85,11 @@ const EquityCurvePercentChart = ({ data, accentColor, liveColor, medianLineColor
           ]}
         />
         <Area type="monotone" dataKey="percentClosed" stroke={color} strokeWidth={2} fill={`url(#pctGrad-${uid})`} filter={`url(#glow-${uid})`}
-          dot={hasLive ? false : makePulseDot(data.length - 1, color)}
+          dot={hasLive ? makeTurningPointDots(data, 'percentClosed', color, false) : makeTurningPointDots(data, 'percent', color)}
           activeDot={{ r: 4, stroke: color, fill: 'hsl(220, 18%, 10%)' }} connectNulls={false} />
         {hasLive && (
           <Area type="monotone" dataKey="percentLive" stroke={live} strokeWidth={2} strokeDasharray="6 3" fill={`url(#pctLiveGrad-${uid})`} filter={`url(#glow-${uid})`}
-            dot={makePulseDot(data.length - 1, live)}
+            dot={makeTurningPointDots(data, 'percentLive', live)}
             activeDot={{ r: 4, stroke: live, fill: 'hsl(220, 18%, 10%)' }} connectNulls={false} />
         )}
         {maxPctIdx !== data.length - 1 && (

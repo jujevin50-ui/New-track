@@ -1,7 +1,7 @@
 import { useId, useMemo } from 'react';
 import { ComposedChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Line, ReferenceDot } from 'recharts';
 import { niceTicks, niceDomain } from '@/lib/chartTicks';
-import { glassTooltip, tooltipLabelStyle, tooltipItemStyle, lineCursor, Glow, makePulseDot, gridProps, axisTick, chartMargin, medianLineStyle } from './chartFx';
+import { glassTooltip, tooltipLabelStyle, tooltipItemStyle, lineCursor, Glow, makePulseDot, makeTurningPointDots, gridProps, axisTick, chartMargin, medianLineStyle } from './chartFx';
 
 interface EquityCurveChartProps {
   data: { date: string; balance: number; isLive?: boolean }[];
@@ -82,11 +82,11 @@ const EquityCurveChart = ({ data, accentColor, liveColor, medianLineColor, media
           ]}
         />
         <Area type="monotone" dataKey="balanceClosed" stroke={color} fill={`url(#balGrad-${uid})`} strokeWidth={2} filter={`url(#glow-${uid})`}
-          dot={hasLive ? false : makePulseDot(data.length - 1, color)}
+          dot={hasLive ? makeTurningPointDots(data, 'balanceClosed', color, false) : makeTurningPointDots(data, 'balance', color)}
           activeDot={{ r: 4, fill: color, stroke: color, strokeWidth: 2 }} connectNulls={false} />
         {hasLive && (
           <Area type="monotone" dataKey="balanceLive" stroke={live} fill={`url(#liveGrad-${uid})`} strokeWidth={2} strokeDasharray="6 3" filter={`url(#glow-${uid})`}
-            dot={makePulseDot(data.length - 1, live)}
+            dot={makeTurningPointDots(data, 'balanceLive', live)}
             activeDot={{ r: 4, fill: live, stroke: live, strokeWidth: 2 }} connectNulls={false} />
         )}
         {maxIdx !== data.length - 1 && (
