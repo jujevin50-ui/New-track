@@ -404,10 +404,19 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
 
   // ── Chart data ────────────────────────────────────────────────────
   const chartData = useMemo(() => {
-    const equityCurve = trades.reduce<{ date: string; balance: number; isLive?: boolean }[]>((acc, t, i) => {
+    const equityCurveTrades = trades.reduce<{ date: string; balance: number; isLive?: boolean }[]>((acc, t, i) => {
       acc.push({ date: t.date, balance: (i === 0 ? initialBalance : acc[i - 1].balance) + getNetResult(t), isLive: !t.endDate });
       return acc;
     }, []);
+    // Anchor the curve at the starting capital / 0% the day before the first trade,
+    // so charts visibly start from the initial balance instead of jumping in mid-flight.
+    const equityCurve = (() => {
+      if (equityCurveTrades.length === 0) return equityCurveTrades;
+      const d = new Date(trades[0].date);
+      d.setDate(d.getDate() - 1);
+      const startDate = d.toISOString().slice(0, 10);
+      return [{ date: startDate, balance: initialBalance, isLive: false }, ...equityCurveTrades];
+    })();
     const equityCurvePercent = equityCurve.map(p => ({
       date: p.date,
       percent: initialBalance > 0 ? ((p.balance - initialBalance) / initialBalance) * 100 : 0,

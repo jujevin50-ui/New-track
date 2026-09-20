@@ -80,7 +80,7 @@ export function AppLayout({ children, accounts, activeAccountId, onSelectAccount
           className="
             fixed top-4 right-4 z-40
             flex items-center gap-1.5
-            px-1.5 py-1.5 rounded-full
+            h-[60px] px-2.5 rounded-full
             bg-card/95 backdrop-blur-sm
             border border-border/60
             shadow-[0_8px_24px_rgba(0,0,0,0.15)]
@@ -92,7 +92,7 @@ export function AppLayout({ children, accounts, activeAccountId, onSelectAccount
               <button
                 key={f.key}
                 onClick={() => { setStatusFilter(f.key); setDropdownOpen(true); }}
-                className={`h-6 px-2 text-[10px] font-medium rounded-full transition-colors flex items-center gap-1 ${
+                className={`h-7 px-2.5 text-[10px] font-medium rounded-full transition-colors flex items-center gap-1 ${
                   statusFilter === f.key
                     ? 'bg-primary/15 text-primary border border-primary/30'
                     : 'text-muted-foreground hover:text-foreground border border-transparent hover:border-border/50'
@@ -115,7 +115,7 @@ export function AppLayout({ children, accounts, activeAccountId, onSelectAccount
                 onChange={e => { setSearch(e.target.value); setDropdownOpen(true); }}
                 onFocus={() => setDropdownOpen(true)}
                 placeholder={activeAccount ? activeAccount.name : 'All accounts'}
-                className="h-9 w-[160px] md:w-[220px] pl-8 text-xs bg-background/60 border-border/60 rounded-full"
+                className="h-10 w-[160px] md:w-[220px] pl-8 text-xs bg-background/60 border-border/60 rounded-full"
               />
             </div>
             {dropdownOpen && (

@@ -41,7 +41,7 @@ export function TopNav() {
         className="
           fixed top-4 left-1/2 -translate-x-1/2 z-50
           flex items-center gap-1
-          px-2 py-2 rounded-full
+          h-[60px] px-2.5 rounded-full
           bg-[#141414]
           border border-white/[0.06]
           shadow-[0_10px_40px_rgba(0,0,0,0.55)]
