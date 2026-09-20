@@ -82,11 +82,11 @@ const EquityCurveChart = ({ data, accentColor, liveColor, medianLineColor, media
           ]}
         />
         <Area type="monotone" dataKey="balanceClosed" stroke={color} fill={`url(#balGrad-${uid})`} strokeWidth={2} filter={`url(#glow-${uid})`}
-          dot={hasLive ? makeTurningPointDots(chartData, 'balanceClosed', color, false) : makeTurningPointDots(chartData, 'balanceClosed', color)}
+          dot={false}
           activeDot={{ r: 4, fill: color, stroke: color, strokeWidth: 2 }} connectNulls={false} />
         {hasLive && (
           <Area type="monotone" dataKey="balanceLive" stroke={live} fill={`url(#liveGrad-${uid})`} strokeWidth={2} strokeDasharray="6 3" filter={`url(#glow-${uid})`}
-            dot={makeTurningPointDots(chartData, 'balanceLive', live)}
+            dot={false}
             activeDot={{ r: 4, fill: live, stroke: live, strokeWidth: 2 }} connectNulls={false} />
         )}
         {maxIdx !== -1 && maxIdx !== data.length - 1 && (
