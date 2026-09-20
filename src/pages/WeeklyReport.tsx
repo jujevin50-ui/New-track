@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTrades } from '@/hooks/useTrades';
 import { useWeeklyReport, getWeekKey, getWeekRange, WeeklyReportData } from '@/hooks/useWeeklyReport';
 import { Account } from '@/types/account';
@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ChevronLeft, ChevronRight, Download, Save, Star, Image, List, FileText, Eye, MessageSquare, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, Save, Star, Image, List, FileText, Eye, MessageSquare, X, LayoutGrid } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
@@ -86,7 +86,7 @@ const WeeklyReport = ({ activeAccount, accounts }: WeeklyReportPageProps) => {
 
   const [currentWeekKey, setCurrentWeekKey] = useState(() => getWeekKey(new Date()));
   const [previewImgs, setPreviewImgs] = useState<string[] | null>(null);
-  const [view, setView] = useState<'edit' | 'all'>('all');
+  const [view, setView] = useState<'edit' | 'all' | 'gallery'>('all');
   const [commentingTradeId, setCommentingTradeId] = useState<string | null>(null);
   const [viewYear, setViewYear] = useState(() => new Date().getFullYear());
 
@@ -214,6 +214,28 @@ const WeeklyReport = ({ activeAccount, accounts }: WeeklyReportPageProps) => {
     setCurrentWeekKey(getWeekKey(d));
   };
 
+  // ── PDF Gallery — browse saved reports left/right, rendered inline ────
+  const reportedWeekKeys = useMemo(() => Object.keys(reports).sort(), [reports]);
+  const [galleryIndex, setGalleryIndex] = useState(0);
+  const [galleryUrl, setGalleryUrl] = useState<string | null>(null);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  const clampedGalleryIndex = reportedWeekKeys.length ? Math.min(galleryIndex, reportedWeekKeys.length - 1) : 0;
+  const galleryWeekKey = reportedWeekKeys[clampedGalleryIndex];
+
+  useEffect(() => {
+    if (view !== 'gallery' || !galleryWeekKey) { setGalleryUrl(null); return; }
+    let cancelled = false;
+    setGalleryLoading(true);
+    (async () => {
+      const url = await handleDownloadPDF(galleryWeekKey, reports[galleryWeekKey], getWeekTrades(galleryWeekKey), 'blob');
+      if (cancelled) return;
+      setGalleryUrl(prev => { if (prev) URL.revokeObjectURL(prev); return url || null; });
+      setGalleryLoading(false);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, galleryWeekKey]);
+
   const updateField = (field: keyof WeeklyReportData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -231,7 +253,7 @@ const WeeklyReport = ({ activeAccount, accounts }: WeeklyReportPageProps) => {
     setView('all');
   };
 
-  const handleDownloadPDF = async (weekKey?: string, reportData?: WeeklyReportData, wTrades?: Trade[], mode: 'download' | 'view' = 'download') => {
+  const handleDownloadPDF = async (weekKey?: string, reportData?: WeeklyReportData, wTrades?: Trade[], mode: 'download' | 'view' | 'blob' = 'download'): Promise<string | undefined> => {
     const targetWeekKey = weekKey || currentWeekKey;
     const targetData = reportData || formData;
     const targetRange = getWeekRange(targetWeekKey);
@@ -329,9 +351,13 @@ const WeeklyReport = ({ activeAccount, accounts }: WeeklyReportPageProps) => {
       const blobUrl = pdf.output('bloburl') as unknown as string;
       window.open(blobUrl, '_blank');
       toast.success('PDF opened');
+      return undefined;
+    } else if (mode === 'blob') {
+      return pdf.output('bloburl') as unknown as string;
     } else {
       pdf.save(`weekly-report-${targetWeekKey}.pdf`);
       toast.success('PDF downloaded');
+      return undefined;
     }
   };
 
@@ -394,6 +420,10 @@ const WeeklyReport = ({ activeAccount, accounts }: WeeklyReportPageProps) => {
           <button onClick={() => setView('all')}
             className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 transition-colors ${view === 'all' ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
             <List className="h-3.5 w-3.5" />All Reports
+          </button>
+          <button onClick={() => setView('gallery')}
+            className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 transition-colors ${view === 'gallery' ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
+            <LayoutGrid className="h-3.5 w-3.5" />PDF Gallery
           </button>
         </div>
       </div>
@@ -466,6 +496,69 @@ const WeeklyReport = ({ activeAccount, accounts }: WeeklyReportPageProps) => {
               </div>
             );
           })()}
+        </div>
+      ) : view === 'gallery' ? (
+        /* ══════════════ PDF GALLERY · browse reports left/right ══════════════ */
+        <div className="max-w-4xl mx-auto space-y-3">
+          {reportedWeekKeys.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-[50vh] gap-2 text-center">
+              <FileText className="h-8 w-8 text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground">No saved reports yet</p>
+              <p className="text-xs text-muted-foreground/60">Save a weekly report to see it here.</p>
+            </div>
+          ) : (
+            <>
+              {/* Navigation bar */}
+              <div className="flex items-center justify-between rounded-xl border border-border/60 bg-card px-3 py-2">
+                <button
+                  onClick={() => setGalleryIndex(i => Math.max(0, clampedGalleryIndex - 1))}
+                  disabled={clampedGalleryIndex === 0}
+                  className="h-8 w-8 rounded-lg border border-border/60 flex items-center justify-center hover:bg-secondary transition-colors disabled:opacity-30 disabled:pointer-events-none">
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <div className="text-center">
+                  <p className="text-sm font-bold tracking-tight">
+                    {galleryWeekKey && (() => {
+                      const r = getWeekRange(galleryWeekKey);
+                      return `${formatDate(r.start)} – ${formatDate(r.end)}`;
+                    })()}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground font-mono">{clampedGalleryIndex + 1} / {reportedWeekKeys.length}</p>
+                </div>
+                <button
+                  onClick={() => setGalleryIndex(i => Math.min(reportedWeekKeys.length - 1, clampedGalleryIndex + 1))}
+                  disabled={clampedGalleryIndex >= reportedWeekKeys.length - 1}
+                  className="h-8 w-8 rounded-lg border border-border/60 flex items-center justify-center hover:bg-secondary transition-colors disabled:opacity-30 disabled:pointer-events-none">
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* PDF preview */}
+              <div className="relative rounded-xl border border-border/60 bg-card overflow-hidden h-[75vh]">
+                {galleryLoading || !galleryUrl ? (
+                  <div className="absolute inset-0 flex items-center justify-center gap-2 text-muted-foreground text-sm">
+                    <div className="h-4 w-4 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+                    Generating report…
+                  </div>
+                ) : (
+                  <iframe src={galleryUrl} title="Weekly report PDF" className="w-full h-full" />
+                )}
+              </div>
+
+              <div className="flex items-center justify-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => { setCurrentWeekKey(galleryWeekKey); setView('edit'); }} className="gap-1.5 text-xs">
+                  <FileText className="h-3.5 w-3.5" />Edit This Week
+                </Button>
+                {galleryUrl && (
+                  <a href={galleryUrl} download={`weekly-report-${galleryWeekKey}.pdf`}>
+                    <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                      <Download className="h-3.5 w-3.5" />Download
+                    </Button>
+                  </a>
+                )}
+              </div>
+            </>
+          )}
         </div>
       ) : (
         /* ══════════════ EDIT VIEW ══════════════ */
