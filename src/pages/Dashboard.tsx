@@ -42,6 +42,22 @@ function RiskBar({ usedPct, invert }: { usedPct: number; invert?: boolean }) {
 function CalendarHeatmap({ dailyPnL }: { dailyPnL: Record<string, number> }) {
   const MONTHS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
   const DAYS   = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Remember where the user scrolled this panel to, across page visits
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const saved = localStorage.getItem('dashboard-heatmap-scroll');
+    if (saved) el.scrollLeft = Number(saved);
+    let raf = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => localStorage.setItem('dashboard-heatmap-scroll', String(el.scrollLeft)));
+    };
+    el.addEventListener('scroll', onScroll);
+    return () => { el.removeEventListener('scroll', onScroll); cancelAnimationFrame(raf); };
+  }, []);
 
   const months = useMemo(() => {
     const today  = new Date();
@@ -71,7 +87,7 @@ function CalendarHeatmap({ dailyPnL }: { dailyPnL: Record<string, number> }) {
   };
 
   return (
-    <div className="flex gap-5 overflow-x-auto pb-1">
+    <div ref={scrollRef} className="flex gap-5 overflow-x-auto pb-1">
       {months.map(({ year, month, days, maxAbs }) => (
         <div key={`${year}-${month}`} className="flex flex-col gap-1.5 min-w-fit">
           <span className="text-[11px] font-semibold text-muted-foreground">{MONTHS[month]} {year}</span>
@@ -269,7 +285,17 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
 
   const trades    = useMemo(() => { const f = filterTrades(rawTrades); return tradeLimit ? f.slice(-tradeLimit) : f; }, [rawTrades, filterTrades, tradeLimit]);
   const allTrades = useMemo(() => filterTrades(rawAllTrades), [rawAllTrades, filterTrades]);
-  const initialBalance = activeAccount?.initialBalance || 0;
+  // When viewing "All accounts", the initial balance must reflect only the
+  // accounts kept by the category filter — otherwise Balance mixes a filtered
+  // P&L with an unfiltered starting capital.
+  const initialBalance = useMemo(() => {
+    if (!activeAccount) return 0;
+    if (activeAccount.id === 'all') {
+      const scoped = filteredAccountIds ? accounts.filter(a => filteredAccountIds.includes(a.id)) : accounts;
+      return scoped.reduce((s, a) => s + a.initialBalance, 0);
+    }
+    return activeAccount.initialBalance || 0;
+  }, [activeAccount, accounts, filteredAccountIds]);
 
   const stats = useMemo((): StatsObj => {
     const totalProfit = trades.reduce((s, t) => s + getNetResult(t), 0);

@@ -1,5 +1,5 @@
 import { useId, useMemo } from 'react';
-import { ComposedChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Line, ReferenceLine } from 'recharts';
+import { ComposedChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Line, ReferenceLine, ReferenceDot } from 'recharts';
 import { niceTicks, niceDomain } from '@/lib/chartTicks';
 import { glassTooltip, tooltipLabelStyle, tooltipItemStyle, lineCursor, Glow, makePulseDot, gridProps, axisTick, chartMargin, zeroLine, medianLineStyle } from './chartFx';
 
@@ -31,6 +31,10 @@ const DrawdownChart = ({ data, accentColor, medianLineColor, medianLineVisible }
     );
   }
 
+  const ddValues = data.map(d => d.drawdown);
+  const worstDd = Math.min(...ddValues);
+  const worstDdIdx = ddValues.indexOf(worstDd);
+
   return (
     <ResponsiveContainer width="100%" height="100%">
       <ComposedChart data={dataAvg} margin={chartMargin}>
@@ -53,6 +57,10 @@ const DrawdownChart = ({ data, accentColor, medianLineColor, medianLineVisible }
         <Area type="monotone" dataKey="drawdown" stroke={color} fill={`url(#ddGrad-${uid})`} strokeWidth={2} filter={`url(#glow-${uid})`}
           dot={makePulseDot(data.length - 1, color)}
           activeDot={{ r: 4, fill: color, stroke: color, strokeWidth: 2 }} />
+        {worstDd < 0 && (
+          <ReferenceDot x={data[worstDdIdx].date} y={worstDd} r={2.5} fill={color} stroke="none"
+            label={{ value: `${worstDd.toFixed(1)}%`, position: 'bottom', fill: color, fontSize: 10, fontWeight: 700 }} />
+        )}
       </ComposedChart>
     </ResponsiveContainer>
   );

@@ -1,5 +1,5 @@
 import { useMemo, useId } from 'react';
-import { ComposedChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Line, ReferenceLine } from 'recharts';
+import { ComposedChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Line, ReferenceLine, ReferenceDot } from 'recharts';
 import { niceTicks, niceDomain } from '@/lib/chartTicks';
 import { glassTooltip, tooltipLabelStyle, tooltipItemStyle, lineCursor, Glow, makePulseDot, gridProps, axisTick, chartMargin, zeroLine, medianLineStyle } from './chartFx';
 
@@ -50,6 +50,11 @@ const EquityCurvePercentChart = ({ data, accentColor, liveColor, medianLineColor
     );
   }
 
+  const pctValues = data.map(d => d.percent);
+  const maxPct = Math.max(...pctValues);
+  const maxPctIdx = pctValues.indexOf(maxPct);
+  const lastPoint = data[data.length - 1];
+
   return (
     <ResponsiveContainer width="100%" height="100%">
       <ComposedChart data={chartData} margin={chartMargin}>
@@ -86,6 +91,14 @@ const EquityCurvePercentChart = ({ data, accentColor, liveColor, medianLineColor
           <Area type="monotone" dataKey="percentLive" stroke={live} strokeWidth={2} strokeDasharray="6 3" fill={`url(#pctLiveGrad-${uid})`} filter={`url(#glow-${uid})`}
             dot={makePulseDot(data.length - 1, live)}
             activeDot={{ r: 4, stroke: live, fill: 'hsl(220, 18%, 10%)' }} connectNulls={false} />
+        )}
+        {maxPctIdx !== data.length - 1 && (
+          <ReferenceDot x={data[maxPctIdx].date} y={maxPct} r={2.5} fill={color} stroke="none"
+            label={{ value: `${maxPct.toFixed(1)}%`, position: 'top', fill: color, fontSize: 10, fontWeight: 700 }} />
+        )}
+        {lastPoint && (
+          <ReferenceDot x={lastPoint.date} y={lastPoint.percent} r={0}
+            label={{ value: `${lastPoint.percent.toFixed(1)}%`, position: 'top', fill: hasLive ? live : color, fontSize: 10, fontWeight: 700 }} />
         )}
       </ComposedChart>
     </ResponsiveContainer>

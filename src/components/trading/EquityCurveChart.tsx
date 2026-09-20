@@ -1,5 +1,5 @@
 import { useId, useMemo } from 'react';
-import { ComposedChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Line } from 'recharts';
+import { ComposedChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Line, ReferenceDot } from 'recharts';
 import { niceTicks, niceDomain } from '@/lib/chartTicks';
 import { glassTooltip, tooltipLabelStyle, tooltipItemStyle, lineCursor, Glow, makePulseDot, gridProps, axisTick, chartMargin, medianLineStyle } from './chartFx';
 
@@ -42,6 +42,8 @@ const EquityCurveChart = ({ data, accentColor, liveColor, medianLineColor, media
   const values = data.map(d => d.balance);
   const min = Math.min(...values);
   const max = Math.max(...values);
+  const maxIdx = values.indexOf(max);
+  const lastPoint = data[data.length - 1];
   const spread = max - min || min * 0.02;
   const padding = spread * 0.15;
   const domain = niceDomain(min - padding, max + padding);
@@ -86,6 +88,14 @@ const EquityCurveChart = ({ data, accentColor, liveColor, medianLineColor, media
           <Area type="monotone" dataKey="balanceLive" stroke={live} fill={`url(#liveGrad-${uid})`} strokeWidth={2} strokeDasharray="6 3" filter={`url(#glow-${uid})`}
             dot={makePulseDot(data.length - 1, live)}
             activeDot={{ r: 4, fill: live, stroke: live, strokeWidth: 2 }} connectNulls={false} />
+        )}
+        {maxIdx !== data.length - 1 && (
+          <ReferenceDot x={data[maxIdx].date} y={max} r={2.5} fill={color} stroke="none"
+            label={{ value: `$${max.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, position: 'top', fill: color, fontSize: 10, fontWeight: 700 }} />
+        )}
+        {lastPoint && (
+          <ReferenceDot x={lastPoint.date} y={lastPoint.balance} r={0}
+            label={{ value: `$${lastPoint.balance.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, position: 'top', fill: hasLive ? live : color, fontSize: 10, fontWeight: 700 }} />
         )}
       </ComposedChart>
     </ResponsiveContainer>
