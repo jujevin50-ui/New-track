@@ -11,6 +11,8 @@ import { BarChart3, FolderOpen, FilePlus, HardDrive, RefreshCw } from "lucide-re
 import { Trade } from "@/types/trade";
 import { getNetResult } from "@/types/trade";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { WelcomeSplash } from "@/components/trading/WelcomeSplash";
 
 // Reload once when a lazy chunk fails to load (stale assets after a new deploy).
 function lazyWithReload<T extends { default: ComponentType<any> }>(
@@ -115,6 +117,8 @@ function FileSetupScreen() {
 const AppContent = () => {
   const { status, data } = useData();
   const { accounts, activeAccount, activeAccountId, setActiveAccountId, addAccount, updateAccount, deleteAccount, categories } = useAccounts();
+  const { userName } = useUserProfile();
+  const [showSplash, setShowSplash] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
   const [routeRestored, setRouteRestored] = useState(false);
@@ -164,7 +168,9 @@ const AppContent = () => {
     : activeAccount;
 
   return (
-    <AppLayout accounts={accounts} activeAccountId={activeAccountId} onSelectAccount={setActiveAccountId}>
+    <>
+      {showSplash && <WelcomeSplash name={userName} onDone={() => setShowSplash(false)} />}
+      <AppLayout accounts={accounts} activeAccountId={activeAccountId} onSelectAccount={setActiveAccountId}>
       <ErrorBoundary>
       <Suspense fallback={<PageLoader />}>
         <Routes>
@@ -192,7 +198,8 @@ const AppContent = () => {
         </Routes>
       </Suspense>
       </ErrorBoundary>
-    </AppLayout>
+      </AppLayout>
+    </>
   );
 };
 
