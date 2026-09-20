@@ -268,6 +268,12 @@
 }
 .animate-welcome-slide { animation: welcomeSlideIn 0.9s cubic-bezier(0.16,1,0.3,1) both; }
 
+@keyframes letterIn {
+  from { opacity: 0; transform: translateX(-14px); }
+  to   { opacity: 1; transform: translateX(0);      }
+}
+.animate-letter-in { animation: letterIn 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+
 .animate-page-in      { animation: pageIn      0.38s cubic-bezier(0.16,1,0.3,1) both; }
 .animate-fade-in-up   { animation: fadeInUp    0.4s  cubic-bezier(0.16,1,0.3,1) both; }
 .animate-fade-in      { animation: fadeIn      0.3s  ease-out                   both; }
@@ -300,7 +306,7 @@
   .animate-page-in, .animate-fade-in-up, .animate-fade-in, .animate-scale-in,
   .animate-glow-pulse, .animate-shimmer, .animate-slide-right, .animate-number-in,
   .animate-pop-in, .animate-bar-grow, .animate-gradient-x, .animate-ring-pulse,
-  .animate-flicker, .animate-welcome-slide, .shine::before {
+  .animate-flicker, .animate-welcome-slide, .animate-letter-in, .shine::before {
     animation: none !important;
   }
 }
