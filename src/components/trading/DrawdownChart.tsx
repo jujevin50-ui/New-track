@@ -55,7 +55,7 @@ const DrawdownChart = ({ data, accentColor, medianLineColor, medianLineVisible }
         <YAxis domain={domain} ticks={ticks} tick={axisTick} tickLine={false} axisLine={false} tickFormatter={v => `${v.toFixed(v < 1 ? 1 : 0)}%`} />
         <Tooltip cursor={lineCursor} contentStyle={glassTooltip} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} formatter={(value: number) => [`${value.toFixed(2)}%`, 'Drawdown']} />
         <Area type="monotone" dataKey="drawdown" stroke={color} fill={`url(#ddGrad-${uid})`} strokeWidth={2} filter={`url(#glow-${uid})`}
-          dot={false}
+          dot={makeTurningPointDots(dataAvg, 'drawdown', color)}
           activeDot={{ r: 4, fill: color, stroke: color, strokeWidth: 2 }} />
         {worstDdIdx !== -1 && worstDd < 0 && (
           <ReferenceDot x={data[worstDdIdx].date} y={worstDd} r={2.5} fill={color} stroke="none"

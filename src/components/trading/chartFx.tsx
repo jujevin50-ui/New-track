@@ -35,11 +35,11 @@ export const barCursor = { fill: 'hsla(215, 15%, 55%, 0.06)' };
 
 const AXIS_FONT = 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace';
 
-/** Solid, faint horizontal-only gridlines — a flatter, more "terminal" read than dashed. */
+/** Solid, faint grid — horizontal and vertical — a "terminal" read with a line per trade. */
 export const gridProps = {
   stroke: 'hsla(215,15%,50%,0.12)',
   strokeWidth: 1,
-  vertical: false as const,
+  vertical: true,
 };
 
 /** Numeric axis ticks — tabular monospace, quiet color. */
