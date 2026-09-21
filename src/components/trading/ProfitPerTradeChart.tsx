@@ -1,9 +1,9 @@
 import { useId, useMemo } from 'react';
-import { ComposedChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid, Line, ReferenceLine } from 'recharts';
+import { ComposedChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid, Line, ReferenceLine, LabelList } from 'recharts';
 import { Trade, getNetResult } from '@/types/trade';
 import { Account } from '@/types/account';
 import { niceTicks, niceDomain } from '@/lib/chartTicks';
-import { glassTooltip, tooltipLabelStyle, tooltipItemStyle, barCursor, gridProps, axisTick, chartMargin, zeroLine, medianLineStyle } from './chartFx';
+import { glassTooltip, tooltipLabelStyle, tooltipItemStyle, barCursor, gridProps, axisTick, chartMargin, zeroLine, medianLineStyle, valueLabelStyle } from './chartFx';
 
 interface ProfitPerTradeChartProps {
   trades: Trade[];
@@ -66,8 +66,11 @@ const ProfitPerTradeChart = ({ trades, accounts, accentColor, medianLineColor, m
         )}
         <XAxis dataKey="name" tick={axisTick} tickLine={false} axisLine={false} />
         <YAxis domain={domain} ticks={ticks} tick={axisTick} tickLine={false} axisLine={false} tickFormatter={v => `${v}%`} />
-        <Tooltip cursor={barCursor} contentStyle={glassTooltip} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} formatter={(value: number, _name: string, entry: any) => [`${value.toFixed(2)}%`, entry.payload.pair]} />
+        <Tooltip cursor={barCursor} contentStyle={glassTooltip} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} formatter={(value: number, name: string, entry: any) => [`${value.toFixed(2)}%`, name === 'avgLine' ? 'Average' : entry.payload.pair]} />
         <Bar dataKey="profit" radius={[3, 3, 0, 0]} maxBarSize={28}>
+          <LabelList dataKey="profit" position="top"
+            formatter={(v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`}
+            style={valueLabelStyle} />
           {data.map((entry, index) => (
             <Cell
               key={index}

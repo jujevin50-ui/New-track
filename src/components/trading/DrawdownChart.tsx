@@ -1,7 +1,7 @@
 import { useId, useMemo } from 'react';
 import { ComposedChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Line, ReferenceLine, ReferenceDot } from 'recharts';
 import { niceTicks, niceDomain } from '@/lib/chartTicks';
-import { glassTooltip, tooltipLabelStyle, tooltipItemStyle, lineCursor, Glow, makePulseDot, makeTurningPointDots, gridProps, axisTick, chartMargin, zeroLine, medianLineStyle } from './chartFx';
+import { glassTooltip, tooltipLabelStyle, tooltipItemStyle, lineCursor, Glow, makePulseDot, makeTurningPointDots, gridProps, axisTick, chartMargin, zeroLine, medianLineStyle, valueLabelStyle } from './chartFx';
 
 interface DrawdownChartProps {
   data: { date: string; drawdown: number }[];
@@ -53,13 +53,13 @@ const DrawdownChart = ({ data, accentColor, medianLineColor, medianLineVisible }
         )}
         <XAxis dataKey="date" tick={axisTick} tickLine={false} axisLine={false} />
         <YAxis domain={domain} ticks={ticks} tick={axisTick} tickLine={false} axisLine={false} tickFormatter={v => `${v.toFixed(v < 1 ? 1 : 0)}%`} />
-        <Tooltip cursor={lineCursor} contentStyle={glassTooltip} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} formatter={(value: number) => [`${value.toFixed(2)}%`, 'Drawdown']} />
+        <Tooltip cursor={lineCursor} contentStyle={glassTooltip} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} formatter={(value: number, name: string) => [`${value.toFixed(2)}%`, name === 'avgLine' ? 'Average' : 'Drawdown']} />
         <Area type="monotone" dataKey="drawdown" stroke={color} fill={`url(#ddGrad-${uid})`} strokeWidth={2} filter={`url(#glow-${uid})`}
           dot={makeTurningPointDots(dataAvg, 'drawdown', color)}
           activeDot={{ r: 4, fill: color, stroke: color, strokeWidth: 2 }} />
         {worstDdIdx !== -1 && worstDd < 0 && (
           <ReferenceDot x={data[worstDdIdx].date} y={worstDd} r={2.5} fill={color} stroke="none"
-            label={{ value: `${worstDd.toFixed(1)}%`, position: 'bottom', fill: color, fontSize: 10, fontWeight: 700 }} />
+            label={{ value: `${worstDd.toFixed(1)}%`, position: 'bottom', ...valueLabelStyle }} />
         )}
       </ComposedChart>
     </ResponsiveContainer>

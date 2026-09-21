@@ -78,7 +78,7 @@ const EquityCurveChart = ({ data, accentColor, liveColor, medianLineColor, media
           itemStyle={tooltipItemStyle}
           formatter={(value: number, name: string) => [
             `$${value.toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
-            name === 'balanceLive' ? 'Balance (Live 🔴)' : 'Balance',
+            name === 'avgLine' ? 'Average' : name === 'balanceLive' ? 'Balance (Live 🔴)' : 'Balance',
           ]}
         />
         <Area type="monotone" dataKey="balanceClosed" stroke={color} fill={`url(#balGrad-${uid})`} strokeWidth={2} filter={`url(#glow-${uid})`}

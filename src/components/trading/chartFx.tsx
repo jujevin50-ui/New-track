@@ -59,6 +59,13 @@ export const catAxisTick = {
 
 export const chartMargin = { top: 12, right: 8, left: 0, bottom: 4 };
 
+/** Neutral value-label style for on-chart numbers — muted gray, never bold/colored by sign. */
+export const valueLabelStyle = {
+  fontSize: 10,
+  fontWeight: 500,
+  fill: 'hsla(215,15%,65%,0.85)',
+};
+
 /** Zero baseline reference line. */
 export const zeroLine = { stroke: 'hsla(215,15%,55%,0.4)', strokeWidth: 1 };
 

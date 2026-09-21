@@ -81,7 +81,7 @@ const EquityCurvePercentChart = ({ data, accentColor, liveColor, medianLineColor
         <Tooltip cursor={lineCursor} contentStyle={glassTooltip} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle}
           formatter={(value: number, name: string) => [
             `${value.toFixed(2)}%`,
-            name === 'percentLive' ? 'Performance (Live 🔴)' : 'Performance',
+            name === 'avgLine' ? 'Average' : name === 'percentLive' ? 'Performance (Live 🔴)' : 'Performance',
           ]}
         />
         <Area type="monotone" dataKey="percentClosed" stroke={color} strokeWidth={2} fill={`url(#pctGrad-${uid})`} filter={`url(#glow-${uid})`}

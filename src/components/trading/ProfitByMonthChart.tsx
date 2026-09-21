@@ -1,7 +1,7 @@
 import { useId, useMemo } from 'react';
 import { ComposedChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid, Line, ReferenceLine, LabelList } from 'recharts';
 import { niceTicks, niceDomain } from '@/lib/chartTicks';
-import { glassTooltip, tooltipLabelStyle, tooltipItemStyle, barCursor, Glow, gridProps, axisTick, chartMargin, zeroLine, medianLineStyle } from './chartFx';
+import { glassTooltip, tooltipLabelStyle, tooltipItemStyle, barCursor, Glow, gridProps, axisTick, chartMargin, zeroLine, medianLineStyle, valueLabelStyle } from './chartFx';
 
 interface Props {
   data: { month: string; profit: number; count: number }[];
@@ -56,11 +56,11 @@ const ProfitByMonthChart = ({ data, accentColor, medianLineColor, medianLineVisi
         )}
         <XAxis dataKey="month" tick={axisTick} tickLine={false} axisLine={false} />
         <YAxis domain={domain} ticks={ticks} tick={axisTick} tickLine={false} axisLine={false} tickFormatter={v => usePercent ? `${v.toFixed(v < 1 && v > -1 ? 1 : 0)}%` : `$${v}`} />
-        <Tooltip cursor={barCursor} contentStyle={glassTooltip} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} formatter={(value: number, _: string, entry: any) => [usePercent ? `${value.toFixed(2)}% (${entry.payload.count} trades)` : `$${value.toFixed(2)} (${entry.payload.count} trades)`, 'Profit']} />
+        <Tooltip cursor={barCursor} contentStyle={glassTooltip} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} formatter={(value: number, name: string, entry: any) => [usePercent ? `${value.toFixed(2)}% (${entry.payload.count} trades)` : `$${value.toFixed(2)} (${entry.payload.count} trades)`, name === 'avgLine' ? 'Average' : 'Profit']} />
         <Bar dataKey="profit" radius={[3, 3, 0, 0]} barSize={20}>
           <LabelList dataKey="profit" position="top"
             formatter={(v: number) => usePercent ? `${v >= 0 ? '+' : ''}${v.toFixed(1)}%` : `${v >= 0 ? '+' : ''}$${v.toFixed(0)}`}
-            style={{ fontSize: 10, fontWeight: 700, fill: 'hsla(0,0%,90%,0.9)' }} />
+            style={valueLabelStyle} />
           {data.map((entry, index) => (
             <Cell
               key={index}
