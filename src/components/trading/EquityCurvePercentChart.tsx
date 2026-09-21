@@ -1,7 +1,7 @@
 import { useMemo, useId } from 'react';
 import { ComposedChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Line, ReferenceLine, ReferenceDot } from 'recharts';
 import { niceTicks, niceDomain } from '@/lib/chartTicks';
-import { glassTooltip, tooltipLabelStyle, tooltipItemStyle, lineCursor, Glow, makePulseDot, makeTurningPointDots, gridProps, axisTick, chartMargin, zeroLine, medianLineStyle } from './chartFx';
+import { glassTooltip, tooltipLabelStyle, tooltipItemStyle, lineCursor, Glow, makePulseDot, makeTurningPointDots, gridProps, axisTick, chartMargin, zeroLine, medianLineStyle, valueLabelStyle } from './chartFx';
 
 interface Props {
   data: { date: string; percent: number; isLive?: boolean }[];
@@ -94,11 +94,11 @@ const EquityCurvePercentChart = ({ data, accentColor, liveColor, medianLineColor
         )}
         {maxPctIdx !== -1 && maxPctIdx !== data.length - 1 && (
           <ReferenceDot x={data[maxPctIdx].date} y={maxPct} r={2.5} fill={color} stroke="none"
-            label={{ value: `${maxPct.toFixed(1)}%`, position: 'top', fill: color, fontSize: 10, fontWeight: 700 }} />
+            label={{ value: `${maxPct.toFixed(1)}%`, position: 'top', ...valueLabelStyle }} />
         )}
         {lastPoint && Number.isFinite(lastPoint.percent) && (
           <ReferenceDot x={lastPoint.date} y={lastPoint.percent} r={0}
-            label={{ value: `${lastPoint.percent.toFixed(1)}%`, position: 'top', fill: hasLive ? live : color, fontSize: 10, fontWeight: 700 }} />
+            label={{ value: `${lastPoint.percent.toFixed(1)}%`, position: 'top', ...valueLabelStyle }} />
         )}
       </ComposedChart>
     </ResponsiveContainer>

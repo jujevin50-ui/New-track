@@ -1,7 +1,7 @@
 import { useId, useMemo } from 'react';
 import { ComposedChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Line, ReferenceDot } from 'recharts';
 import { niceTicks, niceDomain } from '@/lib/chartTicks';
-import { glassTooltip, tooltipLabelStyle, tooltipItemStyle, lineCursor, Glow, makePulseDot, makeTurningPointDots, gridProps, axisTick, chartMargin, medianLineStyle } from './chartFx';
+import { glassTooltip, tooltipLabelStyle, tooltipItemStyle, lineCursor, Glow, makePulseDot, makeTurningPointDots, gridProps, axisTick, chartMargin, medianLineStyle, valueLabelStyle } from './chartFx';
 
 interface EquityCurveChartProps {
   data: { date: string; balance: number; isLive?: boolean }[];
@@ -91,11 +91,11 @@ const EquityCurveChart = ({ data, accentColor, liveColor, medianLineColor, media
         )}
         {maxIdx !== -1 && maxIdx !== data.length - 1 && (
           <ReferenceDot x={data[maxIdx].date} y={max} r={2.5} fill={color} stroke="none"
-            label={{ value: `$${max.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, position: 'top', fill: color, fontSize: 10, fontWeight: 700 }} />
+            label={{ value: `$${max.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, position: 'top', ...valueLabelStyle }} />
         )}
         {lastPoint && Number.isFinite(lastPoint.balance) && (
           <ReferenceDot x={lastPoint.date} y={lastPoint.balance} r={0}
-            label={{ value: `$${lastPoint.balance.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, position: 'top', fill: hasLive ? live : color, fontSize: 10, fontWeight: 700 }} />
+            label={{ value: `$${lastPoint.balance.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, position: 'top', ...valueLabelStyle }} />
         )}
       </ComposedChart>
     </ResponsiveContainer>
