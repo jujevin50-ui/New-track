@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Star, Clipboard, X, Image as ImageIcon, Check, ChevronsUpDown, Sparkles, Upload, Loader2 } from 'lucide-react';
+import { Star, Clipboard, X, Image as ImageIcon, Check, ChevronsUpDown, Sparkles, Loader2 } from 'lucide-react';
 
 const PairCombobox = ({ value, onChange, className }: { value: string; onChange: (v: string) => void; className?: string }) => {
   const [open, setOpen] = useState(false);
@@ -225,6 +225,23 @@ const AddTradeDialog = ({ open, onOpenChange, onSubmit, editTrade, accounts, act
     }
   }, [addImage]);
 
+  const handleAiPasteEvent = useCallback((e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      if (!items[i].type.startsWith('image/')) continue;
+      const blob = items[i].getAsFile();
+      if (blob) {
+        const file = new File([blob], `trade-${Date.now()}-${i}.png`, { type: blob.type || 'image/png' });
+        setAiFiles(prev => [...prev, file]);
+        setAiTrades([]);
+        setAiError('');
+      }
+      e.preventDefault();
+      return;
+    }
+  }, []);
+
   const net = form.result - form.commission - form.swap;
   const balance = accounts.find(a => a.id === form.accountId)?.initialBalance || 0;
   const rValue = form.riskPercent && form.riskPercent > 0 && balance > 0
@@ -290,7 +307,7 @@ Règles:
 
   const aiDialog = (
     <Dialog open={aiOpen} onOpenChange={v => { setAiOpen(v); if (!v) resetAi(); }}>
-      <DialogContent className="sm:max-w-5xl bg-card border-border max-h-[90vh] overflow-y-auto">
+      <DialogContent onPaste={handleAiPasteEvent} className="sm:max-w-5xl bg-card border-border max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-4 w-4" /> Import IA de plusieurs trades
@@ -303,24 +320,17 @@ Règles:
             Tu peux toujours utiliser <b>New Trade</b> manuellement.
           </div>
 
+          <div
+            tabIndex={0}
+            className="flex min-h-28 flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border bg-secondary/40 px-6 py-5 text-center outline-none transition-colors hover:bg-secondary/70 focus:border-primary/60"
+          >
+            <Clipboard className="h-6 w-6 text-muted-foreground" />
+            <div className="text-sm font-medium">Colle tes screenshots ici</div>
+            <div className="text-xs text-muted-foreground">Ctrl + V après avoir fait une capture d'écran — chaque collage ajoute un trade</div>
+            <span className="text-xs font-medium text-primary">{aiFiles.length} capture(s) prête(s)</span>
+          </div>
           <div className="flex flex-wrap items-center gap-3">
-            <label className="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-secondary cursor-pointer hover:bg-secondary/80 text-sm">
-              <Upload className="h-4 w-4" />
-              Choisir les captures
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={e => {
-                  const files = Array.from(e.target.files || []);
-                  setAiFiles(files);
-                  setAiTrades([]);
-                  setAiError('');
-                }}
-              />
-            </label>
-            <span className="text-xs text-muted-foreground">{aiFiles.length} capture(s) sélectionnée(s)</span>
+            <span className="text-xs text-muted-foreground">Tu peux coller autant de screenshots que nécessaire, puis tout analyser en une seule requête.</span>
             {aiFiles.length > 12 && <span className="text-xs text-amber-500">Conseil : 12 maximum par lot pour rester léger.</span>}
           </div>
 
