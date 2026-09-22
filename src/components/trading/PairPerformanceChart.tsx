@@ -54,7 +54,7 @@ const PairPerformanceChart = ({ data, accentColor, medianLineColor, medianLineVi
         <Bar dataKey="percent" radius={[0, 3, 3, 0]} barSize={16}>
           <LabelList dataKey="percent" position="right"
             formatter={(v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`}
-            style={valueLabelStyle} />
+            style={{ ...valueLabelStyle, fontWeight: 400, fill: 'hsl(215, 15%, 65%)' }} />
           {sorted.map((entry, index) => (
             <Cell
               key={index}

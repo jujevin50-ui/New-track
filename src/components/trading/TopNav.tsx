@@ -11,12 +11,12 @@ import { NotionImportDialog } from './NotionImportDialog';
 import { useAccounts } from '@/hooks/useAccounts';
 
 const NAV_ITEMS = [
-  { id: 'dashboard',      title: 'Dashboard',       url: '/' },
-  { id: 'calendar',       title: 'Calendar',         url: '/calendar' },
-  { id: 'trades',         title: 'Trades',           url: '/trades' },
-  { id: 'weekly-report',  title: 'Weekly Report',    url: '/weekly-report' },
-  { id: 'ai-assistant',   title: 'AI Assistant',     url: '/ai-assistant' },
-  { id: 'accounts',       title: 'Accounts',         url: '/accounts' },
+  { id: 'dashboard',      title: 'Dashboard',   url: '/' },
+  { id: 'calendar',       title: 'Calendar',     url: '/calendar' },
+  { id: 'trades',         title: 'Trades',       url: '/trades' },
+  { id: 'reports',        title: 'Reports',      url: '/reports' },
+  { id: 'ai-assistant',   title: 'AI Assistant', url: '/ai-assistant' },
+  { id: 'accounts',       title: 'Accounts',     url: '/accounts' },
 ];
 
 export function TopNav() {
@@ -29,7 +29,6 @@ export function TopNav() {
   const [notionOpen, setNotionOpen] = useState(false);
   const { accounts } = useAccounts();
 
-  // Build entries in navConfig order, ignoring separators (pas de sens dans une barre horizontale)
   const navEntries = navItems
     .filter(cfg => cfg.type !== 'separator' && cfg.visible)
     .map(cfg => NAV_ITEMS.find(n => n.id === cfg.id))
@@ -37,17 +36,15 @@ export function TopNav() {
 
   return (
     <>
-      <nav
-        className="
-          fixed top-4 left-1/2 -translate-x-1/2 z-50
-          flex items-center gap-1
-          h-[60px] px-2.5 rounded-full
-          bg-[#141414]
-          border border-white/[0.06]
-          shadow-[0_10px_40px_rgba(0,0,0,0.55)]
-          max-w-[95vw]
-        "
-      >
+      <nav className="
+        fixed top-4 left-1/2 -translate-x-1/2 z-50
+        flex items-center gap-1
+        h-[60px] px-2.5 rounded-full
+        bg-[#141414]
+        border border-white/[0.06]
+        shadow-[0_10px_40px_rgba(0,0,0,0.55)]
+        max-w-[95vw]
+      ">
         <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
           {navEntries.map(entry => (
             <NavLink
@@ -67,11 +64,7 @@ export function TopNav() {
               {({ isActive }) => (
                 <>
                   <span>{entry.title}</span>
-                  <span
-                    className={`h-1 w-1 rounded-full bg-green-400 mt-1 transition-opacity ${
-                      isActive ? 'opacity-100' : 'opacity-0'
-                    }`}
-                  />
+                  <span className={`h-1 w-1 rounded-full bg-green-400 mt-1 transition-opacity ${isActive ? 'opacity-100' : 'opacity-0'}`} />
                 </>
               )}
             </NavLink>

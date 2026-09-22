@@ -70,6 +70,7 @@ export interface AppData {
   payouts: any[];
   weeklyReports: any[];
   monthlyReports: any[];
+  yearlyReports: any[];
   analysisSyntheses: any[];
   riskRules: any[];
   riskIncreaseRules: any[];
@@ -88,6 +89,7 @@ export const DEFAULT_DATA: AppData = {
   payouts: [],
   weeklyReports: [],
   monthlyReports: [],
+  yearlyReports: [],
   analysisSyntheses: [],
   riskRules: [],
   riskIncreaseRules: [],
@@ -124,22 +126,13 @@ export async function openExistingFile(): Promise<FileSystemFileHandle> {
   return handle;
 }
 
-/* ──────────────────────────────────────────────────────────────────────────
- * Fallback for cross-origin iframes (e.g. embedding the site in Notion), where
- * the File System Access pickers are blocked. We read the file with a classic
- * <input type="file"> and persist changes to localStorage — the original file
- * on disk is never written to, so it can't be damaged.
- * ────────────────────────────────────────────────────────────────────────── */
-
 const LS_KEY = 'tr7upfx-local-data';
 
-/** True when the File System Access pickers exist in this context. */
 export function hasFsAccess(): boolean {
   return typeof (window as any).showOpenFilePicker === 'function'
     && typeof (window as any).showSaveFilePicker === 'function';
 }
 
-/** True for the errors thrown when a picker is blocked in a cross-origin frame. */
 export function isPickerBlocked(e: any): boolean {
   return e?.name === 'SecurityError' || e?.name === 'NotAllowedError';
 }
@@ -160,7 +153,6 @@ export function clearLocalData(): void {
   try { localStorage.removeItem(LS_KEY); } catch { /* ignore */ }
 }
 
-/** Read an existing JSON file via <input> — works inside cross-origin iframes. */
 export function openExistingFileFallback(): Promise<AppData> {
   return new Promise((resolve, reject) => {
     const input = document.createElement('input');
