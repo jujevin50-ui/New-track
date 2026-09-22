@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Account } from '@/types/account';
 import { Trade, getNetResult, getTradeScreenshots } from '@/types/trade';
 import { useTrades } from '@/hooks/useTrades';
