@@ -23,11 +23,14 @@ export interface Trade {
 
 export type TradeFormData = Omit<Trade, 'id' | 'tradeNumber'>;
 
+// Les frais sont saisis avec leur signe réel :
+// Profit + Commission + Swap = Total net
+// Exemple : 556 + (-58) + 0 = 498
 export const getNetResult = (trade: Trade): number => {
-  return trade.result - trade.commission - trade.swap;
+  return trade.result + trade.commission + trade.swap;
 };
 
-// R-multiple: net result expressed as a multiple of the amount risked (riskPercent % of balance)
+// R-multiple: résultat net exprimé comme multiple du montant risqué
 export const getTradeR = (trade: Trade, balance: number): number | null => {
   if (!trade.riskPercent || trade.riskPercent <= 0 || !balance) return null;
   const riskAmount = balance * (trade.riskPercent / 100);
