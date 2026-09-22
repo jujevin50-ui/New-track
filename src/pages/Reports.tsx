@@ -763,7 +763,7 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
                       </div>
                     ) : (
                       <iframe
-                        src={`${pdfUrl}#toolbar=1&navpanes=0&view=FitH`}
+                        src={`${pdfUrl}#toolbar=1&navpanes=0&zoom=100`}
                         title="Trading report PDF"
                         className="w-full h-full bg-white"
                       />
