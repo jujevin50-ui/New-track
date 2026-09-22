@@ -29,47 +29,40 @@ export const tooltipItemStyle: React.CSSProperties = { color: 'hsl(0, 0%, 96%)',
 export const lineCursor = { stroke: 'hsla(215, 15%, 55%, 0.3)', strokeWidth: 1, strokeDasharray: '3 3' };
 export const barCursor = { fill: 'hsla(215, 15%, 55%, 0.06)' };
 
-/* ── Shared grid / axis / reference-line kit ─────────────────────────
-   Applied identically across every chart so the dashboard reads as one
-   coherent instrument panel rather than six differently-tuned charts. */
-
 const AXIS_FONT = 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace';
 
-/** Solid, faint grid — horizontal and vertical — a "terminal" read with a line per trade. */
 export const gridProps = {
   stroke: 'hsla(215,15%,50%,0.12)',
   strokeWidth: 1,
   vertical: true,
 };
 
-/** Numeric axis ticks — tabular monospace, quiet color. */
 export const axisTick = {
   fontSize: 10,
-  fill: 'hsla(215,15%,58%,0.8)',
+  fill: 'hsl(215, 15%, 65%)',
+  fontWeight: 400,
   fontFamily: AXIS_FONT,
 };
 
-/** Category axis ticks (e.g. pair names) — slightly brighter, still monospace. */
 export const catAxisTick = {
   fontSize: 11,
-  fill: 'hsl(0,0%,78%)',
-  fontWeight: 500,
+  fill: 'hsl(215, 15%, 65%)',
+  fontWeight: 400,
   fontFamily: AXIS_FONT,
 };
 
 export const chartMargin = { top: 12, right: 8, left: 0, bottom: 4 };
 
-/** Neutral value-label style for on-chart numbers — muted gray, never bold/colored by sign. */
-export const valueLabelStyle = {
+/** Neutral value-label style for on-chart numbers: always gray, never bold. */
+export const valueLabelStyle: React.CSSProperties = {
   fontSize: 10,
   fontWeight: 400,
-  fill: 'hsl(215,15%,65%)',
+  fill: 'hsl(215, 15%, 65%)',
+  color: 'hsl(215, 15%, 65%)',
 };
 
-/** Zero baseline reference line. */
 export const zeroLine = { stroke: 'hsla(215,15%,55%,0.4)', strokeWidth: 1 };
 
-/** Dotted running-average line, tinted to the chart's accent when given. */
 export const medianLineStyle = (color?: string) => ({
   stroke: color || 'hsl(38,92%,50%)',
   strokeWidth: 1,
@@ -77,11 +70,6 @@ export const medianLineStyle = (color?: string) => ({
   strokeOpacity: 0.75,
 });
 
-/**
- * Kept for backwards compatibility with chart files that still apply
- * `filter={url(#id)}`. Strength is reduced to near-zero so lines render
- * crisp and flat instead of glowing — a subtle, professional finish.
- */
 export const Glow = ({ id, strength = 0.6 }: { id: string; strength?: number }) => (
   <filter id={id} x="-20%" y="-20%" width="140%" height="140%">
     <feGaussianBlur stdDeviation={strength} result="blur" />
@@ -92,7 +80,6 @@ export const Glow = ({ id, strength = 0.6 }: { id: string; strength?: number }) 
   </filter>
 );
 
-/** Static end-of-series marker — no pulse/animation, just a clean ring */
 export const makePulseDot = (lastIndex: number, color: string) =>
   (props: any) => {
     const { cx, cy, index } = props;
@@ -105,11 +92,6 @@ export const makePulseDot = (lastIndex: number, color: string) =>
     );
   };
 
-/**
- * A dot on every single point (every trade) plus a bigger highlighted marker
- * on the very last one — so the whole path of the line is visible, not just
- * its endpoint.
- */
 export const makeTurningPointDots = (data: Array<Record<string, any>>, key: string, color: string, showLastHighlight: boolean = true) =>
   (props: any) => {
     const { cx, cy, index } = props;
