@@ -88,8 +88,8 @@ function CalendarHeatmap({ dailyPnL }: { dailyPnL: Record<string, number> }) {
   }, [dailyPnL]);
 
   const cellColor = (pnl: number | null, maxAbs: number) => {
-    if (pnl === null) return 'transparent';
-    if (pnl === 0)    return 'hsla(215,15%,55%,0.08)';
+    if (pnl === null) return 'hsla(215,15%,55%,0.10)';
+    if (pnl === 0)    return 'hsla(215,15%,55%,0.16)';
     const intensity = Math.min(Math.abs(pnl) / maxAbs, 1);
     return pnl > 0
       ? `hsla(142,71%,45%,${(0.18 + intensity * 0.72).toFixed(2)})`
@@ -106,10 +106,12 @@ function CalendarHeatmap({ dailyPnL }: { dailyPnL: Record<string, number> }) {
               <span key={i} className="text-[8px] text-muted-foreground/40 text-center leading-none pb-0.5 w-6">{d}</span>
             ))}
             {days.map((day, i) =>
-              day.date === '' ? <div key={`pad-${i}`} className="w-6 h-6" /> : (
-                <div key={day.date} className="w-6 h-6 rounded-[4px]"
+              day.date === '' ? (
+                <div key={`pad-${i}`} className="w-6 h-6 rounded-[4px] border border-border/15" />
+              ) : (
+                <div key={day.date} className="w-6 h-6 rounded-[4px] border border-border/25"
                   style={{ backgroundColor: cellColor(day.pnl, maxAbs) }}
-                  title={day.pnl !== null ? `${day.date}: ${day.pnl >= 0 ? '+' : ''}$${Math.abs(day.pnl).toFixed(0)}` : day.date} />
+                  title={day.pnl !== null ? `${day.date}: ${day.pnl >= 0 ? '+' : ''}$${Math.abs(day.pnl).toFixed(0)}` : `${day.date}: No trades`} />
               )
             )}
           </div>

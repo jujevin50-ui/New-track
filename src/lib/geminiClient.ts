@@ -3,7 +3,7 @@ export interface GeminiMessage {
   content: string;
 }
 
-const GEMINI_MODEL = 'gemini-2.5-flash';
+const GEMINI_MODEL = 'gemini-3.6-flash';
 
 export async function askGemini(apiKey: string, systemInstruction: string, history: GeminiMessage[]): Promise<string> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`;
