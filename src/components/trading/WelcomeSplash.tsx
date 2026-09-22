@@ -11,7 +11,7 @@ interface WelcomeSplashProps {
  */
 export function WelcomeSplash({ name, onDone }: WelcomeSplashProps) {
   const [fading, setFading] = useState(false);
-  const text = `WELCOME BACK ${(name || 'Trader').toUpperCase()}`;
+  const text = `Welcome back, ${name || 'Trader'}`;
   const letters = text.split('');
   const staggerMs = 35;
   const revealDuration = letters.length * staggerMs + 400; // last letter's delay + its own animation
@@ -31,7 +31,7 @@ export function WelcomeSplash({ name, onDone }: WelcomeSplashProps) {
         {letters.map((ch, i) => (
           <span
             key={i}
-            className="inline-block animate-letter-in text-3xl md:text-5xl font-extrabold uppercase tracking-tight bg-gradient-to-r from-foreground via-foreground to-foreground/50 bg-clip-text text-transparent"
+            className="inline-block animate-letter-in text-3xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-foreground via-foreground to-foreground/50 bg-clip-text text-transparent"
             style={{ animationDelay: `${i * staggerMs}ms` }}
           >
             {ch === ' ' ? '\u00A0' : ch}

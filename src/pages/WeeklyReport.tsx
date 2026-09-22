@@ -216,7 +216,7 @@ const WeeklyReport = ({ activeAccount, accounts }: WeeklyReportPageProps) => {
 
   // ── PDF Gallery — browse saved reports left/right, rendered inline ────
   const reportedWeekKeys = useMemo(() => Object.keys(reports).sort(), [reports]);
-  const [galleryIndex, setGalleryIndex] = useState(0);
+  const [galleryIndex, setGalleryIndex] = useState(Infinity);
   const [galleryUrl, setGalleryUrl] = useState<string | null>(null);
   const [galleryLoading, setGalleryLoading] = useState(false);
   const clampedGalleryIndex = reportedWeekKeys.length ? Math.min(galleryIndex, reportedWeekKeys.length - 1) : 0;
@@ -282,15 +282,42 @@ const WeeklyReport = ({ activeAccount, accounts }: WeeklyReportPageProps) => {
     pdf.setDrawColor(59, 130, 246); pdf.setLineWidth(0.5);
     pdf.line(margin, y, pageW - margin, y); y += 10;
 
+    // ── Key stats boxes ─────────────────────────────────────────
+    const winRatePct = targetStats.total > 0 ? Math.round((targetStats.wins / targetStats.total) * 100) : 0;
+    const posColor: [number, number, number] = [16, 150, 80];
+    const negColor: [number, number, number] = [214, 48, 48];
+    const neutralColor: [number, number, number] = [30, 30, 30];
+    const kpis: { label: string; value: string; color: [number, number, number] }[] = [
+      { label: 'TOTAL P&L',  value: `${targetStats.totalProfit >= 0 ? '+' : ''}${targetStats.totalProfit.toFixed(2)}$`, color: targetStats.totalProfit >= 0 ? posColor : negColor },
+      { label: 'TRADES',     value: `${targetStats.total}`,      color: neutralColor },
+      { label: 'WIN RATE',   value: `${winRatePct}%`,             color: winRatePct >= 50 ? posColor : negColor },
+      { label: 'STRATEGY',   value: `${targetStats.strategyPercent}%`, color: targetStats.strategyPercent >= 70 ? posColor : negColor },
+    ];
+    const boxGap = 4;
+    const boxW = (contentW - boxGap * (kpis.length - 1)) / kpis.length;
+    const boxH = 22;
+    checkPage(boxH + 6);
+    kpis.forEach((kpi, i) => {
+      const bx = margin + i * (boxW + boxGap);
+      pdf.setDrawColor(222, 222, 226);
+      pdf.setLineWidth(0.3);
+      pdf.setFillColor(248, 248, 250);
+      pdf.roundedRect(bx, y, boxW, boxH, 2, 2, 'FD');
+      pdf.setFontSize(7.5); pdf.setFont('helvetica', 'normal'); pdf.setTextColor(130, 130, 138);
+      pdf.text(kpi.label, bx + 3.5, y + 7.5);
+      pdf.setFontSize(15); pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(kpi.color[0], kpi.color[1], kpi.color[2]);
+      pdf.text(kpi.value, bx + 3.5, y + 17);
+    });
+    pdf.setTextColor(0, 0, 0);
+    y += boxH + 10;
+
     pdf.setFontSize(13); pdf.setFont('helvetica', 'bold');
     pdf.text('1 - Week Summary', margin, y); y += 8;
     pdf.setFontSize(10); pdf.setFont('helvetica', 'normal');
     const summaryLines = [
-      `Total performance: ${targetStats.totalProfit >= 0 ? '+' : ''}${targetStats.totalProfit.toFixed(2)}$`,
-      `Number of trades: ${targetStats.total}`,
       `Winning trades: ${targetStats.wins}`, `Losing trades: ${targetStats.losses}`,
       `Overall emotion: ${targetData.emotionGenerale || 'Not specified'}`,
-      `% strategy respected: ${targetStats.strategyPercent}%`,
       `Emotional trades: ${targetData.tradesEmotionnels}`,
     ];
     summaryLines.forEach(line => { checkPage(6); pdf.text(line, margin + 4, y); y += 6; }); y += 6;
@@ -421,7 +448,7 @@ const WeeklyReport = ({ activeAccount, accounts }: WeeklyReportPageProps) => {
             className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 transition-colors ${view === 'all' ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
             <List className="h-3.5 w-3.5" />All Reports
           </button>
-          <button onClick={() => setView('gallery')}
+          <button onClick={() => { setView('gallery'); setGalleryIndex(Infinity); }}
             className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 transition-colors ${view === 'gallery' ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
             <LayoutGrid className="h-3.5 w-3.5" />PDF Gallery
           </button>
