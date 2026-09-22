@@ -22,6 +22,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  Edit3,
   Eye,
   FileText,
   Image,
@@ -130,6 +131,9 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
     solutions: '',
   });
   const [previewImgs, setPreviewImgs] = useState<string[] | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   const buildEntries = (type: PeriodType): PeriodEntry[] => {
     const keys = new Set<string>(Object.keys(reports[type]));
@@ -224,6 +228,7 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
 
   const selectPeriod = (type: PeriodType, key: string) => {
     setSelected({ type, key });
+    setIsEditing(false);
     setOpen(prev => ({ ...prev, [type]: true }));
   };
 
@@ -236,9 +241,10 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
     if (!selected) return;
     await saveReport(selected.type, selected.key, formData);
     toast.success('Report saved');
+    setIsEditing(false);
   };
 
-  const handleDownloadPDF = async (mode: 'download' | 'view' = 'download') => {
+  const handleDownloadPDF = async (mode: 'download' | 'view' | 'blob' = 'download'): Promise<string | undefined> => {
     if (!selected) return;
 
     const title = periodStorageTitle(selected.type);
@@ -401,6 +407,10 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
       y += lines.length * 5 + 4;
     }
 
+    if (mode === 'blob') {
+      return pdf.output('bloburl') as unknown as string;
+    }
+
     if (mode === 'view') {
       window.open(pdf.output('bloburl') as unknown as string, '_blank');
       return;
@@ -408,7 +418,46 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
 
     pdf.save(`${selected.type}-report-${selected.key}.pdf`);
     toast.success('PDF downloaded');
+    return undefined;
   };
+
+  // Generate the PDF automatically so the report is visible immediately.
+  useEffect(() => {
+    if (!selected || isEditing) return;
+    let cancelled = false;
+    setPdfLoading(true);
+
+    (async () => {
+      try {
+        const url = await handleDownloadPDF('blob');
+        if (cancelled) {
+          if (url) URL.revokeObjectURL(url);
+          return;
+        }
+        setPdfUrl(prev => {
+          if (prev) URL.revokeObjectURL(prev);
+          return url || null;
+        });
+      } catch {
+        if (!cancelled) setPdfUrl(null);
+      } finally {
+        if (!cancelled) setPdfLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    selected?.type,
+    selected?.key,
+    isEditing,
+    JSON.stringify(formData),
+    selectedTrades.map(t => t.id).join('|'),
+  ]);
+
+  useEffect(() => () => {
+    if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+  }, [pdfUrl]);
 
   if (!activeAccount) {
     return (
@@ -522,18 +571,29 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
                   <h2 className="text-xl font-bold tracking-tight">{selectedEntry?.label || getPeriodLabel(selected.type, selected.key)}</h2>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <Button variant="outline" size="sm" onClick={() => handleDownloadPDF('view')} className="gap-1.5 text-xs">
-                    <Eye className="h-3.5 w-3.5" />View PDF
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleDownloadPDF()} className="gap-1.5 text-xs">
-                    <Download className="h-3.5 w-3.5" />Export
-                  </Button>
-                  <Button size="sm" onClick={handleSave} className="gap-1.5 text-xs">
-                    <Save className="h-3.5 w-3.5" />Save
-                  </Button>
+                  {!isEditing ? (
+                    <>
+                      <Button size="sm" onClick={() => setIsEditing(true)} className="gap-1.5 text-xs">
+                        <Edit3 className="h-3.5 w-3.5" />Modifier
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleDownloadPDF()} className="gap-1.5 text-xs">
+                        <Download className="h-3.5 w-3.5" />Export PDF
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button variant="outline" size="sm" onClick={() => { setIsEditing(false); }} className="gap-1.5 text-xs">
+                        Annuler
+                      </Button>
+                      <Button size="sm" onClick={handleSave} className="gap-1.5 text-xs">
+                        <Save className="h-3.5 w-3.5" />Enregistrer
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
 
+              {isEditing ? (
               <div className="p-5 space-y-6">
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                   {[
@@ -693,6 +753,24 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
                   </Button>
                 </div>
               </div>
+              ) : (
+                <div className="p-3">
+                  <div className="relative rounded-xl border border-border/60 bg-background/20 overflow-hidden" style={{ height: 'calc(100vh - 14rem)', minHeight: '520px' }}>
+                    {pdfLoading || !pdfUrl ? (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground text-sm">
+                        <div className="h-5 w-5 rounded-full border-2 border-primary/25 border-t-primary animate-spin" />
+                        Génération du PDF…
+                      </div>
+                    ) : (
+                      <iframe
+                        src={`${pdfUrl}#toolbar=1&navpanes=0&view=FitH`}
+                        title="Trading report PDF"
+                        className="w-full h-full bg-white"
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
             </>
           )}
         </section>
