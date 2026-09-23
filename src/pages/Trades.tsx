@@ -57,7 +57,7 @@ const Trades = ({ activeAccount, accounts, onAddAccount, onUpdateAccount }: Trad
       const acctTrades = (data.trades as any[]).filter(t => t.accountId === a.id);
       const profit = acctTrades.reduce(
         (sum: number, t: any) =>
-          sum + Number(t.result || 0) + Number(t.commission || 0) + Number(t.swap || 0),
+          sum + Number(t.result || 0) - Math.abs(Number(t.commission || 0)) + Number(t.swap || 0),
         0
       );
 

@@ -23,11 +23,12 @@ export interface Trade {
 
 export type TradeFormData = Omit<Trade, 'id' | 'tradeNumber'>;
 
-// Les frais sont saisis avec leur signe réel :
-// Profit + Commission + Swap = Total net
-// Exemple : 556 + (-58) + 0 = 498
+// La commission est toujours considérée comme un coût, qu'elle soit
+// enregistrée positive ou négative. Le swap conserve son signe réel.
+// Exemple : 556 + commission 58 + swap 0 = 498 net.
+// Un ancien trade avec commission -58 donne aussi 498 net.
 export const getNetResult = (trade: Trade): number => {
-  return trade.result + trade.commission + trade.swap;
+  return trade.result - Math.abs(trade.commission || 0) + (trade.swap || 0);
 };
 
 // R-multiple: résultat net exprimé comme multiple du montant risqué

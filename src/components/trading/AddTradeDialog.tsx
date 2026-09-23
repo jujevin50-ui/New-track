@@ -114,7 +114,7 @@ const normalizeAiTrade = (raw: AiTrade, accountId: string): TradeFormData => {
     pair,
     type,
     result: Number(raw.result) || 0,
-    commission: Number(raw.commission) || 0,
+    commission: Math.abs(Number(raw.commission) || 0),
     swap: Number(raw.swap) || 0,
     exitType,
     setupQuality,
@@ -211,7 +211,7 @@ const AddTradeDialog = ({ open, onOpenChange, onSubmit, editTrade, accounts, act
     }
   }, []);
 
-  const net = form.result + form.commission + form.swap;
+  const net = form.result - Math.abs(form.commission || 0) + (form.swap || 0);
   const balance = accounts.find(a => a.id === form.accountId)?.initialBalance || 0;
   const rValue = form.riskPercent && form.riskPercent > 0 && balance > 0
     ? net / (balance * (form.riskPercent / 100))
@@ -248,9 +248,9 @@ Règles:
 - Ne devine jamais une valeur illisible.
 - "Short" = type "Sell"; "Long" = type "Buy".
 - result = Profit BRUT affiché.
-- commission = commission affichée AVEC SON SIGNE. Si le screenshot affiche "-58", retourne -58, pas 58.
+- commission = le montant de la commission. Retourne sa valeur absolue : si le screenshot affiche "-58", retourne 58.
 - swap = swap affiché AVEC SON SIGNE.
-- Le total net est calculé par l'application comme: result + commission + swap.
+- Le total net est calculé par l'application comme: result - abs(commission) + swap.
 - Respecte les nombres décimaux et les virgules françaises.
 - IMPORTANT POUR NOTES: cherche attentivement partout dans le screenshot une note personnelle, annotation, commentaire, texte libre, remarque ou description écrite par l'utilisateur.
 - Recopie cette note dans "notes" LE PLUS FIDÈLEMENT POSSIBLE, sans la résumer ni l'interpréter.
@@ -386,7 +386,7 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
 
         <div className="grid grid-cols-3 gap-3">
           <div><Label className="text-xs text-muted-foreground">Profit ($)</Label><Input type="text" inputMode="decimal" value={resultText} onChange={decimalHandler('result',setResultText,true)} className="font-mono text-sm bg-secondary border-border" /></div>
-          <div><Label className="text-xs text-muted-foreground">Comm.</Label><Input type="text" inputMode="decimal" value={commissionText} onChange={decimalHandler('commission',setCommissionText,true)} className="font-mono text-sm bg-secondary border-border" /></div>
+          <div><Label className="text-xs text-muted-foreground">Comm.</Label><Input type="text" inputMode="decimal" value={commissionText} onChange={decimalHandler('commission',setCommissionText,false)} className="font-mono text-sm bg-secondary border-border" /></div>
           <div><Label className="text-xs text-muted-foreground">Swap</Label><Input type="text" inputMode="decimal" value={swapText} onChange={decimalHandler('swap',setSwapText,true)} className="font-mono text-sm bg-secondary border-border" /></div>
         </div>
 
