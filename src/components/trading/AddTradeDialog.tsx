@@ -9,17 +9,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Star, Clipboard, X, Image as ImageIcon, Check, ChevronsUpDown, Sparkles, Loader2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Star, Clipboard, X, Image as ImageIcon, Check, ChevronsUpDown, Sparkles, Loader2 } from 'lucide-react';
 
-const PairCombobox = ({ value, onChange, className }: { value: string; onChange: (v: string) => void; className?: string }) => {
+const PairCombobox = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => {
   const [open, setOpen] = useState(false);
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" role="combobox" aria-expanded={open}
-          className={`w-full justify-between bg-secondary border-border font-mono text-sm font-normal ${className ?? ''}`}>
+        <Button type="button" variant="outline" role="combobox" className="w-full justify-between bg-secondary border-border font-mono text-sm font-normal">
           {value || 'Choisir...'}<ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -58,20 +57,6 @@ interface AddTradeDialogProps {
 
 type AiTrade = Partial<TradeFormData> & { pair?: string; type?: 'Buy' | 'Sell' };
 
-const DEFAULT_AI: AiTrade = {
-  date: new Date().toISOString().slice(0, 10),
-  pair: 'EURUSD',
-  type: 'Buy',
-  result: 0,
-  commission: 0,
-  swap: 0,
-  exitType: 'TP',
-  setupQuality: 2,
-  strategyRespected: true,
-  riskPercent: 0,
-  notes: '',
-};
-
 const makeDefaultForm = (accountId: string): TradeFormData => ({
   date: new Date().toISOString().slice(0, 10),
   endDate: '',
@@ -104,7 +89,6 @@ const compressImage = async (file: File): Promise<{ mimeType: string; data: stri
     img.onload = () => resolve();
     img.onerror = reject;
   });
-
   const maxWidth = 1600;
   const scale = Math.min(1, maxWidth / img.width);
   const canvas = document.createElement('canvas');
@@ -113,17 +97,13 @@ const compressImage = async (file: File): Promise<{ mimeType: string; data: stri
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas indisponible');
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
   const compressed = canvas.toDataURL('image/jpeg', 0.82);
   return { mimeType: 'image/jpeg', data: compressed.split(',')[1] };
 };
 
 const normalizeAiTrade = (raw: AiTrade, accountId: string): TradeFormData => {
-  const allowedPairs = PAIRS as readonly string[];
-  const pair = allowedPairs.includes(String(raw.pair || '').toUpperCase())
-    ? String(raw.pair).toUpperCase()
-    : 'EURUSD';
-
+  const pairValue = String(raw.pair || '').toUpperCase();
+  const pair = (PAIRS as readonly string[]).includes(pairValue) ? pairValue : 'EURUSD';
   const type = raw.type === 'Sell' ? 'Sell' : 'Buy';
   const exitType: ExitType = EXIT_TYPES.includes(raw.exitType as ExitType) ? raw.exitType as ExitType : 'TP';
   const setupQuality: SetupQuality = raw.setupQuality === 1 || raw.setupQuality === 3 ? raw.setupQuality : 2;
@@ -182,32 +162,23 @@ const AddTradeDialog = ({ open, onOpenChange, onSubmit, editTrade, accounts, act
 
   const set = (field: keyof TradeFormData, value: any) => setForm(prev => ({ ...prev, [field]: value }));
 
-  const decimalHandler = (field: 'result' | 'commission' | 'swap' | 'riskPercent', setText: (s: string) => void, allowNegative: boolean) =>
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const raw = e.target.value;
-      const pattern = allowNegative ? /^-?\d*[.,]?\d*$/ : /^\d*[.,]?\d*$/;
-      if (!pattern.test(raw)) return;
-      setText(raw);
-      set(field, parseFloat(raw.replace(',', '.')) || 0);
-    };
+  const decimalHandler = (
+    field: 'result' | 'commission' | 'swap' | 'riskPercent',
+    setText: (s: string) => void,
+    allowNegative: boolean
+  ) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const pattern = allowNegative ? /^-?\d*[.,]?\d*$/ : /^\d*[.,]?\d*$/;
+    if (!pattern.test(raw)) return;
+    setText(raw);
+    set(field, parseFloat(raw.replace(',', '.')) || 0);
+  };
 
-  const addImage = useCallback((dataUrl: string) => setForm(prev => ({ ...prev, screenshots: [...(prev.screenshots || []), dataUrl] })), []);
-  const removeImage = useCallback((index: number) => setForm(prev => ({ ...prev, screenshots: (prev.screenshots || []).filter((_, i) => i !== index) })), []);
+  const addImage = useCallback((dataUrl: string) =>
+    setForm(prev => ({ ...prev, screenshots: [...(prev.screenshots || []), dataUrl] })), []);
 
-  const handlePaste = useCallback(async () => {
-    try {
-      const items = await navigator.clipboard.read();
-      for (const item of items) {
-        const imageType = item.types.find(t => t.startsWith('image/'));
-        if (!imageType) continue;
-        const blob = await item.getType(imageType);
-        const reader = new FileReader();
-        reader.onload = () => addImage(reader.result as string);
-        reader.readAsDataURL(blob);
-        break;
-      }
-    } catch {}
-  }, [addImage]);
+  const removeImage = useCallback((index: number) =>
+    setForm(prev => ({ ...prev, screenshots: (prev.screenshots || []).filter((_, i) => i !== index) })), []);
 
   const handlePasteEvent = useCallback((e: React.ClipboardEvent) => {
     const items = e.clipboardData?.items;
@@ -215,11 +186,10 @@ const AddTradeDialog = ({ open, onOpenChange, onSubmit, editTrade, accounts, act
     for (let i = 0; i < items.length; i++) {
       if (!items[i].type.startsWith('image/')) continue;
       const file = items[i].getAsFile();
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = () => addImage(reader.result as string);
-        reader.readAsDataURL(file);
-      }
+      if (!file) continue;
+      const reader = new FileReader();
+      reader.onload = () => addImage(reader.result as string);
+      reader.readAsDataURL(file);
       e.preventDefault();
       return;
     }
@@ -231,18 +201,17 @@ const AddTradeDialog = ({ open, onOpenChange, onSubmit, editTrade, accounts, act
     for (let i = 0; i < items.length; i++) {
       if (!items[i].type.startsWith('image/')) continue;
       const blob = items[i].getAsFile();
-      if (blob) {
-        const file = new File([blob], `trade-${Date.now()}-${i}.png`, { type: blob.type || 'image/png' });
-        setAiFiles(prev => [...prev, file]);
-        setAiTrades([]);
-        setAiError('');
-      }
+      if (!blob) continue;
+      const file = new File([blob], `trade-${Date.now()}-${i}.png`, { type: blob.type || 'image/png' });
+      setAiFiles(prev => [...prev, file]);
+      setAiTrades([]);
+      setAiError('');
       e.preventDefault();
       return;
     }
   }, []);
 
-  const net = form.result - form.commission - form.swap;
+  const net = form.result + form.commission + form.swap;
   const balance = accounts.find(a => a.id === form.accountId)?.initialBalance || 0;
   const rValue = form.riskPercent && form.riskPercent > 0 && balance > 0
     ? net / (balance * (form.riskPercent / 100))
@@ -261,31 +230,42 @@ const AddTradeDialog = ({ open, onOpenChange, onSubmit, editTrade, accounts, act
       return;
     }
     if (!aiFiles.length) {
-      setAiError('Sélectionne au moins une capture.');
+      setAiError('Colle au moins une capture avec Ctrl + V.');
       return;
     }
 
     setAiLoading(true);
     setAiError('');
     try {
-      // Batch: one Gemini request for all selected screenshots.
-      // The app keeps manual entry fully available; AI import is optional.
       const images = await Promise.all(aiFiles.map(compressImage));
+
       const system = `Tu es l'assistant d'import de trades de l'application New-track.
 Analyse chaque capture d'écran comme un trade distinct, dans l'ordre des images.
 Retourne UNIQUEMENT un JSON valide sous la forme:
 {"trades":[{"date":"YYYY-MM-DD","endDate":"","pair":"EURUSD","type":"Buy","result":0,"commission":0,"swap":0,"exitType":"TP","setupQuality":2,"strategyRespected":true,"riskPercent":0,"notes":""}]}
-Règles:
-- Ne devine pas une valeur illisible: utilise 0, une chaîne vide, ou la valeur par défaut.
-- "Short" = type "Sell"; "Long" = type "Buy".
-- Le résultat doit être le Profit brut affiché, la commission doit être la commission affichée, et le swap le swap affiché.
-- Respecte les nombres décimaux, y compris la virgule française.
-- Pour le champ "notes", retranscris les notes visibles de la capture si elles existent.
-- Chaque image correspond à exactement un trade.`;
 
-      const prompt = `Voici ${images.length} capture(s). Extrais les informations de chaque trade. Image 1 = trade 1, etc.`;
+Règles:
+- Ne devine jamais une valeur illisible.
+- "Short" = type "Sell"; "Long" = type "Buy".
+- result = Profit BRUT affiché.
+- commission = commission affichée AVEC SON SIGNE. Si le screenshot affiche "-58", retourne -58, pas 58.
+- swap = swap affiché AVEC SON SIGNE.
+- Le total net est calculé par l'application comme: result + commission + swap.
+- Respecte les nombres décimaux et les virgules françaises.
+- IMPORTANT POUR NOTES: cherche attentivement partout dans le screenshot une note personnelle, annotation, commentaire, texte libre, remarque ou description écrite par l'utilisateur.
+- Recopie cette note dans "notes" LE PLUS FIDÈLEMENT POSSIBLE, sans la résumer ni l'interpréter.
+- Conserve les mots, chiffres, signes, accents et informations visibles.
+- Si plusieurs zones de notes personnelles sont visibles, rassemble-les dans "notes" dans un ordre logique.
+- Si aucune note personnelle/libre n'est visible, retourne "notes": "".
+- Chaque image correspond exactement à un trade.`;
+
+      const prompt = `Voici ${images.length} capture(s). Extrais les informations de chaque trade.
+Image 1 = trade 1, image 2 = trade 2, etc.
+Pour chaque trade, récupère aussi la note écrite directement sur le screenshot si elle existe.`;
+
       const text = await askGeminiWithImages(apiKey, system, prompt, images);
-      const parsed = JSON.parse(text.replace(/^```json\s*/i, '').replace(/\s*```$/i, ''));
+      const cleaned = text.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
+      const parsed = JSON.parse(cleaned);
       const rows = Array.isArray(parsed) ? parsed : parsed.trades;
       if (!Array.isArray(rows)) throw new Error('Format de réponse IA invalide.');
 
@@ -307,7 +287,7 @@ Règles:
 
   const aiDialog = (
     <Dialog open={aiOpen} onOpenChange={v => { setAiOpen(v); if (!v) resetAi(); }}>
-      <DialogContent onPaste={handleAiPasteEvent} className="sm:max-w-5xl bg-card border-border max-h-[90vh] overflow-y-auto">
+      <DialogContent onPaste={handleAiPasteEvent} className="sm:max-w-6xl bg-card border-border max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-4 w-4" /> Import IA de plusieurs trades
@@ -316,22 +296,17 @@ Règles:
 
         <div className="space-y-4">
           <div className="rounded-lg border border-border bg-secondary/40 p-4 text-xs text-muted-foreground">
-            Sélectionne plusieurs screenshots. Ils sont envoyés ensemble à la même requête Gemini pour limiter les appels API.
-            Tu peux toujours utiliser <b>New Trade</b> manuellement.
+            <b>Ctrl + V</b> pour coller chaque screenshot. Toutes les images sont analysées ensemble dans une seule requête Gemini.
           </div>
 
           <div
             tabIndex={0}
-            className="flex min-h-28 flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border bg-secondary/40 px-6 py-5 text-center outline-none transition-colors hover:bg-secondary/70 focus:border-primary/60"
+            className="flex min-h-28 flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border bg-secondary/40 px-6 py-5 text-center outline-none hover:bg-secondary/70 focus:border-primary/60"
           >
             <Clipboard className="h-6 w-6 text-muted-foreground" />
             <div className="text-sm font-medium">Colle tes screenshots ici</div>
-            <div className="text-xs text-muted-foreground">Ctrl + V après avoir fait une capture d'écran — chaque collage ajoute un trade</div>
+            <div className="text-xs text-muted-foreground">Fais une capture → Ctrl + C → Ctrl + V. Répète pour chaque trade.</div>
             <span className="text-xs font-medium text-primary">{aiFiles.length} capture(s) prête(s)</span>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-xs text-muted-foreground">Tu peux coller autant de screenshots que nécessaire, puis tout analyser en une seule requête.</span>
-            {aiFiles.length > 12 && <span className="text-xs text-amber-500">Conseil : 12 maximum par lot pour rester léger.</span>}
           </div>
 
           {aiFiles.length > 0 && (
@@ -354,20 +329,16 @@ Règles:
                 <table className="w-full text-xs">
                   <thead className="bg-secondary">
                     <tr>
-                      <th className="text-left p-2">#</th>
-                      <th className="text-left p-2">Date</th>
-                      <th className="text-left p-2">Paire</th>
-                      <th className="text-left p-2">Direction</th>
-                      <th className="text-right p-2">Profit</th>
-                      <th className="text-right p-2">Comm.</th>
-                      <th className="text-right p-2">Swap</th>
-                      <th className="text-right p-2">Risque</th>
-                      <th className="text-left p-2">Sortie</th>
+                      <th className="text-left p-2">#</th><th className="text-left p-2">Date</th>
+                      <th className="text-left p-2">Paire</th><th className="text-left p-2">Direction</th>
+                      <th className="text-right p-2">Profit</th><th className="text-right p-2">Comm.</th>
+                      <th className="text-right p-2">Swap</th><th className="text-right p-2">Risque</th>
+                      <th className="text-left p-2">Sortie</th><th className="text-left p-2">Note</th>
                     </tr>
                   </thead>
                   <tbody>
                     {aiTrades.map((t, i) => (
-                      <tr key={i} className="border-t border-border">
+                      <tr key={i} className="border-t border-border align-top">
                         <td className="p-2">{i + 1}</td>
                         <td className="p-2"><Input type="date" value={t.date} onChange={e => setAiTrades(prev => prev.map((x,j) => j===i ? {...x,date:e.target.value} : x))} className="h-7 text-xs bg-secondary" /></td>
                         <td className="p-2"><Input value={t.pair} onChange={e => setAiTrades(prev => prev.map((x,j) => j===i ? {...x,pair:e.target.value.toUpperCase()} : x))} className="h-7 text-xs bg-secondary font-mono w-24" /></td>
@@ -377,6 +348,7 @@ Règles:
                         <td className="p-2"><Input type="number" value={t.swap} onChange={e => setAiTrades(prev => prev.map((x,j) => j===i ? {...x,swap:Number(e.target.value)||0} : x))} className="h-7 text-xs bg-secondary w-24" /></td>
                         <td className="p-2"><Input type="number" value={t.riskPercent} onChange={e => setAiTrades(prev => prev.map((x,j) => j===i ? {...x,riskPercent:Number(e.target.value)||0} : x))} className="h-7 text-xs bg-secondary w-20" /></td>
                         <td className="p-2"><Select value={t.exitType} onValueChange={v => setAiTrades(prev => prev.map((x,j) => j===i ? {...x,exitType:v as ExitType} : x))}><SelectTrigger className="h-7 w-24 text-xs bg-secondary"><SelectValue /></SelectTrigger><SelectContent>{EXIT_TYPES.map(x => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent></Select></td>
+                        <td className="p-2 min-w-[220px]"><Textarea value={t.notes || ''} onChange={e => setAiTrades(prev => prev.map((x,j) => j===i ? {...x,notes:e.target.value} : x))} className="min-h-16 text-xs bg-secondary" placeholder="Note détectée..." /></td>
                       </tr>
                     ))}
                   </tbody>
@@ -390,9 +362,7 @@ Règles:
             <Button variant="outline" onClick={analyzeAiFiles} disabled={aiLoading || !aiFiles.length}>
               {aiLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Analyse...</> : <><Sparkles className="h-4 w-4 mr-2" />Analyser</>}
             </Button>
-            <Button onClick={importAiTrades} disabled={!aiTrades.length || aiLoading}>
-              Importer {aiTrades.length || ''} trade(s)
-            </Button>
+            <Button onClick={importAiTrades} disabled={!aiTrades.length || aiLoading}>Importer {aiTrades.length || ''} trade(s)</Button>
           </div>
         </div>
       </DialogContent>
@@ -409,18 +379,14 @@ Règles:
 
         <div className="grid grid-cols-2 gap-3">
           <div><Label className="text-xs text-muted-foreground">Pair</Label><PairCombobox value={form.pair} onChange={v => set('pair', v)} /></div>
-          <div><Label className="text-xs text-muted-foreground">Account</Label>
-            <Select value={form.accountId} onValueChange={v => set('accountId', v)}><SelectTrigger className="bg-secondary border-border"><SelectValue /></SelectTrigger><SelectContent>{accounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select>
-          </div>
+          <div><Label className="text-xs text-muted-foreground">Account</Label><Select value={form.accountId} onValueChange={v => set('accountId', v)}><SelectTrigger className="bg-secondary border-border"><SelectValue /></SelectTrigger><SelectContent>{accounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div>
         </div>
 
-        <div><Label className="text-xs text-muted-foreground">Direction</Label><div className="flex gap-2 mt-1.5">
-          {(['Buy','Sell'] as const).map(v => <button key={v} type="button" onClick={() => set('type',v)} className={`flex-1 px-4 py-1.5 rounded-md border text-xs font-medium ${form.type===v ? v==='Buy'?'bg-profit/15 border-profit/50 text-profit':'bg-loss/15 border-loss/50 text-loss':'bg-secondary border-border text-muted-foreground'}`}>{v==='Buy'?'↑ Long':'↓ Short'}</button>)}
-        </div></div>
+        <div><Label className="text-xs text-muted-foreground">Direction</Label><div className="flex gap-2 mt-1.5">{(['Buy','Sell'] as const).map(v => <button key={v} type="button" onClick={() => set('type',v)} className={`flex-1 px-4 py-1.5 rounded-md border text-xs font-medium ${form.type===v ? v==='Buy'?'bg-profit/15 border-profit/50 text-profit':'bg-loss/15 border-loss/50 text-loss':'bg-secondary border-border text-muted-foreground'}`}>{v==='Buy'?'↑ Long':'↓ Short'}</button>)}</div></div>
 
         <div className="grid grid-cols-3 gap-3">
           <div><Label className="text-xs text-muted-foreground">Profit ($)</Label><Input type="text" inputMode="decimal" value={resultText} onChange={decimalHandler('result',setResultText,true)} className="font-mono text-sm bg-secondary border-border" /></div>
-          <div><Label className="text-xs text-muted-foreground">Comm.</Label><Input type="text" inputMode="decimal" value={commissionText} onChange={decimalHandler('commission',setCommissionText,false)} className="font-mono text-sm bg-secondary border-border" /></div>
+          <div><Label className="text-xs text-muted-foreground">Comm.</Label><Input type="text" inputMode="decimal" value={commissionText} onChange={decimalHandler('commission',setCommissionText,true)} className="font-mono text-sm bg-secondary border-border" /></div>
           <div><Label className="text-xs text-muted-foreground">Swap</Label><Input type="text" inputMode="decimal" value={swapText} onChange={decimalHandler('swap',setSwapText,true)} className="font-mono text-sm bg-secondary border-border" /></div>
         </div>
 
@@ -430,21 +396,18 @@ Règles:
         </div>
 
         <div><Label className="text-xs text-muted-foreground">Trade Exit</Label><Select value={form.exitType} onValueChange={v=>set('exitType',v as ExitType)}><SelectTrigger className="bg-secondary border-border"><SelectValue /></SelectTrigger><SelectContent>{EXIT_TYPES.map(t=><SelectItem key={t} value={t}>{t==='Manual'?'Manual Close':t}</SelectItem>)}</SelectContent></Select></div>
-
         <div><Label className="text-xs text-muted-foreground">Setup Quality</Label><div className="flex gap-1 mt-1.5">{([1,2,3] as SetupQuality[]).map(q=><button key={q} type="button" onClick={()=>set('setupQuality',q)} className={`flex items-center gap-0.5 px-3 py-1.5 rounded-md border text-xs ${form.setupQuality===q?'bg-primary/20 border-primary/50 text-primary':'bg-secondary border-border text-muted-foreground'}`}>{Array.from({length:q}).map((_,i)=><Star key={i} className="h-3 w-3 fill-current"/>)}</button>)}</div></div>
-
         <div><Label className="text-xs text-muted-foreground">Strategy Respected</Label><div className="flex gap-2 mt-1.5">{[true,false].map(v=><button key={String(v)} type="button" onClick={()=>set('strategyRespected',v)} className={`px-4 py-1.5 rounded-md border text-xs ${form.strategyRespected===v?v?'bg-profit/15 border-profit/50 text-profit':'bg-loss/15 border-loss/50 text-loss':'bg-secondary border-border text-muted-foreground'}`}>{v?'Yes':'No'}</button>)}</div></div>
-
         <div className="bg-card rounded-md border border-border p-3 flex justify-between items-center"><span className="text-xs text-muted-foreground">Net Result</span><span className={`font-mono font-bold ${net>=0?'text-profit':'text-loss'}`}>{net>=0?'+':''}${net.toFixed(2)}</span></div>
       </div>
 
       <div className="flex-1 flex flex-col gap-3 min-w-0">
-        <div className="flex-1 flex flex-col"><Label className="text-xs text-muted-foreground mb-1">Notes & Description</Label><Textarea value={form.notes||''} onChange={e=>set('notes',e.target.value)} placeholder="Describe the trade: entry reason, market context, observations, lessons learned..." className="flex-1 bg-secondary border-border text-sm min-h-[200px] resize-none"/></div>
+        <div className="flex-1 flex flex-col"><Label className="text-xs text-muted-foreground mb-1">Notes & Description</Label><Textarea value={form.notes||''} onChange={e=>set('notes',e.target.value)} placeholder="Describe the trade..." className="flex-1 bg-secondary border-border text-sm min-h-[200px] resize-none"/></div>
         <div>
           <Label className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5"><ImageIcon className="h-3 w-3"/>Images ({(form.screenshots||[]).length})</Label>
           {(form.screenshots||[]).length>0 && <div className="grid grid-cols-2 gap-2 mb-2">{(form.screenshots||[]).map((img,i)=><div key={i} className="relative rounded-md overflow-hidden border border-border group"><img src={img} alt={`Image ${i+1}`} className="w-full h-24 object-cover"/><Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-5 w-5 bg-background/80 opacity-0 group-hover:opacity-100" onClick={()=>removeImage(i)}><X className="h-3 w-3"/></Button></div>)}</div>}
           <div className="flex items-center justify-between gap-2">
-            <div className="flex-1 flex flex-col items-center justify-center gap-1.5 h-16 rounded-md border border-dashed border-border bg-secondary/50 cursor-pointer" onClick={handlePaste} tabIndex={0}><div className="flex items-center gap-2"><Clipboard className="h-3.5 w-3.5 text-muted-foreground"/><span className="text-[11px] text-muted-foreground">Click to paste or Ctrl+V</span></div></div>
+            <div className="flex-1 flex flex-col items-center justify-center gap-1.5 h-16 rounded-md border border-dashed border-border bg-secondary/50 cursor-pointer" onClick={() => navigator.clipboard.readText().catch(()=>{})} tabIndex={0}><div className="flex items-center gap-2"><Clipboard className="h-3.5 w-3.5 text-muted-foreground"/><span className="text-[11px] text-muted-foreground">Click then Ctrl+V</span></div></div>
             <Button type="button" variant="outline" onClick={()=>setAiOpen(true)}><Sparkles className="h-4 w-4 mr-2"/>Import IA</Button>
           </div>
         </div>
