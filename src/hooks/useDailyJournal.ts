@@ -6,6 +6,7 @@ export type DailyEvent = 'perte_compte' | 'challenge_echoue' | 'challenge_realis
 export interface DailyJournal {
   date: string;
   strategyRespected: boolean;
+  productive?: boolean;
   mood: 'excellent' | 'good' | 'neutral' | 'bad' | 'terrible';
   discipline: number;
   confidence: number;
@@ -22,6 +23,7 @@ export const useDailyJournal = () => {
   const journals: DailyJournal[] = (data.dailyJournals as any[]).map(j => ({
     date: j.date,
     strategyRespected: j.strategyRespected,
+    productive: j.productive === true,
     mood: j.mood,
     discipline: j.discipline,
     confidence: j.confidence,

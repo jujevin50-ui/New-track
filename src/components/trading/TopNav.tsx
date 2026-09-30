@@ -11,12 +11,13 @@ import { NotionImportDialog } from './NotionImportDialog';
 import { useAccounts } from '@/hooks/useAccounts';
 
 const NAV_ITEMS = [
-  { id: 'dashboard',      title: 'Dashboard',   url: '/' },
-  { id: 'calendar',       title: 'Calendar',     url: '/calendar' },
-  { id: 'trades',         title: 'Trades',       url: '/trades' },
-  { id: 'reports',        title: 'Reports',      url: '/reports' },
-  { id: 'ai-assistant',   title: 'AI Assistant', url: '/ai-assistant' },
-  { id: 'accounts',       title: 'Accounts',     url: '/accounts' },
+  { id: 'dashboard', title: 'Dashboard', url: '/' },
+  { id: 'calendar', title: 'Calendar', url: '/calendar' },
+  { id: 'daily-report', title: 'Bilan', url: '/daily-report' },
+  { id: 'trades', title: 'Trades', url: '/trades' },
+  { id: 'reports', title: 'Reports', url: '/reports' },
+  { id: 'ai-assistant', title: 'AI Assistant', url: '/ai-assistant' },
+  { id: 'accounts', title: 'Accounts', url: '/accounts' },
 ];
 
 export function TopNav() {
@@ -36,30 +37,14 @@ export function TopNav() {
 
   return (
     <>
-      <nav className="
-        fixed top-4 left-1/2 -translate-x-1/2 z-50
-        flex items-center gap-1
-        h-[60px] px-2.5 rounded-full
-        bg-[#141414]
-        border border-white/[0.06]
-        shadow-[0_10px_40px_rgba(0,0,0,0.55)]
-        max-w-[95vw]
-      ">
+      <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 h-[60px] px-2.5 rounded-full bg-[#141414] border border-white/[0.06] shadow-[0_10px_40px_rgba(0,0,0,0.55)] max-w-[95vw]">
         <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
           {navEntries.map(entry => (
             <NavLink
               key={entry.id}
               to={entry.url}
               end={entry.url === '/'}
-              className={({ isActive }) => `
-                flex flex-col items-center justify-center whitespace-nowrap
-                px-5 py-2.5 rounded-full
-                text-[14px] font-medium
-                transition-all duration-150
-                ${isActive
-                  ? 'bg-white/[0.09] text-white font-semibold'
-                  : 'text-white/40 hover:text-white/90 hover:bg-white/[0.05]'}
-              `}
+              className={({ isActive }) => `flex flex-col items-center justify-center whitespace-nowrap px-5 py-2.5 rounded-full text-[14px] font-medium transition-all duration-150 ${isActive ? 'bg-white/[0.09] text-white font-semibold' : 'text-white/40 hover:text-white/90 hover:bg-white/[0.05]'}`}
             >
               {({ isActive }) => (
                 <>
@@ -74,18 +59,10 @@ export function TopNav() {
         <div className="w-px h-5 bg-white/[0.08] mx-1 shrink-0" />
 
         <div className="flex items-center gap-0.5 shrink-0">
-          <button
-            onClick={() => setSettingsOpen(true)}
-            className="p-2.5 rounded-full text-white/40 hover:text-white hover:bg-white/[0.06] transition-colors"
-            aria-label="Settings"
-          >
+          <button onClick={() => setSettingsOpen(true)} className="p-2.5 rounded-full text-white/40 hover:text-white hover:bg-white/[0.06] transition-colors" aria-label="Settings">
             <Settings className="h-4 w-4" />
           </button>
-          <button
-            onClick={disconnect}
-            className="p-2.5 rounded-full text-white/40 hover:text-red-400 hover:bg-red-400/10 transition-colors"
-            aria-label="Changer de fichier"
-          >
+          <button onClick={disconnect} className="p-2.5 rounded-full text-white/40 hover:text-red-400 hover:bg-red-400/10 transition-colors" aria-label="Changer de fichier">
             <LogOut className="h-4 w-4" />
           </button>
         </div>

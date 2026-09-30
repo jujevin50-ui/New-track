@@ -12,6 +12,7 @@ export interface NavItem {
 const DEFAULT_NAV: NavItem[] = [
   { id: 'dashboard', title: 'Dashboard', visible: true },
   { id: 'calendar', title: 'Calendar', visible: true },
+  { id: 'daily-report', title: 'Bilan', visible: true },
   { id: 'trades', title: 'Trades', visible: true },
   { id: 'reports', title: 'Reports', visible: true },
   { id: 'ai-assistant', title: 'AI Assistant', visible: true },
@@ -24,19 +25,10 @@ function loadFromStorage(): NavItem[] {
     const saved = localStorage.getItem(NAV_CONFIG_KEY);
     if (!saved) return DEFAULT_NAV;
     const parsed = JSON.parse(saved) as NavItem[];
-
     const migrated = parsed.map(item =>
-      item.type === 'separator'
-        ? item
-        : item.id === 'weekly-report'
-          ? { ...item, id: 'reports', title: 'Reports' }
-          : item
+      item.type === 'separator' ? item : item.id === 'weekly-report' ? { ...item, id: 'reports', title: 'Reports' } : item
     );
-
-    const existingIds = new Set(
-      migrated.filter(p => p.type !== 'separator').map(p => p.id)
-    );
-
+    const existingIds = new Set(migrated.filter(p => p.type !== 'separator').map(p => p.id));
     const merged = migrated
       .filter(p => p.type === 'separator' || DEFAULT_NAV.some(d => d.id === p.id))
       .map(p => {
@@ -44,7 +36,6 @@ function loadFromStorage(): NavItem[] {
         const def = DEFAULT_NAV.find(d => d.id === p.id)!;
         return { ...def, visible: p.visible };
       });
-
     const newItems = DEFAULT_NAV.filter(d => !existingIds.has(d.id));
     return [...merged, ...newItems];
   } catch {
@@ -60,20 +51,13 @@ export const useNavConfig = () => {
   }, [navItems]);
 
   const toggleNav = useCallback((id: string) => {
-    setNavItems(prev =>
-      prev.map(item => item.id === id ? { ...item, visible: !item.visible } : item)
-    );
+    setNavItems(prev => prev.map(item => item.id === id ? { ...item, visible: !item.visible } : item));
   }, []);
 
-  const reorderNav = useCallback((items: NavItem[]) => {
-    setNavItems(items);
-  }, []);
+  const reorderNav = useCallback((items: NavItem[]) => setNavItems(items), []);
 
   const addSeparator = useCallback(() => {
-    setNavItems(prev => [
-      ...prev,
-      { id: `sep-${Date.now()}`, title: 'Separator', visible: true, type: 'separator' },
-    ]);
+    setNavItems(prev => [...prev, { id: `sep-${Date.now()}`, title: 'Separator', visible: true, type: 'separator' }]);
   }, []);
 
   const removeSeparator = useCallback((id: string) => {
