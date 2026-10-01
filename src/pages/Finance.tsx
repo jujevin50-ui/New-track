@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart,
-  ResponsiveContainer, Tooltip, XAxis, YAxis
+  ResponsiveContainer, Tooltip, XAxis, YAxis, Line, LineChart
 } from 'recharts';
 import { toast } from 'sonner';
 import type { ReactNode } from 'react';
