@@ -56,7 +56,7 @@ export function AppSidebar() {
       <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar">
         <div className={`h-14 px-4 flex items-center ${collapsed ? 'justify-center' : 'gap-3'} shrink-0`}>
           <div className="h-9 w-9 rounded-lg overflow-hidden shrink-0">
-            <img src="/goggins.svg" alt="Goggins" className="h-full w-full object-cover" />
+            <img src="/logo.png" alt="Logo" className="h-full w-full object-contain" />
           </div>
           {!collapsed && (
             <div className="overflow-hidden">
