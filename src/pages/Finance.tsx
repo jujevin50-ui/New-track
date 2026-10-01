@@ -32,7 +32,8 @@ const INCOME_CATEGORIES = ['Salaire', 'Trading', 'Payout', 'Intérêts', 'Vente'
 const COLORS = ['#60a5fa', '#34d399', '#a78bfa', '#f59e0b', '#fb7185', '#22d3ee', '#f97316', '#94a3b8'];
 const eur = (n: number) => `${n < 0 ? '-' : ''}${Math.abs(n).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
 const id = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-const monthKey = (d: string) => d.slice(0, 7);
+const dateKey = (d: string) => String(d || '').slice(0, 10);
+const monthKey = (d: string) => dateKey(d).slice(0, 7);
 
 const emptyTx: FinanceTransaction = { id: '', date: new Date().toISOString().slice(0, 10), description: '', amount: 0, type: 'expense', accountId: '', category: 'Autre', notes: '' };
 
@@ -44,6 +45,7 @@ export default function Finance() {
   const subscriptions = ((data as any).financeSubscriptions || []) as FinanceSubscription[];
   const transfers = ((data as any).financeTransfers || []) as FinanceTransfer[];
   const [tab, setTab] = useState<Tab>('overview');
+  const [overviewMode, setOverviewMode] = useState<'month' | 'year'>('month');
   const [cursor, setCursor] = useState(new Date());
   const [txOpen, setTxOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -93,11 +95,25 @@ export default function Finance() {
     let running = 0;
     return Array.from({ length: days }, (_, i) => {
       const date = `${key}-${String(i + 1).padStart(2, '0')}`;
-      const day = monthTx.filter(t => t.date === date);
+      const day = monthTx.filter(t => dateKey(t.date) === date);
       running += day.reduce((s, t) => s + (t.type === 'income' ? Number(t.amount) : -Number(t.amount)), 0);
       return { day: String(i + 1), net: running };
     });
   }, [cursor, key, monthTx]);
+
+  const yearData = useMemo(() => {
+    const year = cursor.getFullYear();
+    return Array.from({ length: 12 }, (_, month) => {
+      const prefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+      const txs = transactions.filter(t => monthKey(t.date) === prefix);
+      const income = txs.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
+      const expenses = txs.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
+      return { month: new Date(year, month, 1).toLocaleDateString('fr-FR', { month: 'short' }).replace('.', ''), income, expenses, cashflow: income - expenses, savingsRate: income > 0 ? ((income - expenses) / income) * 100 : 0 };
+    });
+  }, [cursor, transactions]);
+
+  const yearTotals = useMemo(() => yearData.reduce((a, m) => ({ income: a.income + m.income, expenses: a.expenses + m.expenses, cashflow: a.cashflow + m.cashflow }), { income: 0, expenses: 0, cashflow: 0 }), [yearData]);
+  const yearSavingsRate = yearTotals.income > 0 ? (yearTotals.cashflow / yearTotals.income) * 100 : 0;
 
   const accountData = accounts.filter(a => !a.archived).map(a => ({ name: a.name, balance: accountBalances[a.id] ?? 0 }));
   const upcomingSubs = subscriptions.filter(s => s.active).sort((a, b) => a.nextDate.localeCompare(b.nextDate)).slice(0, 6);
@@ -160,10 +176,26 @@ export default function Finance() {
       <main className="max-w-[1500px] mx-auto p-5 space-y-5">
         {tab === 'overview' && <>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div><p className="text-xs text-muted-foreground uppercase tracking-wider">Vue mensuelle</p><div className="flex items-center gap-2 mt-1"><button onClick={() => moveMonth(-1)} className="p-1.5 rounded-lg hover:bg-muted"><ChevronLeft className="h-4 w-4" /></button><h1 className="text-xl font-bold capitalize min-w-[190px] text-center">{monthLabel}</h1><button onClick={() => moveMonth(1)} className="p-1.5 rounded-lg hover:bg-muted"><ChevronRight className="h-4 w-4" /></button></div></div>
+            <div><p className="text-xs text-muted-foreground uppercase tracking-wider">Vue {overviewMode === 'month' ? 'mensuelle' : 'annuelle'}</p><div className="flex items-center gap-2 mt-1"><button onClick={() => setCursor(new Date(cursor.getFullYear() + (overviewMode === 'year' ? -1 : 0), cursor.getMonth() + (overviewMode === 'month' ? -1 : 0), 1))} className="p-1.5 rounded-lg hover:bg-muted"><ChevronLeft className="h-4 w-4" /></button><h1 className="text-xl font-bold capitalize min-w-[190px] text-center">{overviewMode === 'month' ? monthLabel : cursor.getFullYear()}</h1><button onClick={() => setCursor(new Date(cursor.getFullYear() + (overviewMode === 'year' ? 1 : 0), cursor.getMonth() + (overviewMode === 'month' ? 1 : 0), 1))} className="p-1.5 rounded-lg hover:bg-muted"><ChevronRight className="h-4 w-4" /></button></div></div>
+            <div className="flex items-center gap-1 rounded-xl border border-border p-1"><button onClick={() => setOverviewMode('month')} className={`px-3 py-1.5 rounded-lg text-xs ${overviewMode === 'month' ? 'bg-muted font-medium' : 'text-muted-foreground'}`}>Mois</button><button onClick={() => setOverviewMode('year')} className={`px-3 py-1.5 rounded-lg text-xs ${overviewMode === 'year' ? 'bg-muted font-medium' : 'text-muted-foreground'}`}>Année</button></div>
             <div className="flex items-center gap-2"><div className="text-right"><p className="text-[10px] text-muted-foreground">Patrimoine suivi</p><p className="font-mono text-lg font-bold">{eur(balance)}</p></div></div>
           </div>
 
+          {overviewMode === 'year' && <>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <Metric title="Revenus annuels" value={eur(yearTotals.income)} icon={<ArrowDownLeft className="h-4 w-4" />} tone="text-emerald-400" />
+              <Metric title="Dépenses annuelles" value={eur(yearTotals.expenses)} icon={<ArrowUpRight className="h-4 w-4" />} tone="text-rose-400" />
+              <Metric title="Cash-flow annuel" value={eur(yearTotals.cashflow)} icon={<TrendingUp className="h-4 w-4" />} tone={yearTotals.cashflow >= 0 ? 'text-emerald-400' : 'text-rose-400'} />
+              <Metric title="Taux d’épargne annuel" value={`${yearSavingsRate.toFixed(1)} %`} icon={<PiggyBank className="h-4 w-4" />} tone="text-violet-400" />
+            </div>
+            <div className="grid lg:grid-cols-[1.6fr_1fr] gap-4">
+              <Card title={`Flux de ${cursor.getFullYear()}`} subtitle="Revenus, dépenses et cash-flow par mois"><div className="h-[320px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={yearData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.35}/><XAxis dataKey="month" tick={{fontSize:10}}/><YAxis tick={{fontSize:10}} tickFormatter={(v)=>`${Math.round(v)}€`}/><Tooltip formatter={(v:number)=>eur(v)} contentStyle={{background:'hsl(var(--card))',border:'1px solid hsl(var(--border))',borderRadius:10,fontSize:12}}/><Bar dataKey="income" name="Revenus" fill="#34d399" radius={[4,4,0,0]}/><Bar dataKey="expenses" name="Dépenses" fill="#fb7185" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div></Card>
+              <Card title="Cash-flow mensuel" subtitle="Évolution sur l’année"><div className="h-[320px]"><ResponsiveContainer width="100%" height="100%"><LineChart data={yearData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.35}/><XAxis dataKey="month" tick={{fontSize:10}}/><YAxis tick={{fontSize:10}} tickFormatter={(v)=>`${Math.round(v)}€`}/><Tooltip formatter={(v:number)=>eur(v)} contentStyle={{background:'hsl(var(--card))',border:'1px solid hsl(var(--border))',borderRadius:10,fontSize:12}}/><Line type="monotone" dataKey="cashflow" name="Cash-flow" stroke="#60a5fa" strokeWidth={2.5} dot={{r:3}}/></LineChart></ResponsiveContainer></div></Card>
+            </div>
+            <Card title="Détail des 12 mois" subtitle="Vue complète de l’année"><div className="overflow-x-auto"><table className="w-full text-xs"><thead><tr className="text-muted-foreground border-b border-border"><th className="text-left py-3">Mois</th><th className="text-right py-3">Revenus</th><th className="text-right py-3">Dépenses</th><th className="text-right py-3">Cash-flow</th><th className="text-right py-3">Taux d’épargne</th></tr></thead><tbody>{yearData.map(m=><tr key={m.month} className="border-b border-border/40"><td className="py-3 capitalize font-medium">{m.month}</td><td className="text-right py-3 text-emerald-400 font-mono">{eur(m.income)}</td><td className="text-right py-3 text-rose-400 font-mono">{eur(m.expenses)}</td><td className={`text-right py-3 font-mono ${m.cashflow >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{eur(m.cashflow)}</td><td className="text-right py-3 font-mono">{m.savingsRate.toFixed(1)} %</td></tr>)}</tbody></table></div></Card>
+          </>}
+
+          {overviewMode === 'month' && <>
           <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
             <Metric title="Patrimoine suivi" value={eur(balance)} icon={<CircleDollarSign className="h-4 w-4" />} tone="text-sky-400" />
             <Metric title="Cash-flow" value={eur(income - expenses)} icon={<TrendingUp className="h-4 w-4" />} tone={income - expenses >= 0 ? 'text-emerald-400' : 'text-rose-400'} />
@@ -192,6 +224,7 @@ export default function Finance() {
             <Card title="Répartition des comptes" subtitle="Solde actuel"><div className="h-[230px]">{accountData.length ? <ResponsiveContainer width="100%" height="100%"><BarChart data={accountData} layout="vertical" margin={{left:10,right:20}}><CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.35}/><XAxis type="number" tick={{fontSize:10}} tickFormatter={(v)=>`${Math.round(v)}€`} /><YAxis type="category" dataKey="name" width={100} tick={{fontSize:10}}/><Tooltip formatter={(v:number)=>[eur(v),'Solde']} contentStyle={{background:'hsl(var(--card))',border:'1px solid hsl(var(--border))',borderRadius:10,fontSize:12}}/><Bar dataKey="balance" fill="#60a5fa" radius={[0,5,5,0]} /></BarChart></ResponsiveContainer> : <Empty text="Crée ton premier compte" />}</div></Card>
             <Card title="Abonnements à venir" subtitle={`${eur(recurringMonthly)} / mois environ`}><div className="space-y-2">{upcomingSubs.length ? upcomingSubs.map(s=><div key={s.id} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30 border border-border/40"><div className="flex items-center gap-2 min-w-0"><div className="h-7 w-7 rounded-lg bg-orange-500/10 flex items-center justify-center"><Repeat2 className="h-3.5 w-3.5 text-orange-400"/></div><div className="min-w-0"><p className="text-xs font-medium truncate">{s.name}</p><p className="text-[10px] text-muted-foreground">{s.nextDate} · {accountName(s.accountId)}</p></div></div><span className="font-mono text-xs">{eur(s.amount)}</span></div>) : <Empty text="Aucun abonnement" />}</div></Card>
           </div>
+          </>}
         </>}
 
         {tab === 'transactions' && <TransactionsView transactions={transactions} accounts={accounts} onAdd={() => { setTx({ ...emptyTx, accountId: accounts[0]?.id || '' }); setTxOpen(true); }} onEdit={(x)=>{setTx(x);setTxOpen(true)}} onDelete={async (x)=>{await deleteRow('financeTransactions' as any,x.id);toast.success('Transaction supprimée')}} />}
