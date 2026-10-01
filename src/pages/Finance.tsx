@@ -19,7 +19,7 @@ import {
 import { toast } from 'sonner';
 import type { ReactNode } from 'react';
 
-interface FinanceAccount { id: string; name: string; type: string; institution: string; balance: number; currency: string; color?: string; archived?: boolean; }
+interface FinanceAccount { id: string; name: string; type: string; institution: string; balance: number; openingBalance?: number; currency: string; color?: string; archived?: boolean; }
 interface FinanceTransaction { id: string; date: string; description: string; amount: number; type: 'income' | 'expense'; accountId: string; category: string; notes?: string; }
 interface FinanceSubscription { id: string; name: string; amount: number; frequency: 'monthly' | 'yearly' | 'weekly'; nextDate: string; accountId: string; category: string; active: boolean; }
 interface FinanceTransfer { id: string; date: string; fromAccountId: string; toAccountId: string; amount: number; recurring: boolean; frequency?: 'monthly' | 'weekly' | 'yearly'; nextDate?: string; active: boolean; }
@@ -60,8 +60,25 @@ export default function Finance() {
   const monthTx = useMemo(() => transactions.filter(t => monthKey(t.date) === key), [transactions, key]);
   const income = monthTx.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
   const expenses = monthTx.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
-  const balance = accounts.reduce((s, a) => s + Number(a.balance || 0), 0);
+  const accountBalances = useMemo(() => {
+    const result: Record<string, number> = {};
+    accounts.forEach(a => {
+      const txNet = transactions.filter(t => t.accountId === a.id).reduce((sum, t) => sum + (t.type === 'income' ? Number(t.amount) : -Number(t.amount)), 0);
+      const transferNet = transfers.reduce((sum, t) => {
+        if (t.fromAccountId === a.id) return sum - Number(t.amount);
+        if (t.toAccountId === a.id) return sum + Number(t.amount);
+        return sum;
+      }, 0);
+      const opening = a.openingBalance !== undefined ? Number(a.openingBalance) : Number(a.balance || 0) - txNet - transferNet;
+      result[a.id] = opening + txNet + transferNet;
+    });
+    return result;
+  }, [accounts, transactions, transfers]);
+  const balance = accounts.reduce((s, a) => s + (accountBalances[a.id] ?? 0), 0);
   const savingsRate = income > 0 ? ((income - expenses) / income) * 100 : 0;
+  const investmentBalance = accounts.filter(a => ['PEA', 'CTO', 'Assurance-vie', 'Crypto'].includes(a.type)).reduce((s, a) => s + (accountBalances[a.id] ?? 0), 0);
+  const fixedMonthly = subscriptions.filter(s => s.active).reduce((s, x) => s + (x.frequency === 'monthly' ? x.amount : x.frequency === 'yearly' ? x.amount / 12 : x.amount * 52 / 12), 0);
+  const cashBalance = accounts.filter(a => ['Compte courant', 'Épargne', 'Espèces'].includes(a.type)).reduce((s, a) => s + (accountBalances[a.id] ?? 0), 0);
 
   const categoryData = useMemo(() => {
     const map: Record<string, number> = {};
@@ -80,7 +97,7 @@ export default function Finance() {
     });
   }, [cursor, key, monthTx]);
 
-  const accountData = accounts.filter(a => !a.archived).map(a => ({ name: a.name, balance: Number(a.balance || 0) }));
+  const accountData = accounts.filter(a => !a.archived).map(a => ({ name: a.name, balance: accountBalances[a.id] ?? 0 }));
   const upcomingSubs = subscriptions.filter(s => s.active).sort((a, b) => a.nextDate.localeCompare(b.nextDate)).slice(0, 6);
   const recurringMonthly = subscriptions.filter(s => s.active).reduce((s, x) => s + (x.frequency === 'monthly' ? x.amount : x.frequency === 'yearly' ? x.amount / 12 : x.amount * 52 / 12), 0);
 
@@ -96,7 +113,10 @@ export default function Finance() {
 
   const saveAccount = async () => {
     if (!accountForm.name) return toast.error('Donne un nom au compte.');
-    const row = { ...accountForm, id: accountForm.id || id('acc'), balance: Number(accountForm.balance) };
+    const txNet = editingAccount ? transactions.filter(t => t.accountId === editingAccount.id).reduce((sum, t) => sum + (t.type === 'income' ? Number(t.amount) : -Number(t.amount)), 0) : 0;
+    const transferNet = editingAccount ? transfers.reduce((sum, t) => sum + (t.toAccountId === editingAccount.id ? Number(t.amount) : t.fromAccountId === editingAccount.id ? -Number(t.amount) : 0), 0) : 0;
+    const openingBalance = editingAccount ? Number(accountForm.balance) - txNet - transferNet : Number(accountForm.balance);
+    const row = { ...accountForm, id: accountForm.id || id('acc'), balance: Number(accountForm.balance), openingBalance };
     if (editingAccount) await updateRow('financeAccounts' as any, editingAccount.id, row); else await addRow('financeAccounts' as any, row);
     setAccountOpen(false); setEditingAccount(null); toast.success('Compte enregistré');
   };
@@ -142,11 +162,19 @@ export default function Finance() {
             <div className="flex items-center gap-2"><div className="text-right"><p className="text-[10px] text-muted-foreground">Patrimoine suivi</p><p className="font-mono text-lg font-bold">{eur(balance)}</p></div></div>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <Metric title="Revenus" value={eur(income)} icon={<ArrowDownLeft className="h-4 w-4" />} tone="text-emerald-400" />
-            <Metric title="Dépenses" value={eur(expenses)} icon={<ArrowUpRight className="h-4 w-4" />} tone="text-rose-400" />
-            <Metric title="Épargne du mois" value={eur(income - expenses)} icon={<PiggyBank className="h-4 w-4" />} tone={income - expenses >= 0 ? 'text-emerald-400' : 'text-rose-400'} />
-            <Metric title="Taux d’épargne" value={`${savingsRate.toFixed(1)} %`} icon={<TrendingUp className="h-4 w-4" />} tone="text-sky-400" />
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+            <Metric title="Patrimoine suivi" value={eur(balance)} icon={<CircleDollarSign className="h-4 w-4" />} tone="text-sky-400" />
+            <Metric title="Cash-flow" value={eur(income - expenses)} icon={<TrendingUp className="h-4 w-4" />} tone={income - expenses >= 0 ? 'text-emerald-400' : 'text-rose-400'} />
+            <Metric title="Taux d’épargne" value={`${savingsRate.toFixed(1)} %`} icon={<PiggyBank className="h-4 w-4" />} tone="text-emerald-400" />
+            <Metric title="Liquidités" value={eur(cashBalance)} icon={<Banknote className="h-4 w-4" />} tone="text-cyan-400" />
+            <Metric title="Investissements" value={eur(investmentBalance)} icon={<TrendingUp className="h-4 w-4" />} tone="text-violet-400" />
+            <Metric title="Dépenses fixes" value={`${eur(fixedMonthly)} / mois`} icon={<CalendarClock className="h-4 w-4" />} tone="text-orange-400" />
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-3">
+            <Metric title="Revenus du mois" value={eur(income)} icon={<ArrowDownLeft className="h-4 w-4" />} tone="text-emerald-400" />
+            <Metric title="Dépenses du mois" value={eur(expenses)} icon={<ArrowUpRight className="h-4 w-4" />} tone="text-rose-400" />
+            <Metric title="Épargne potentielle" value={eur(Math.max(0, income - expenses))} icon={<PiggyBank className="h-4 w-4" />} tone="text-emerald-400" />
           </div>
 
           <div className="grid lg:grid-cols-[1.6fr_1fr] gap-4">
@@ -164,8 +192,8 @@ export default function Finance() {
           </div>
         </>}
 
-        {tab === 'transactions' && <TransactionsView transactions={transactions} accounts={accounts} onAdd={() => { setTx({ ...emptyTx, accountId: accounts[0]?.id || '' }); setTxOpen(true); }} onDelete={async (x)=>{await deleteRow('financeTransactions' as any,x.id);toast.success('Transaction supprimée')}} />}
-        {tab === 'accounts' && <AccountsView accounts={accounts} onNew={() => {setEditingAccount(null);setAccountForm({id:'',name:'',type:'Compte courant',institution:'',balance:0,currency:'EUR'});setAccountOpen(true)}} onEdit={(a)=>{setEditingAccount(a);setAccountForm(a);setAccountOpen(true)}} onDelete={async a=>{await deleteRow('financeAccounts' as any,a.id);toast.success('Compte supprimé')}} />}
+        {tab === 'transactions' && <TransactionsView transactions={transactions} accounts={accounts} onAdd={() => { setTx({ ...emptyTx, accountId: accounts[0]?.id || '' }); setTxOpen(true); }} onEdit={(x)=>{setTx(x);setTxOpen(true)}} onDelete={async (x)=>{await deleteRow('financeTransactions' as any,x.id);toast.success('Transaction supprimée')}} />}
+        {tab === 'accounts' && <AccountsView accounts={accounts.map(a=>({...a,balance:accountBalances[a.id] ?? Number(a.balance || 0)}))} onNew={() => {setEditingAccount(null);setAccountForm({id:'',name:'',type:'Compte courant',institution:'',balance:0,currency:'EUR'});setAccountOpen(true)}} onEdit={(a)=>{const original=accounts.find(x=>x.id===a.id)||a;setEditingAccount(original);setAccountForm(a);setAccountOpen(true)}} onDelete={async a=>{await deleteRow('financeAccounts' as any,a.id);toast.success('Compte supprimé')}} />}
         {tab === 'subscriptions' && <SubscriptionsView subscriptions={subscriptions} accounts={accounts} onNew={()=>{setSubForm({...subForm,id:'',name:'',amount:0,accountId:accounts[0]?.id||''});setSubOpen(true)}} onToggle={async s=>await updateRow('financeSubscriptions' as any,s.id,{active:!s.active})} onDelete={async s=>{await deleteRow('financeSubscriptions' as any,s.id);toast.success('Abonnement supprimé')}} />}
         {tab === 'transfers' && <TransfersView transfers={transfers} accounts={accounts} onNew={()=>{setTransferForm({...transferForm,id:'',fromAccountId:accounts[0]?.id||'',toAccountId:accounts[1]?.id||''});setTransferOpen(true)}} onDelete={async t=>{await deleteRow('financeTransfers' as any,t.id);toast.success('Virement supprimé')}} />}
       </main>
@@ -185,8 +213,7 @@ function Metric({title,value,icon,tone}:{title:string;value:string;icon:ReactNod
 function Card({title,subtitle,children}:{title:string;subtitle?:string;children:ReactNode}){return <section className="rounded-2xl border border-border bg-card p-4 shadow-sm"><div className="mb-3"><h2 className="text-sm font-semibold">{title}</h2>{subtitle&&<p className="text-[10px] text-muted-foreground mt-0.5">{subtitle}</p>}</div>{children}</section>}
 function Empty({text}:{text:string}){return <div className="h-full min-h-[120px] flex items-center justify-center text-xs text-muted-foreground">{text}</div>}
 
-function TransactionsView({transactions,accounts,onAdd,onDelete}:{transactions:FinanceTransaction[];accounts:FinanceAccount[];onAdd:()=>void;onDelete:(x:FinanceTransaction)=>void}){const [filter,setFilter]=useState('');const list=transactions.filter(t=>!filter||t.description.toLowerCase().includes(filter.toLowerCase())||t.category.toLowerCase().includes(filter.toLowerCase())).sort((a,b)=>b.date.localeCompare(a.date));return <div className="space-y-4"><Header title="Transactions" subtitle={`${transactions.length} opérations enregistrées`} action={<Button size="sm" onClick={onAdd}><Plus className="h-4 w-4 mr-1"/>Ajouter</Button>} /><Input value={filter} onChange={e=>setFilter(e.target.value)} placeholder="Rechercher une transaction…" className="max-w-sm"/><div className="rounded-2xl border border-border overflow-hidden"><div className="grid grid-cols-[110px_1fr_150px_120px_110px_40px] gap-3 px-4 py-3 text-[10px] uppercase tracking-wider text-muted-foreground bg-muted/30"><span>Date</span><span>Description</span><span>Catégorie</span><span>Compte</span><span className="text-right">Montant</span><span/></div>{list.map(t=><div key={t.id} className="grid grid-cols-[110px_1fr_150px_120px_110px_40px] gap-3 items-center px-4 py-3 border-t border-border/50 text-xs"><span className="text-muted-foreground">{t.date}</span><span className="font-medium truncate">{t.description}</span><span className="text-muted-foreground truncate">{t.category}</span><span className="text-muted-foreground truncate">{accounts.find(a=>a.id===t.accountId)?.name||'—'}</span><span className={`text-right font-mono font-semibold ${t.type==='income'?'text-emerald-400':'text-rose-400'}`}>{t.type==='income'?'+':'-'}{eur(t.amount)}</span><button onClick={()=>onDelete(t)} className="text-muted-foreground hover:text-rose-400"><X className="h-3.5 w-3.5"/></button></div>)}{!list.length&&<div className="p-10 text-center text-xs text-muted-foreground">Aucune transaction.</div>}</div></div>}
-
+function TransactionsView({transactions,accounts,onAdd,onEdit,onDelete}:{transactions:FinanceTransaction[];accounts:FinanceAccount[];onAdd:()=>void;onEdit:(x:FinanceTransaction)=>void;onDelete:(x:FinanceTransaction)=>void}){const [filter,setFilter]=useState('');const list=transactions.filter(t=>!filter||t.description.toLowerCase().includes(filter.toLowerCase())||t.category.toLowerCase().includes(filter.toLowerCase())).sort((a,b)=>b.date.localeCompare(a.date));return <div className="space-y-4"><Header title="Transactions" subtitle={`${transactions.length} opérations enregistrées · modification en temps réel des soldes`} action={<Button size="sm" onClick={onAdd}><Plus className="h-4 w-4 mr-1"/>Ajouter</Button>} /><Input value={filter} onChange={e=>setFilter(e.target.value)} placeholder="Rechercher une transaction…" className="max-w-sm"/><div className="rounded-2xl border border-border overflow-hidden"><div className="grid grid-cols-[110px_1fr_150px_120px_110px_70px] gap-3 px-4 py-3 text-[10px] uppercase tracking-wider text-muted-foreground bg-muted/30"><span>Date</span><span>Description</span><span>Catégorie</span><span>Compte</span><span className="text-right">Montant</span><span/></div>{list.map(t=><div key={t.id} className="grid grid-cols-[110px_1fr_150px_120px_110px_70px] gap-3 items-center px-4 py-3 border-t border-border/50 text-xs"><span className="text-muted-foreground">{t.date}</span><span className="font-medium truncate">{t.description}</span><span className="text-muted-foreground truncate">{t.category}</span><span className="text-muted-foreground truncate">{accounts.find(a=>a.id===t.accountId)?.name||'—'}</span><span className={`text-right font-mono font-semibold ${t.type==='income'?'text-emerald-400':'text-rose-400'}`}>{t.type==='income'?'+':'-'}{eur(t.amount)}</span><div className="flex justify-end gap-1"><button onClick={()=>onEdit(t)} className="px-2 py-1 rounded-md text-[10px] border border-border hover:bg-muted">Modifier</button><button onClick={()=>onDelete(t)} className="p-1.5 text-muted-foreground hover:text-rose-400" aria-label="Supprimer"><X className="h-3.5 w-3.5"/></button></div></div>)}{!list.length&&<div className="p-10 text-center text-xs text-muted-foreground">Aucune transaction.</div>}</div></div>}
 function AccountsView({accounts,onNew,onEdit,onDelete}:{accounts:FinanceAccount[];onNew:()=>void;onEdit:(a:FinanceAccount)=>void;onDelete:(a:FinanceAccount)=>void}){return <div className="space-y-4"><Header title="Comptes & patrimoine" subtitle="Tous tes comptes financiers au même endroit" action={<Button size="sm" onClick={onNew}><Plus className="h-4 w-4 mr-1"/>Nouveau compte</Button>}/><div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">{accounts.map(a=><div key={a.id} className="rounded-2xl border border-border bg-card p-4"><div className="flex items-start justify-between"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-xl bg-sky-500/10 flex items-center justify-center"><Landmark className="h-5 w-5 text-sky-400"/></div><div><p className="font-semibold text-sm">{a.name}</p><p className="text-[10px] text-muted-foreground">{a.type} · {a.institution||'—'}</p></div></div><div className="flex gap-1"><button className="p-1.5 text-muted-foreground hover:text-foreground" onClick={()=>onEdit(a)}><Settings2 className="h-3.5 w-3.5"/></button><button className="p-1.5 text-muted-foreground hover:text-rose-400" onClick={()=>onDelete(a)}><X className="h-3.5 w-3.5"/></button></div></div><p className="font-mono text-2xl font-bold mt-5">{eur(a.balance)}</p><p className="text-[10px] text-muted-foreground mt-1">{a.currency}</p></div>)}{!accounts.length&&<Empty text="Crée ton premier compte bancaire, épargne ou investissement."/>}</div></div>}
 
 function SubscriptionsView({subscriptions,accounts,onNew,onToggle,onDelete}:{subscriptions:FinanceSubscription[];accounts:FinanceAccount[];onNew:()=>void;onToggle:(s:FinanceSubscription)=>void;onDelete:(s:FinanceSubscription)=>void}){const monthly=subscriptions.filter(s=>s.active).reduce((s,x)=>s+(x.frequency==='monthly'?x.amount:x.frequency==='yearly'?x.amount/12:x.amount*52/12),0);return <div className="space-y-4"><Header title="Abonnements" subtitle={`${eur(monthly)} / mois estimés · ${subscriptions.filter(x=>x.active).length} actifs`} action={<Button size="sm" onClick={onNew}><Plus className="h-4 w-4 mr-1"/>Ajouter</Button>}/><div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">{subscriptions.map(s=><div key={s.id} className={`rounded-2xl border p-4 ${s.active?'border-border bg-card':'border-border/50 bg-muted/20 opacity-60'}`}><div className="flex justify-between gap-3"><div><p className="font-semibold text-sm">{s.name}</p><p className="text-[10px] text-muted-foreground">{s.category} · {accounts.find(a=>a.id===s.accountId)?.name||'—'}</p></div><p className="font-mono font-bold">{eur(s.amount)}</p></div><div className="flex items-center justify-between mt-5 text-[10px] text-muted-foreground"><span>Prochain : {s.nextDate}</span><div className="flex gap-2"><button onClick={()=>onToggle(s)} className="text-emerald-400">{s.active?'Désactiver':'Réactiver'}</button><button onClick={()=>onDelete(s)} className="text-rose-400">Supprimer</button></div></div></div>)}</div></div>}
