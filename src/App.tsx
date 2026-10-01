@@ -32,6 +32,7 @@ const Trades = lazyWithReload(() => import("./pages/Trades"));
 const Accounts = lazyWithReload(() => import("./pages/Accounts"));
 const Reports = lazyWithReload(() => import("./pages/Reports"));
 const DailyReport = lazyWithReload(() => import("./pages/DailyReport"));
+const Finance = lazyWithReload(() => import("./pages/Finance"));
 const AiAssistant = lazyWithReload(() => import("./pages/AiAssistant"));
 import NotFound from "./pages/NotFound";
 
@@ -101,6 +102,16 @@ const AppContent = () => {
     id: "all", name: "All Accounts", broker: "", currency: "", createdAt: "", status: "active" as const, category: "",
     initialBalance: accounts.reduce((s, a) => s + a.initialBalance, 0), payoutIntervalDays: 0, dailyDrawdownPct: 0, maxDrawdownPct: 0, riskPct: 1,
   } : null) : activeAccount;
+
+  if (location.pathname === '/finance') {
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<PageLoader />}>
+          <Finance />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
 
   return (
     <>

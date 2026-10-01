@@ -75,6 +75,10 @@ export interface AppData {
   riskRules: any[];
   riskIncreaseRules: any[];
   checklistTemplate: any[];
+  financeAccounts: any[];
+  financeTransactions: any[];
+  financeSubscriptions: any[];
+  financeTransfers: any[];
 }
 
 export const DEFAULT_DATA: AppData = {
@@ -94,6 +98,10 @@ export const DEFAULT_DATA: AppData = {
   riskRules: [],
   riskIncreaseRules: [],
   checklistTemplate: [],
+  financeAccounts: [],
+  financeTransactions: [],
+  financeSubscriptions: [],
+  financeTransfers: [],
 };
 
 export async function readFileData(handle: FileSystemFileHandle): Promise<AppData> {
