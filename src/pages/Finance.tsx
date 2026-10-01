@@ -69,7 +69,9 @@ export default function Finance() {
         if (t.toAccountId === a.id) return sum + Number(t.amount);
         return sum;
       }, 0);
-      const opening = a.openingBalance !== undefined ? Number(a.openingBalance) : Number(a.balance || 0) - txNet - transferNet;
+      // `balance` (or `openingBalance`) is the starting balance.
+      // The current balance is then recalculated from every transaction and transfer.
+      const opening = a.openingBalance !== undefined ? Number(a.openingBalance) : Number(a.balance || 0);
       result[a.id] = opening + txNet + transferNet;
     });
     return result;
