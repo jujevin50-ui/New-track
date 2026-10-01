@@ -31,7 +31,7 @@ export function AppLayout({ children, accounts, activeAccountId, onSelectAccount
   useEffect(()=>{ const handler=(e:MouseEvent)=>{if(wrapperRef.current&&!wrapperRef.current.contains(e.target as Node))setDropdownOpen(false)}; document.addEventListener('mousedown',handler); return()=>document.removeEventListener('mousedown',handler)},[]);
   const handleSelect=(id:string)=>{onSelectAccount(id);setSearch('');setDropdownOpen(false)};
   return <div className="min-h-screen flex flex-col w-full">
-    <LogoSwitch size={38} className="fixed top-4 left-4 z-50 h-[60px] w-[60px]" />
+    <LogoSwitch floating />
     <TopNav />
     {accounts.length>0&&<div className="fixed top-4 right-4 z-40 flex items-center gap-1.5 h-[60px] px-2.5 rounded-full bg-card/95 backdrop-blur-sm border border-border/60 shadow-[0_8px_24px_rgba(0,0,0,0.15)]">
       <div className="hidden md:flex items-center gap-1">{FILTERS.filter(f=>f.key==='all'||accounts.some(a=>a.status===f.key)).map(f=><button key={f.key} onClick={()=>{setStatusFilter(f.key);setDropdownOpen(true)}} className={`h-7 px-2.5 text-[10px] font-medium rounded-full transition-colors flex items-center gap-1 ${statusFilter===f.key?'bg-primary/15 text-primary border border-primary/30':'text-muted-foreground hover:text-foreground border border-transparent hover:border-border/50'}`}>{f.key!=='all'&&<span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[f.key]}`}/>} {f.label}</button>)}</div>

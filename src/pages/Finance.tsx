@@ -153,10 +153,10 @@ export default function Finance() {
 
   return (
     <div className="min-h-screen bg-background text-foreground -mx-4 md:-mx-6 -mb-4 md:-mb-6">
+      <LogoSwitch floating />
       <div className="sticky top-0 z-30 border-b border-border/60 bg-background/90 backdrop-blur-xl">
         <div className="max-w-[1500px] mx-auto px-5 py-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <LogoSwitch size={30} className="h-11 w-11" />
+          <div className="flex items-center gap-3 min-h-[60px] pl-[96px]">
             <div className="h-10 w-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center"><Wallet className="h-5 w-5 text-emerald-400" /></div>
             <div><p className="text-sm font-semibold">My Finance</p><p className="text-[11px] text-muted-foreground">Patrimoine · dépenses · revenus · automatisations</p></div>
           </div>
