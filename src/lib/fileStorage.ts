@@ -104,12 +104,21 @@ export const DEFAULT_DATA: AppData = {
   financeTransfers: [],
 };
 
+/** Garantit que chaque table est bien un tableau (évite les crashs si le fichier contient null / un type inattendu). */
+export function normalizeData(raw: any): AppData {
+  const merged: any = { ...DEFAULT_DATA, ...(raw && typeof raw === 'object' ? raw : {}) };
+  for (const key of Object.keys(DEFAULT_DATA) as (keyof AppData)[]) {
+    if (Array.isArray((DEFAULT_DATA as any)[key]) && !Array.isArray(merged[key])) merged[key] = [];
+  }
+  return merged as AppData;
+}
+
 export async function readFileData(handle: FileSystemFileHandle): Promise<AppData> {
   const file = await handle.getFile();
   const text = await file.text();
   if (!text.trim()) return { ...DEFAULT_DATA };
   try {
-    return { ...DEFAULT_DATA, ...JSON.parse(text) };
+    return normalizeData(JSON.parse(text));
   } catch { return { ...DEFAULT_DATA }; }
 }
 
@@ -149,7 +158,7 @@ export function readLocalData(): AppData | null {
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return null;
-    return { ...DEFAULT_DATA, ...JSON.parse(raw) };
+    return normalizeData(JSON.parse(raw));
   } catch { return null; }
 }
 
@@ -179,7 +188,7 @@ export function openExistingFileFallback(): Promise<AppData> {
       if (!file) { fail('AbortError', 'Aucun fichier'); return; }
       try {
         const text = await file.text();
-        const data = !text.trim() ? { ...DEFAULT_DATA } : { ...DEFAULT_DATA, ...JSON.parse(text) };
+        const data = !text.trim() ? { ...DEFAULT_DATA } : normalizeData(JSON.parse(text));
         settled = true; cleanup(); resolve(data);
       } catch { fail('SyntaxError', 'Fichier illisible'); }
     };
