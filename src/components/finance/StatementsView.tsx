@@ -6,11 +6,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  ChevronDown, ChevronRight, ClipboardList, Copy, FileText, Pencil, Plus, Trash2, TrendingDown, TrendingUp, X,
+  Banknote, ChevronDown, ChevronRight, ClipboardList, Copy, FileText, Pencil, Plus, Trash2, TrendingDown, TrendingUp, X,
 } from 'lucide-react';
 import {
   Area, AreaChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart,
-  ResponsiveContainer, Tooltip, XAxis, YAxis,
+  ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import { toast } from 'sonner';
 
@@ -33,7 +33,7 @@ export interface FinanceStatement {
   notes?: string;
 }
 
-interface AccountLite { id: string; name: string; type: string; institution?: string; archived?: boolean }
+interface AccountLite { id: string; name: string; type: string; institution?: string; archived?: boolean; initialCapital?: number | null; initialDate?: string | null }
 
 interface Props {
   accounts: AccountLite[];
@@ -42,6 +42,8 @@ interface Props {
   initialAccountId?: string;
   onSave: (statement: FinanceStatement, isEdit: boolean, applyBalance: boolean) => Promise<void>;
   onDelete: (statement: FinanceStatement) => Promise<void>;
+  /** Définit (ou supprime avec null) le capital initial et sa date pour un compte */
+  onSetInitial: (accountId: string, capital: number | null, date: string | null) => Promise<void>;
 }
 
 /* ───────────── Helpers ───────────── */
@@ -62,6 +64,18 @@ const hasNum = (s: string) => s.trim() !== '' && Number.isFinite(parseFloat(s.re
 const fmtDate = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
 const fmtShort = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: '2-digit' }).replace('.', '');
 const norm = (s: string) => s.trim().toLowerCase();
+const daysBetween = (a: string, b: string) => Math.round((new Date(`${b}T12:00:00`).getTime() - new Date(`${a}T12:00:00`).getTime()) / 86400000);
+const fmtDuration = (days: number) => {
+  if (days < 60) return `${days} j`;
+  const months = Math.floor(days / 30.44);
+  if (months < 12) return `${months} mois`;
+  const y = Math.floor(months / 12); const m = months % 12;
+  return `${y} an${y > 1 ? 's' : ''}${m ? ` ${m} mois` : ''}`;
+};
+const initialOfAccount = (a?: AccountLite) => {
+  const c = Number(a?.initialCapital);
+  return a && Number.isFinite(c) && c > 0 && a.initialDate ? { capital: c, date: a.initialDate } : null;
+};
 const tone = (n: number) => (n > 0 ? 'text-emerald-400' : n < 0 ? 'text-rose-400' : 'text-muted-foreground');
 
 /* Form types (champs texte pour accepter la virgule française) */
@@ -79,7 +93,7 @@ interface Draft {
 const emptyHolding = (): HoldingDraft => ({ id: uid('h'), name: '', quantity: '', unitPrice: '', value: '' });
 
 /* ───────────── Composant principal ───────────── */
-export function StatementsView({ accounts, statements, initialAccountId, onSave, onDelete }: Props) {
+export function StatementsView({ accounts, statements, initialAccountId, onSave, onDelete, onSetInitial }: Props) {
   const safeStatements = useMemo(
     () => (statements || []).map(s => ({ ...s, holdings: Array.isArray(s.holdings) ? s.holdings : [] })),
     [statements],
@@ -102,6 +116,10 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
 
   const [selectedRaw, setSelectedRaw] = useState<string>('');
   const selected = selectedRaw && (selectedRaw === 'all' || accounts.some(a => a.id === selectedRaw)) ? selectedRaw : defaultSelected;
+
+  const initial = useMemo(() => (selected === 'all' ? null : initialOfAccount(accounts.find(a => a.id === selected))), [selected, accounts]);
+  const [initialOpen, setInitialOpen] = useState(false);
+  const [initialForm, setInitialForm] = useState({ capital: '', date: today() });
 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -129,13 +147,23 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
     const dep = last.deposited != null && Number(last.deposited) > 0 ? Number(last.deposited) : null;
     const gain = dep != null ? last.totalValue - dep : null;
     const gainPct = dep != null ? (gain! / dep) * 100 : null;
-    return { dPrev, dPrevPct, dFirst, dFirstPct, dep, gain, gainPct };
-  }, [last, prev, first, list.length]);
+    // Évolution depuis le dépôt initial
+    let since: { d: number; p: number; days: number; annual: number | null } | null = null;
+    if (initial && last.date >= initial.date) {
+      const d = last.totalValue - initial.capital;
+      const days = daysBetween(initial.date, last.date);
+      const annual = days >= 30 && last.totalValue > 0 ? (Math.pow(last.totalValue / initial.capital, 365 / days) - 1) * 100 : null;
+      since = { d, p: (d / initial.capital) * 100, days, annual };
+    }
+    return { dPrev, dPrevPct, dFirst, dFirstPct, dep, gain, gainPct, since };
+  }, [last, prev, first, list.length, initial]);
 
-  const chartData = useMemo(
-    () => list.map(s => ({ label: fmtShort(s.date), value: Number(s.totalValue), deposited: s.deposited != null && Number(s.deposited) > 0 ? Number(s.deposited) : null })),
-    [list],
-  );
+  const chartData = useMemo(() => {
+    const pts = list.map(s => ({ date: s.date, label: fmtShort(s.date), value: Number(s.totalValue), deposited: s.deposited != null && Number(s.deposited) > 0 ? Number(s.deposited) : null }));
+    // Le dépôt initial devient le point de départ de la courbe
+    if (initial && !pts.some(p => p.date === initial.date)) pts.push({ date: initial.date, label: fmtShort(initial.date), value: initial.capital, deposited: null });
+    return pts.sort((a, b) => a.date.localeCompare(b.date));
+  }, [list, initial]);
   const hasDeposits = chartData.some(d => d.deposited != null);
 
   const allocation = useMemo(() => {
@@ -188,7 +216,9 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
       const sts = byAccount[a.id];
       const l = sts[sts.length - 1];
       const p = sts.length > 1 ? sts[sts.length - 2] : undefined;
-      return { account: a, last: l, delta: p ? l.totalValue - Number(p.totalValue) : null, deltaPct: p && p.totalValue ? ((l.totalValue - Number(p.totalValue)) / Number(p.totalValue)) * 100 : null, count: sts.length };
+      const ini = initialOfAccount(a);
+      const sinceD = ini && l.date >= ini.date ? Number(l.totalValue) - ini.capital : null;
+      return { account: a, last: l, since: sinceD != null ? { d: sinceD, p: (sinceD / ini!.capital) * 100 } : null, delta: p ? l.totalValue - Number(p.totalValue) : null, deltaPct: p && p.totalValue ? ((l.totalValue - Number(p.totalValue)) / Number(p.totalValue)) * 100 : null, count: sts.length };
     });
     const total = summary.reduce((s, x) => s + Number(x.last.totalValue), 0);
     return { accs, rows, summary, total };
@@ -202,10 +232,41 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
   const variationOf = (s: FinanceStatement) => {
     const sts = byAccount[s.accountId] || [];
     const i = sts.findIndex(x => x.id === s.id);
-    if (i <= 0) return null;
+    if (i <= 0) {
+      const ini = initialOfAccount(accountById(s.accountId));
+      if (ini && s.date >= ini.date) { const d = Number(s.totalValue) - ini.capital; return { d, p: (d / ini.capital) * 100 }; }
+      return null;
+    }
     const p = sts[i - 1];
     const d = Number(s.totalValue) - Number(p.totalValue);
     return { d, p: Number(p.totalValue) ? (d / Number(p.totalValue)) * 100 : 0 };
+  };
+
+  const sinceInitialOf = (s: FinanceStatement) => {
+    const ini = initialOfAccount(accountById(s.accountId));
+    if (!ini || s.date < ini.date) return null;
+    const d = Number(s.totalValue) - ini.capital;
+    return { d, p: (d / ini.capital) * 100 };
+  };
+  const showSince = history.some(s => sinceInitialOf(s));
+
+  /* ── Capital initial ── */
+  const openInitial = () => {
+    setInitialForm({ capital: initial ? String(initial.capital) : '', date: initial?.date || first?.date || today() });
+    setInitialOpen(true);
+  };
+  const saveInitial = async () => {
+    const capital = num(initialForm.capital);
+    if (!(capital > 0)) return toast.error('Indique un capital initial supérieur à 0.');
+    if (!initialForm.date) return toast.error('Indique la date du dépôt.');
+    await onSetInitial(selected, round2(capital), initialForm.date);
+    setInitialOpen(false);
+    toast.success('Capital initial enregistré');
+  };
+  const clearInitial = async () => {
+    await onSetInitial(selected, null, null);
+    setInitialOpen(false);
+    toast.success('Capital initial supprimé');
   };
 
   /* ── Édition ── */
@@ -327,6 +388,7 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
               {orderedAccounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}{byAccount[a.id]?.length ? ` · ${byAccount[a.id].length} relevé${byAccount[a.id].length > 1 ? 's' : ''}` : ''}</SelectItem>)}
             </SelectContent>
           </Select>
+          {selected !== 'all' && <Button size="sm" variant="outline" onClick={openInitial}><Banknote className="h-4 w-4 mr-1" />{initial ? `Capital initial : ${eurShort(initial.capital)}` : 'Définir le capital initial'}</Button>}
           <Button size="sm" onClick={openNew} disabled={!accounts.length}><Plus className="h-4 w-4 mr-1" />Nouveau relevé</Button>
         </div>
       </div>
@@ -370,7 +432,7 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
           <Box title="Dernier relevé par compte">
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
-                <thead><tr className="text-muted-foreground border-b border-border"><th className="text-left py-2.5">Compte</th><th className="text-right">Date</th><th className="text-right">Valeur</th><th className="text-right">Vs relevé précédent</th><th className="text-right">Relevés</th><th /></tr></thead>
+                <thead><tr className="text-muted-foreground border-b border-border"><th className="text-left py-2.5">Compte</th><th className="text-right">Date</th><th className="text-right">Valeur</th><th className="text-right">Vs relevé précédent</th><th className="text-right">Depuis le dépôt</th><th className="text-right">Relevés</th><th /></tr></thead>
                 <tbody>
                   {overview.summary.map(x => (
                     <tr key={x.account.id} className="border-b border-border/40">
@@ -378,6 +440,7 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
                       <td className="text-right text-muted-foreground">{fmtDate(x.last.date)}</td>
                       <td className="text-right font-mono">{eur(Number(x.last.totalValue))}</td>
                       <td className={`text-right font-mono ${tone(x.delta ?? 0)}`}>{x.delta == null ? '—' : `${signed(x.delta)} (${pct(x.deltaPct ?? 0)})`}</td>
+                      <td className={`text-right font-mono ${tone(x.since?.d ?? 0)}`}>{x.since ? `${signed(x.since.d)} (${pct(x.since.p)})` : '—'}</td>
                       <td className="text-right">{x.count}</td>
                       <td className="text-right"><button className="text-[11px] text-sky-400 hover:underline" onClick={() => setSelectedRaw(x.account.id)}>Détail</button></td>
                     </tr>
@@ -399,11 +462,20 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <Metric title={`Valeur au ${fmtDate(last.date)}`} value={eur(Number(last.totalValue))} />
             <Metric title="Vs relevé précédent" value={kpis.dPrev == null ? '—' : signed(kpis.dPrev)} sub={kpis.dPrevPct == null ? undefined : pct(kpis.dPrevPct)} toneClass={tone(kpis.dPrev ?? 0)} icon={kpis.dPrev != null && kpis.dPrev < 0 ? <TrendingDown className="h-4 w-4" /> : <TrendingUp className="h-4 w-4" />} />
-            <Metric title="Depuis le 1er relevé" value={kpis.dFirst == null ? '—' : signed(kpis.dFirst)} sub={kpis.dFirstPct == null ? undefined : `${pct(kpis.dFirstPct)} · depuis le ${fmtDate(first.date)}`} toneClass={tone(kpis.dFirst ?? 0)} />
-            <Metric title={kpis.dep != null ? 'Plus-value vs capital versé' : 'Capital versé'} value={kpis.gain != null ? signed(kpis.gain) : '—'} sub={kpis.gain != null ? `${pct(kpis.gainPct ?? 0)} · versé ${eur(kpis.dep!)}` : 'Renseigne-le dans un relevé pour voir ta plus-value'} toneClass={tone(kpis.gain ?? 0)} />
+            {kpis.since ? (
+              <Metric title="Depuis le dépôt initial" value={signed(kpis.since.d)} toneClass={tone(kpis.since.d)} icon={kpis.since.d < 0 ? <TrendingDown className="h-4 w-4" /> : <TrendingUp className="h-4 w-4" />}
+                sub={`${pct(kpis.since.p)} · depuis le ${fmtDate(initial!.date)} (${fmtDuration(kpis.since.days)})${kpis.since.annual != null ? ` · ≈ ${pct(kpis.since.annual)}/an` : ''}`} />
+            ) : (
+              <Metric title="Depuis le 1er relevé" value={kpis.dFirst == null ? '—' : signed(kpis.dFirst)} sub={kpis.dFirstPct == null ? (initial ? 'Ce relevé est antérieur au dépôt initial' : undefined) : `${pct(kpis.dFirstPct)} · depuis le ${fmtDate(first.date)}`} toneClass={tone(kpis.dFirst ?? 0)} />
+            )}
+            {kpis.dep == null && initial ? (
+              <Metric title="Capital initial" value={eur(initial.capital)} sub={`Déposé le ${fmtDate(initial.date)}`} />
+            ) : (
+              <Metric title={kpis.dep != null ? 'Plus-value vs capital versé' : 'Capital versé'} value={kpis.gain != null ? signed(kpis.gain) : '—'} sub={kpis.gain != null ? `${pct(kpis.gainPct ?? 0)} · versé ${eur(kpis.dep!)}` : 'Renseigne-le dans un relevé pour voir ta plus-value'} toneClass={tone(kpis.gain ?? 0)} />
+            )}
           </div>
 
-          <Box title={`Évolution — ${accountName(selected)}`} subtitle={hasDeposits ? 'Valeur du compte et capital versé' : 'Valeur du compte à chaque relevé'}>
+          <Box title={`Évolution — ${accountName(selected)}`} subtitle={initial ? `Valeur du compte depuis le dépôt initial du ${fmtDate(initial.date)}${hasDeposits ? ' · capital versé en pointillés' : ''}` : hasDeposits ? 'Valeur du compte et capital versé' : 'Valeur du compte à chaque relevé'}>
             {chartData.length > 1 ? (
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -414,12 +486,13 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
                     <YAxis tick={{ fontSize: 10 }} tickFormatter={eurShort} width={70} domain={['auto', 'auto']} />
                     <Tooltip contentStyle={tooltipStyle} formatter={(v: number, n: string) => [eur(v), n]} />
                     {hasDeposits && <Legend wrapperStyle={{ fontSize: 11 }} />}
+                    {initial && <ReferenceLine y={initial.capital} stroke="#f59e0b" strokeDasharray="4 4" ifOverflow="extendDomain" label={{ value: 'Capital initial', fontSize: 10, fill: '#f59e0b' }} />}
                     <Area type="monotone" dataKey="value" name="Valeur" stroke="#34d399" strokeWidth={2.5} fill="url(#stmtArea)" dot={{ r: 3 }} />
                     {hasDeposits && <Line type="monotone" dataKey="deposited" name="Capital versé" stroke="#60a5fa" strokeWidth={2} strokeDasharray="5 4" dot={{ r: 2 }} connectNulls />}
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
-            ) : <Empty text="Ajoute au moins un deuxième relevé pour voir la courbe d’évolution." />}
+            ) : <Empty text={initial ? 'Ajoute un relevé postérieur au dépôt initial pour voir la courbe.' : 'Ajoute au moins un deuxième relevé pour voir la courbe d’évolution (ou définis le capital initial).'} />}
           </Box>
 
           {allocation.length > 0 && (
@@ -483,7 +556,7 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
         <Box title="Historique des relevés" subtitle="Clique sur une ligne pour voir le détail des actifs">
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
-              <thead><tr className="text-muted-foreground border-b border-border"><th className="w-6" /><th className="text-left py-2.5">Date</th>{selected === 'all' && <th className="text-left">Compte</th>}<th className="text-right">Valeur</th><th className="text-right">Variation</th><th className="text-right">Capital versé</th><th className="text-right">Actifs</th><th /></tr></thead>
+              <thead><tr className="text-muted-foreground border-b border-border"><th className="w-6" /><th className="text-left py-2.5">Date</th>{selected === 'all' && <th className="text-left">Compte</th>}<th className="text-right">Valeur</th><th className="text-right">Variation</th>{showSince && <th className="text-right">Depuis le dépôt</th>}<th className="text-right">Capital versé</th><th className="text-right">Actifs</th><th /></tr></thead>
               <tbody>
                 {history.map(s => {
                   const v = variationOf(s);
@@ -496,6 +569,7 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
                         {selected === 'all' && <td>{accountName(s.accountId)}</td>}
                         <td className="text-right font-mono">{eur(Number(s.totalValue))}</td>
                         <td className={`text-right font-mono ${tone(v?.d ?? 0)}`}>{v ? `${signed(v.d)} (${pct(v.p)})` : '—'}</td>
+                        {showSince && (() => { const si = sinceInitialOf(s); return <td className={`text-right font-mono ${tone(si?.d ?? 0)}`}>{si ? `${signed(si.d)} (${pct(si.p)})` : '—'}</td>; })()}
                         <td className="text-right font-mono text-muted-foreground">{s.deposited != null ? eur(Number(s.deposited)) : '—'}</td>
                         <td className="text-right text-muted-foreground">{s.holdings.length || '—'}</td>
                         <td className="text-right whitespace-nowrap" onClick={e => e.stopPropagation()}>
@@ -506,7 +580,7 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
                       {isOpen && (
                         <tr className="bg-muted/10">
                           <td />
-                          <td colSpan={selected === 'all' ? 7 : 6} className="py-3 pr-3">
+                          <td colSpan={(selected === 'all' ? 7 : 6) + (showSince ? 1 : 0)} className="py-3 pr-3">
                             {s.holdings.length ? (
                               <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-2">
                                 {s.holdings.map((h, i) => (
@@ -524,11 +598,38 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
                     </Fragment>
                   );
                 })}
+                {selected !== 'all' && initial && (
+                  <tr className="border-b border-border/40 bg-amber-500/5">
+                    <td />
+                    <td className="py-2.5 font-medium">{fmtDate(initial.date)}</td>
+                    <td className="text-right font-mono">{eur(initial.capital)}</td>
+                    <td colSpan={3 + (showSince ? 1 : 0)} className="pl-4 text-amber-400">Capital initial (dépôt)</td>
+                    <td className="text-right"><button className="p-1.5 text-muted-foreground hover:text-foreground" title="Modifier" onClick={openInitial}><Pencil className="h-3.5 w-3.5" /></button></td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
         </Box>
       )}
+
+      {/* ───── Dialog capital initial ───── */}
+      <Dialog open={initialOpen} onOpenChange={setInitialOpen}>
+        <DialogContent className="bg-card border-border sm:max-w-md">
+          <DialogHeader><DialogTitle>Capital initial — {selected !== 'all' ? accountName(selected) : ''}</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <p className="text-xs text-muted-foreground">Indique la somme déposée au départ et la date du dépôt. L’évolution du compte sera calculée à partir de ce point.</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Capital initial (€)</Label><Input inputMode="decimal" placeholder="Ex : 10 000" value={initialForm.capital} onChange={e => setInitialForm(f => ({ ...f, capital: e.target.value }))} /></div>
+              <div><Label>Date du dépôt</Label><Input type="date" value={initialForm.date} onChange={e => setInitialForm(f => ({ ...f, date: e.target.value }))} /></div>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              {initial ? <Button variant="outline" className="text-rose-400" onClick={clearInitial}>Supprimer</Button> : <span />}
+              <div className="flex gap-2"><Button variant="outline" onClick={() => setInitialOpen(false)}>Annuler</Button><Button onClick={saveInitial}>Enregistrer</Button></div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* ───── Dialog relevé ───── */}
       <Dialog open={open} onOpenChange={setOpen}>

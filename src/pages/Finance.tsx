@@ -20,7 +20,7 @@ import {
 import { toast } from 'sonner';
 import type { ReactNode } from 'react';
 
-interface FinanceAccount { id: string; name: string; type: string; institution: string; balance: number; openingBalance?: number; currency: string; color?: string; archived?: boolean; }
+interface FinanceAccount { id: string; name: string; type: string; institution: string; balance: number; openingBalance?: number; currency: string; color?: string; archived?: boolean; initialCapital?: number | null; initialDate?: string | null; }
 interface FinanceTransaction { id: string; date: string; description: string; amount: number; type: 'income' | 'expense'; accountId: string; category: string; notes?: string; }
 interface FinanceSubscription { id: string; name: string; amount: number; frequency: 'monthly' | 'yearly' | 'weekly'; nextDate: string; accountId: string; category: string; active: boolean; }
 interface FinanceTransfer { id: string; date: string; fromAccountId: string; toAccountId: string; amount: number; recurring: boolean; frequency?: 'monthly' | 'weekly' | 'yearly'; nextDate?: string; active: boolean; }
@@ -170,6 +170,10 @@ export default function Finance() {
 
   const deleteStatement = async (statement: FinanceStatement) => { await deleteRow('financeStatements' as any, statement.id); };
 
+  const setInitialCapital = async (accountId: string, capital: number | null, date: string | null) => {
+    await updateRow('financeAccounts' as any, accountId, { initialCapital: capital, initialDate: date });
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground -mx-4 md:-mx-6 -mb-4 md:-mb-6">
       <LogoSwitch floating />
@@ -253,7 +257,7 @@ export default function Finance() {
           </div>
         )}
         {tab === 'accounts' && accountsView === 'list' && <AccountsView onStatements={(a)=>{setStatementsAccountId(a.id);setAccountsView('statements')}} accounts={accounts.map(a=>({...a,balance:accountBalances[a.id] ?? Number(a.balance || 0)}))} onNew={() => {setEditingAccount(null);setAccountForm({id:'',name:'',type:'Compte courant',institution:'',balance:0,currency:'EUR'});setAccountOpen(true)}} onEdit={(a)=>{const original=accounts.find(x=>x.id===a.id)||a;setEditingAccount(original);setAccountForm(a);setAccountOpen(true)}} onDelete={async a=>{await deleteRow('financeAccounts' as any,a.id);toast.success('Compte supprimé')}} />}
-        {tab === 'accounts' && accountsView === 'statements' && <StatementsView key={statementsAccountId || 'all'} accounts={accounts} statements={statements} initialAccountId={statementsAccountId} onSave={saveStatement} onDelete={deleteStatement} />}
+        {tab === 'accounts' && accountsView === 'statements' && <StatementsView key={statementsAccountId || 'all'} accounts={accounts} statements={statements} initialAccountId={statementsAccountId} onSave={saveStatement} onDelete={deleteStatement} onSetInitial={setInitialCapital} />}
         {tab === 'subscriptions' && <SubscriptionsView subscriptions={subscriptions} accounts={accounts} onNew={()=>{setSubForm({...subForm,id:'',name:'',amount:0,accountId:accounts[0]?.id||''});setSubOpen(true)}} onToggle={async s=>await updateRow('financeSubscriptions' as any,s.id,{active:!s.active})} onDelete={async s=>{await deleteRow('financeSubscriptions' as any,s.id);toast.success('Abonnement supprimé')}} />}
         {tab === 'transfers' && <TransfersView transfers={transfers} accounts={accounts} onNew={()=>{setTransferForm({...transferForm,id:'',fromAccountId:accounts[0]?.id||'',toAccountId:accounts[1]?.id||''});setTransferOpen(true)}} onDelete={async t=>{await deleteRow('financeTransfers' as any,t.id);toast.success('Virement supprimé')}} />}
       </main>
