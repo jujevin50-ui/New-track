@@ -241,7 +241,7 @@ export function ValueAreaChart({ data, initialCapital }: {
         </defs>
         <CartesianGrid {...gridProps} />
         {initialCapital != null && (
-          <ReferenceLine y={initialCapital} {...medianLineStyle(AMBER)} label={{ value: 'Capital initial', position: 'insideTopLeft', fill: AMBER, fontSize: 10 } as any} />
+          <ReferenceLine y={initialCapital} {...medianLineStyle(AMBER)} label={{ value: 'Capital initial', position: 'insideTopLeft', ...valueLabelStyle } as any} />
         )}
         <XAxis dataKey="label" {...xAxisProps} />
         <YAxis domain={domain} ticks={ticks} {...yAxisProps} />

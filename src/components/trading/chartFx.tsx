@@ -59,6 +59,9 @@ export const valueLabelStyle: React.CSSProperties = {
   fontWeight: 400,
   fill: 'hsl(215, 15%, 65%)',
   color: 'hsl(215, 15%, 65%)',
+  // Sans ça, le texte hérite du contour (stroke) coloré des barres/points et paraît gras + coloré.
+  stroke: 'none',
+  strokeWidth: 0,
 };
 
 export const zeroLine = { stroke: 'hsla(215,15%,55%,0.4)', strokeWidth: 1 };
