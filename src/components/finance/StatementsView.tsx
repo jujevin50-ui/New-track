@@ -8,10 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Banknote, ChevronDown, ChevronRight, ClipboardList, Copy, FileText, Pencil, Plus, Trash2, TrendingDown, TrendingUp, X,
 } from 'lucide-react';
-import {
-  Area, AreaChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart,
-  ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
-} from 'recharts';
+import { Donut, MultiLineChart, ValueAreaChart, PALETTE, PROFIT } from './financeCharts';
 import { toast } from 'sonner';
 
 /* ───────────── Types ───────────── */
@@ -47,13 +44,12 @@ interface Props {
 }
 
 /* ───────────── Helpers ───────────── */
-const COLORS = ['#60a5fa', '#34d399', '#a78bfa', '#f59e0b', '#fb7185', '#22d3ee', '#f97316', '#94a3b8'];
 const INVEST_TYPES = ['Assurance-vie', 'PEA', 'CTO', 'Crypto', 'Épargne'];
 const eur = (n: number) => `${n < 0 ? '-' : ''}${Math.abs(n).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
 const eurShort = (n: number) => `${Math.round(n).toLocaleString('fr-FR')} €`;
 const signed = (n: number) => `${n > 0 ? '+' : ''}${eur(n)}`;
 const pct = (n: number) => `${n > 0 ? '+' : ''}${n.toFixed(2)} %`;
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const uid = (p: string) => `${p}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const num = (s: string | number | null | undefined) => {
@@ -371,8 +367,6 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
   };
 
   /* ───────────── Rendu ───────────── */
-  const tooltipStyle = { background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 12, fontSize: 12 };
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -416,17 +410,7 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
           </div>
           <Box title="Évolution globale" subtitle="Total (dernière valeur connue de chaque compte) et valeur de chaque compte à la date de ses relevés">
             <div className="h-[320px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={overview.rows}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.35} />
-                  <XAxis dataKey="label" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 10 }} tickFormatter={eurShort} width={70} />
-                  <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => eur(v)} />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Line type="monotone" dataKey="Total" stroke="#34d399" strokeWidth={3} dot={{ r: 3 }} />
-                  {overview.accs.map((a, i) => <Line key={a.id} type="monotone" dataKey={a.name} stroke={COLORS[(i + 1) % COLORS.length]} strokeWidth={1.5} dot={{ r: 2 }} connectNulls />)}
-                </LineChart>
-              </ResponsiveContainer>
+              <MultiLineChart rows={overview.rows} series={[{ key: 'Total', color: PROFIT, strong: true }, ...overview.accs.map((a, i) => ({ key: a.name, color: PALETTE[(i + 1) % PALETTE.length] }))]} />
             </div>
           </Box>
           <Box title="Dernier relevé par compte">
@@ -478,19 +462,7 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
           <Box title={`Évolution — ${accountName(selected)}`} subtitle={initial ? `Valeur du compte depuis le dépôt initial du ${fmtDate(initial.date)}${hasDeposits ? ' · capital versé en pointillés' : ''}` : hasDeposits ? 'Valeur du compte et capital versé' : 'Valeur du compte à chaque relevé'}>
             {chartData.length > 1 ? (
               <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData}>
-                    <defs><linearGradient id="stmtArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#34d399" stopOpacity={0.3} /><stop offset="100%" stopColor="#34d399" stopOpacity={0} /></linearGradient></defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.35} />
-                    <XAxis dataKey="label" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} tickFormatter={eurShort} width={70} domain={['auto', 'auto']} />
-                    <Tooltip contentStyle={tooltipStyle} formatter={(v: number, n: string) => [eur(v), n]} />
-                    {hasDeposits && <Legend wrapperStyle={{ fontSize: 11 }} />}
-                    {initial && <ReferenceLine y={initial.capital} stroke="#f59e0b" strokeDasharray="4 4" ifOverflow="extendDomain" label={{ value: 'Capital initial', fontSize: 10, fill: '#f59e0b' }} />}
-                    <Area type="monotone" dataKey="value" name="Valeur" stroke="#34d399" strokeWidth={2.5} fill="url(#stmtArea)" dot={{ r: 3 }} />
-                    {hasDeposits && <Line type="monotone" dataKey="deposited" name="Capital versé" stroke="#60a5fa" strokeWidth={2} strokeDasharray="5 4" dot={{ r: 2 }} connectNulls />}
-                  </AreaChart>
-                </ResponsiveContainer>
+                <ValueAreaChart data={chartData} initialCapital={initial?.capital ?? null} />
               </div>
             ) : <Empty text={initial ? 'Ajoute un relevé postérieur au dépôt initial pour voir la courbe.' : 'Ajoute au moins un deuxième relevé pour voir la courbe d’évolution (ou définis le capital initial).'} />}
           </Box>
@@ -499,14 +471,7 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
             <div className="grid lg:grid-cols-[1fr_1.6fr] gap-4">
               <Box title="Répartition" subtitle={`Relevé du ${fmtDate(last.date)}`}>
                 <div className="h-[240px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={allocation} dataKey="value" nameKey="name" innerRadius={55} outerRadius={90} paddingAngle={2}>
-                        {allocation.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                      </Pie>
-                      <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => eur(v)} />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <Donut data={allocation.map(h => ({ name: h.name, value: Number(h.value) }))} centerLabel="Total" />
                 </div>
               </Box>
               <Box title="Actifs au dernier relevé" subtitle={prev ? `Variation comparée au relevé du ${fmtDate(prev.date)}` : 'Ajoute un autre relevé pour voir les variations par actif'}>
@@ -516,7 +481,7 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
                     <tbody>
                       {allocation.map((h, i) => (
                         <tr key={h.id || i} className="border-b border-border/40">
-                          <td className="py-2.5"><span className="inline-block h-2 w-2 rounded-full mr-2" style={{ background: COLORS[i % COLORS.length] }} />{h.name}{h.isNew && <span className="ml-2 text-[9px] px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400">nouveau</span>}</td>
+                          <td className="py-2.5"><span className="inline-block h-2 w-2 rounded-full mr-2" style={{ background: PALETTE[i % PALETTE.length] }} />{h.name}{h.isNew && <span className="ml-2 text-[9px] px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400">nouveau</span>}</td>
                           <td className="text-right font-mono text-muted-foreground">{h.quantity != null ? Number(h.quantity).toLocaleString('fr-FR', { maximumFractionDigits: 6 }) : '—'}</td>
                           <td className="text-right font-mono text-muted-foreground">{h.unitPrice != null ? eur(Number(h.unitPrice)) : '—'}</td>
                           <td className="text-right font-mono">{eur(Number(h.value))}</td>
@@ -535,16 +500,7 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
           {assetEvolution.names.length > 0 && list.length > 1 && (
             <Box title="Évolution par actif" subtitle="Valeur de chaque actif à chaque relevé">
               <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={assetEvolution.rows}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.35} />
-                    <XAxis dataKey="label" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} tickFormatter={eurShort} width={70} />
-                    <Tooltip contentStyle={tooltipStyle} formatter={(v: number, n: string) => [eur(v), n]} />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
-                    {assetEvolution.names.map((n, i) => <Line key={n} type="monotone" dataKey={n} stroke={COLORS[i % COLORS.length]} strokeWidth={2} dot={{ r: 2.5 }} connectNulls />)}
-                  </LineChart>
-                </ResponsiveContainer>
+                <MultiLineChart rows={assetEvolution.rows} series={assetEvolution.names.map((n, i) => ({ key: n, color: PALETTE[i % PALETTE.length] }))} />
               </div>
             </Box>
           )}

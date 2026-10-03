@@ -13,10 +13,7 @@ import {
   CreditCard, Landmark, Plus, Repeat2, Save, Settings2, ShieldCheck, TrendingDown,
   TrendingUp, Wallet, X, PiggyBank, CircleDollarSign
 } from 'lucide-react';
-import {
-  Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart,
-  ResponsiveContainer, Tooltip, XAxis, YAxis
-} from 'recharts';
+import { YearFlowBars, CashflowChart, FlowAreaChart, Donut, AccountBars, PALETTE } from '@/components/finance/financeCharts';
 import { toast } from 'sonner';
 import type { ReactNode } from 'react';
 
@@ -30,13 +27,16 @@ type Tab = 'overview' | 'transactions' | 'accounts' | 'subscriptions' | 'transfe
 const ACCOUNT_TYPES = ['Compte courant', 'Épargne', 'Assurance-vie', 'PEA', 'CTO', 'Crypto', 'Espèces', 'Autre'];
 const EXPENSE_CATEGORIES = ['Logement', 'Alimentation', 'Transport', 'Abonnements', 'Loisirs', 'Shopping', 'Santé', 'Formation', 'Trading', 'Famille', 'Impôts', 'Autre'];
 const INCOME_CATEGORIES = ['Salaire', 'Trading', 'Payout', 'Intérêts', 'Vente', 'Autre'];
-const COLORS = ['#60a5fa', '#34d399', '#a78bfa', '#f59e0b', '#fb7185', '#22d3ee', '#f97316', '#94a3b8'];
 const eur = (n: number) => `${n < 0 ? '-' : ''}${Math.abs(n).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
 const id = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 const dateKey = (d: string) => String(d || '').slice(0, 10);
 const monthKey = (d: string) => dateKey(d).slice(0, 7);
+// Dates en heure LOCALE (toISOString convertit en UTC et fait reculer d'un mois/jour en France)
+const localDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const todayStr = () => localDate(new Date());
+const monthKeyOf = (d: Date) => localDate(d).slice(0, 7);
 
-const emptyTx: FinanceTransaction = { id: '', date: new Date().toISOString().slice(0, 10), description: '', amount: 0, type: 'expense', accountId: '', category: 'Autre', notes: '' };
+const emptyTx: FinanceTransaction = { id: '', date: todayStr(), description: '', amount: 0, type: 'expense', accountId: '', category: 'Autre', notes: '' };
 
 export default function Finance() {
   const { data, addRow, updateRow, deleteRow } = useData();
@@ -57,10 +57,10 @@ export default function Finance() {
   const [tx, setTx] = useState<FinanceTransaction>({ ...emptyTx });
   const [editingAccount, setEditingAccount] = useState<FinanceAccount | null>(null);
   const [accountForm, setAccountForm] = useState<FinanceAccount>({ id: '', name: '', type: 'Compte courant', institution: '', balance: 0, currency: 'EUR' });
-  const [subForm, setSubForm] = useState<FinanceSubscription>({ id: '', name: '', amount: 0, frequency: 'monthly', nextDate: new Date().toISOString().slice(0, 10), accountId: '', category: 'Abonnements', active: true });
-  const [transferForm, setTransferForm] = useState<FinanceTransfer>({ id: '', date: new Date().toISOString().slice(0, 10), fromAccountId: '', toAccountId: '', amount: 0, recurring: false, frequency: 'monthly', nextDate: new Date().toISOString().slice(0, 10), active: true });
+  const [subForm, setSubForm] = useState<FinanceSubscription>({ id: '', name: '', amount: 0, frequency: 'monthly', nextDate: todayStr(), accountId: '', category: 'Abonnements', active: true });
+  const [transferForm, setTransferForm] = useState<FinanceTransfer>({ id: '', date: todayStr(), fromAccountId: '', toAccountId: '', amount: 0, recurring: false, frequency: 'monthly', nextDate: todayStr(), active: true });
 
-  const key = cursor.toISOString().slice(0, 7);
+  const key = monthKeyOf(cursor);
   const monthLabel = cursor.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
   const monthTx = useMemo(() => transactions.filter(t => monthKey(t.date) === key), [transactions, key]);
   const income = monthTx.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
@@ -211,8 +211,8 @@ export default function Finance() {
               <Metric title="Taux d’épargne annuel" value={`${yearSavingsRate.toFixed(1)} %`} icon={<PiggyBank className="h-4 w-4" />} tone="text-violet-400" />
             </div>
             <div className="grid lg:grid-cols-[1.6fr_1fr] gap-4">
-              <Card title={`Flux de ${cursor.getFullYear()}`} subtitle="Revenus, dépenses et cash-flow par mois"><div className="h-[320px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={yearData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.35}/><XAxis dataKey="month" tick={{fontSize:10}}/><YAxis tick={{fontSize:10}} tickFormatter={(v)=>`${Math.round(v)}€`}/><Tooltip formatter={(v:number)=>eur(v)} contentStyle={{background:'hsl(var(--card))',border:'1px solid hsl(var(--border))',borderRadius:10,fontSize:12}}/><Bar dataKey="income" name="Revenus" fill="#34d399" radius={[4,4,0,0]}/><Bar dataKey="expenses" name="Dépenses" fill="#fb7185" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div></Card>
-              <Card title="Cash-flow mensuel" subtitle="Évolution sur l’année"><div className="h-[320px]"><ResponsiveContainer width="100%" height="100%"><LineChart data={yearData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.35}/><XAxis dataKey="month" tick={{fontSize:10}}/><YAxis tick={{fontSize:10}} tickFormatter={(v)=>`${Math.round(v)}€`}/><Tooltip formatter={(v:number)=>eur(v)} contentStyle={{background:'hsl(var(--card))',border:'1px solid hsl(var(--border))',borderRadius:10,fontSize:12}}/><Line type="monotone" dataKey="cashflow" name="Cash-flow" stroke="#60a5fa" strokeWidth={2.5} dot={{r:3}}/></LineChart></ResponsiveContainer></div></Card>
+              <Card title={`Flux de ${cursor.getFullYear()}`} subtitle="Revenus, dépenses et cash-flow par mois"><div className="h-[320px]"><YearFlowBars data={yearData} /></div></Card>
+              <Card title="Cash-flow mensuel" subtitle="Évolution sur l’année"><div className="h-[320px]"><CashflowChart data={yearData} /></div></Card>
             </div>
             <Card title="Détail des 12 mois" subtitle="Vue complète de l’année"><div className="overflow-x-auto"><table className="w-full text-xs"><thead><tr className="text-muted-foreground border-b border-border"><th className="text-left py-3">Mois</th><th className="text-right py-3">Revenus</th><th className="text-right py-3">Dépenses</th><th className="text-right py-3">Cash-flow</th><th className="text-right py-3">Taux d’épargne</th></tr></thead><tbody>{yearData.map(m=><tr key={m.month} className="border-b border-border/40"><td className="py-3 capitalize font-medium">{m.month}</td><td className="text-right py-3 text-emerald-400 font-mono">{eur(m.income)}</td><td className="text-right py-3 text-rose-400 font-mono">{eur(m.expenses)}</td><td className={`text-right py-3 font-mono ${m.cashflow >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{eur(m.cashflow)}</td><td className="text-right py-3 font-mono">{m.savingsRate.toFixed(1)} %</td></tr>)}</tbody></table></div></Card>
           </>}
@@ -235,15 +235,15 @@ export default function Finance() {
 
           <div className="grid lg:grid-cols-[1.6fr_1fr] gap-4">
             <Card title="Flux du mois" subtitle="Cumul revenus − dépenses">
-              <div className="h-[280px]"><ResponsiveContainer width="100%" height="100%"><AreaChart data={trendData}><defs><linearGradient id="financeArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#34d399" stopOpacity={0.25}/><stop offset="100%" stopColor="#34d399" stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.45}/><XAxis dataKey="day" tick={{fontSize:10}} stroke="hsl(var(--muted-foreground))"/><YAxis tick={{fontSize:10}} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `${Math.round(v)}€`}/><Tooltip formatter={(v:number) => [eur(v), 'Net cumulé']} contentStyle={{background:'hsl(var(--card))',border:'1px solid hsl(var(--border))',borderRadius:10,fontSize:12}}/><Area type="monotone" dataKey="net" stroke="#34d399" fill="url(#financeArea)" strokeWidth={2}/></AreaChart></ResponsiveContainer></div>
+              <div className="h-[280px]"><FlowAreaChart data={trendData} lastIndex={trendData.length - 1} /></div>
             </Card>
             <Card title="Dépenses par catégorie" subtitle="Répartition du mois">
-              {categoryData.length ? <div className="h-[280px] flex items-center"><ResponsiveContainer width="55%" height="100%"><PieChart><Pie data={categoryData} dataKey="value" nameKey="name" innerRadius={58} outerRadius={90} paddingAngle={2}>{categoryData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie><Tooltip formatter={(v:number) => eur(v)} /></PieChart></ResponsiveContainer><div className="flex-1 space-y-2">{categoryData.slice(0,6).map((x,i)=><div key={x.name} className="flex items-center justify-between gap-2 text-xs"><span className="flex items-center gap-2 truncate"><span className="h-2 w-2 rounded-full" style={{background:COLORS[i%COLORS.length]}} />{x.name}</span><span className="font-mono">{eur(x.value)}</span></div>)}</div></div> : <Empty text="Aucune dépense ce mois-ci" />}
+              {categoryData.length ? <div className="h-[280px] flex items-center"><div className="w-[55%] h-full"><Donut data={categoryData} centerLabel="Dépenses" /></div><div className="flex-1 space-y-2">{categoryData.slice(0,6).map((x,i)=><div key={x.name} className="flex items-center justify-between gap-2 text-xs"><span className="flex items-center gap-2 truncate"><span className="h-2 w-2 rounded-full" style={{background:PALETTE[i%PALETTE.length]}} />{x.name}</span><span className="font-mono">{eur(x.value)}</span></div>)}</div></div> : <Empty text="Aucune dépense ce mois-ci" />}
             </Card>
           </div>
 
           <div className="grid lg:grid-cols-[1.2fr_1fr] gap-4">
-            <Card title="Répartition des comptes" subtitle="Solde actuel"><div className="h-[230px]">{accountData.length ? <ResponsiveContainer width="100%" height="100%"><BarChart data={accountData} layout="vertical" margin={{left:10,right:20}}><CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.35}/><XAxis type="number" tick={{fontSize:10}} tickFormatter={(v)=>`${Math.round(v)}€`} /><YAxis type="category" dataKey="name" width={100} tick={{fontSize:10}}/><Tooltip formatter={(v:number)=>[eur(v),'Solde']} contentStyle={{background:'hsl(var(--card))',border:'1px solid hsl(var(--border))',borderRadius:10,fontSize:12}}/><Bar dataKey="balance" fill="#60a5fa" radius={[0,5,5,0]} /></BarChart></ResponsiveContainer> : <Empty text="Crée ton premier compte" />}</div></Card>
+            <Card title="Répartition des comptes" subtitle="Solde actuel"><div className="h-[230px]">{accountData.length ? <AccountBars data={accountData} /> : <Empty text="Crée ton premier compte" />}</div></Card>
             <Card title="Abonnements à venir" subtitle={`${eur(recurringMonthly)} / mois environ`}><div className="space-y-2">{upcomingSubs.length ? upcomingSubs.map(s=><div key={s.id} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30 border border-border/40"><div className="flex items-center gap-2 min-w-0"><div className="h-7 w-7 rounded-lg bg-orange-500/10 flex items-center justify-center"><Repeat2 className="h-3.5 w-3.5 text-orange-400"/></div><div className="min-w-0"><p className="text-xs font-medium truncate">{s.name}</p><p className="text-[10px] text-muted-foreground">{s.nextDate} · {accountName(s.accountId)}</p></div></div><span className="font-mono text-xs">{eur(s.amount)}</span></div>) : <Empty text="Aucun abonnement" />}</div></Card>
           </div>
           </>}
