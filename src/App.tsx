@@ -105,7 +105,7 @@ const AppContent = () => {
 
   if (location.pathname === '/finance') {
     return (
-      <ErrorBoundary resetKey={location.pathname}>
+      <ErrorBoundary>
         <Suspense fallback={<PageLoader />}>
           <Finance />
         </Suspense>
@@ -117,7 +117,7 @@ const AppContent = () => {
     <>
       {showSplash && <WelcomeSplash name={userName} onDone={() => setShowSplash(false)} />}
       <AppLayout accounts={accounts} activeAccountId={activeAccountId} onSelectAccount={setActiveAccountId}>
-        <ErrorBoundary resetKey={location.pathname}>
+        <ErrorBoundary>
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<Dashboard activeAccount={displayAccount} accounts={accounts} />} />
