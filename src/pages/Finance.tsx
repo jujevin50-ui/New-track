@@ -1,256 +1,230 @@
-import { useMemo, useState } from 'react';
-import { LogoSwitch } from '@/components/trading/LogoSwitch';
-import { useData } from '@/contexts/DataContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  ArrowDownLeft, ArrowUpRight, Banknote, CalendarClock, ChevronLeft, ChevronRight,
-  CreditCard, Landmark, Plus, Repeat2, Save, Settings2, ShieldCheck, TrendingDown,
-  TrendingUp, Wallet, X, PiggyBank, CircleDollarSign
-} from 'lucide-react';
-import {
-  Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart,
-  ResponsiveContainer, Tooltip, XAxis, YAxis
-} from 'recharts';
-import { toast } from 'sonner';
-import type { ReactNode } from 'react';
+import { useMemo, useState } from "react";
+import { LogoSwitch } from "@/components/trading/LogoSwitch";
+import { useData } from "@/contexts/DataContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, ArrowRight, Landmark, Plus, Save, TrendingUp, Wallet, X, Pencil } from "lucide-react";
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { toast } from "sonner";
 
-interface FinanceAccount { id: string; name: string; type: string; institution: string; balance: number; openingBalance?: number; currency: string; color?: string; archived?: boolean; }
-interface FinanceTransaction { id: string; date: string; description: string; amount: number; type: 'income' | 'expense'; accountId: string; category: string; notes?: string; }
-interface FinanceSubscription { id: string; name: string; amount: number; frequency: 'monthly' | 'yearly' | 'weekly'; nextDate: string; accountId: string; category: string; active: boolean; }
-interface FinanceTransfer { id: string; date: string; fromAccountId: string; toAccountId: string; amount: number; recurring: boolean; frequency?: 'monthly' | 'weekly' | 'yearly'; nextDate?: string; active: boolean; }
+type Account = {
+  id: string; name: string; type: string; institution: string; balance: number;
+  openingBalance?: number; currency: string; archived?: boolean;
+};
+type Transaction = {
+  id: string; date: string; description: string; amount: number;
+  type: "income" | "expense"; accountId: string; category: string; notes?: string;
+};
+type Snapshot = {
+  id: string; accountId: string; date: string; value: number;
+  contributions: number; withdrawals: number; note?: string;
+};
+type Holding = {
+  id: string; accountId: string; date: string; name: string; ticker?: string;
+  quantity: number; price: number; value: number; note?: string;
+};
+type Subscription = {
+  id: string; name: string; amount: number; frequency: "monthly"|"yearly"|"weekly";
+  nextDate: string; accountId: string; category: string; active: boolean;
+};
+type Transfer = {
+  id: string; date: string; fromAccountId: string; toAccountId: string;
+  amount: number; recurring: boolean; frequency?: "monthly"|"weekly"|"yearly";
+  nextDate?: string; active: boolean;
+};
 
-type Tab = 'overview' | 'transactions' | 'accounts' | 'subscriptions' | 'transfers';
-
-const ACCOUNT_TYPES = ['Compte courant', 'Épargne', 'Assurance-vie', 'PEA', 'CTO', 'Crypto', 'Espèces', 'Autre'];
-const EXPENSE_CATEGORIES = ['Logement', 'Alimentation', 'Transport', 'Abonnements', 'Loisirs', 'Shopping', 'Santé', 'Formation', 'Trading', 'Famille', 'Impôts', 'Autre'];
-const INCOME_CATEGORIES = ['Salaire', 'Trading', 'Payout', 'Intérêts', 'Vente', 'Autre'];
-const COLORS = ['#60a5fa', '#34d399', '#a78bfa', '#f59e0b', '#fb7185', '#22d3ee', '#f97316', '#94a3b8'];
-const eur = (n: number) => `${n < 0 ? '-' : ''}${Math.abs(n).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
-const id = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-const dateKey = (d: string) => String(d || '').slice(0, 10);
-const monthKey = (d: string) => dateKey(d).slice(0, 7);
-
-const emptyTx: FinanceTransaction = { id: '', date: new Date().toISOString().slice(0, 10), description: '', amount: 0, type: 'expense', accountId: '', category: 'Autre', notes: '' };
+const TYPES = ["Compte courant","Épargne","Assurance-vie","PEA","CTO","Crypto","Espèces","Autre"];
+const CATEGORIES = ["Logement","Alimentation","Transport","Abonnements","Loisirs","Shopping","Santé","Formation","Trading","Famille","Impôts","Autre"];
+const INCOME_CATEGORIES = ["Salaire","Trading","Payout","Intérêts","Vente","Autre"];
+const euro = (n:number) => `${n < 0 ? "-" : ""}${Math.abs(n).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})} €`;
+const uid = (p:string) => `${p}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+const day = (d:string) => String(d || "").slice(0,10);
 
 export default function Finance() {
   const { data, addRow, updateRow, deleteRow } = useData();
-  const accounts = ((data as any).financeAccounts || []) as FinanceAccount[];
-  const transactions = ((data as any).financeTransactions || []) as FinanceTransaction[];
-  const subscriptions = ((data as any).financeSubscriptions || []) as FinanceSubscription[];
-  const transfers = ((data as any).financeTransfers || []) as FinanceTransfer[];
-  const [tab, setTab] = useState<Tab>('overview');
-  const [overviewMode, setOverviewMode] = useState<'month' | 'year'>('month');
-  const [cursor, setCursor] = useState(new Date());
-  const [txOpen, setTxOpen] = useState(false);
-  const [accountOpen, setAccountOpen] = useState(false);
-  const [subOpen, setSubOpen] = useState(false);
-  const [transferOpen, setTransferOpen] = useState(false);
-  const [tx, setTx] = useState<FinanceTransaction>({ ...emptyTx });
-  const [editingAccount, setEditingAccount] = useState<FinanceAccount | null>(null);
-  const [accountForm, setAccountForm] = useState<FinanceAccount>({ id: '', name: '', type: 'Compte courant', institution: '', balance: 0, currency: 'EUR' });
-  const [subForm, setSubForm] = useState<FinanceSubscription>({ id: '', name: '', amount: 0, frequency: 'monthly', nextDate: new Date().toISOString().slice(0, 10), accountId: '', category: 'Abonnements', active: true });
-  const [transferForm, setTransferForm] = useState<FinanceTransfer>({ id: '', date: new Date().toISOString().slice(0, 10), fromAccountId: '', toAccountId: '', amount: 0, recurring: false, frequency: 'monthly', nextDate: new Date().toISOString().slice(0, 10), active: true });
+  const accounts = ((data as any).financeAccounts || []) as Account[];
+  const transactions = ((data as any).financeTransactions || []) as Transaction[];
+  const snapshots = ((data as any).financeAccountSnapshots || []) as Snapshot[];
+  const holdings = ((data as any).financeHoldings || []) as Holding[];
+  const subscriptions = ((data as any).financeSubscriptions || []) as Subscription[];
+  const transfers = ((data as any).financeTransfers || []) as Transfer[];
 
-  const key = cursor.toISOString().slice(0, 7);
-  const monthLabel = cursor.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-  const monthTx = useMemo(() => transactions.filter(t => monthKey(t.date) === key), [transactions, key]);
-  const income = monthTx.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
-  const expenses = monthTx.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
-  const accountBalances = useMemo(() => {
-    const result: Record<string, number> = {};
-    accounts.forEach(a => {
-      const txNet = transactions.filter(t => t.accountId === a.id).reduce((sum, t) => sum + (t.type === 'income' ? Number(t.amount) : -Number(t.amount)), 0);
-      const transferNet = transfers.reduce((sum, t) => {
-        if (t.fromAccountId === a.id) return sum - Number(t.amount);
-        if (t.toAccountId === a.id) return sum + Number(t.amount);
-        return sum;
-      }, 0);
-      // `balance` (or `openingBalance`) is the starting balance.
-      // The current balance is then recalculated from every transaction and transfer.
-      const opening = a.openingBalance !== undefined ? Number(a.openingBalance) : Number(a.balance || 0);
-      result[a.id] = opening + txNet + transferNet;
-    });
-    return result;
-  }, [accounts, transactions, transfers]);
-  const balance = accounts.reduce((s, a) => s + (accountBalances[a.id] ?? 0), 0);
-  const savingsRate = income > 0 ? ((income - expenses) / income) * 100 : 0;
-  const investmentBalance = accounts.filter(a => ['PEA', 'CTO', 'Assurance-vie', 'Crypto'].includes(a.type)).reduce((s, a) => s + (accountBalances[a.id] ?? 0), 0);
-  const fixedMonthly = subscriptions.filter(s => s.active).reduce((s, x) => s + (x.frequency === 'monthly' ? x.amount : x.frequency === 'yearly' ? x.amount / 12 : x.amount * 52 / 12), 0);
-  const cashBalance = accounts.filter(a => ['Compte courant', 'Épargne', 'Espèces'].includes(a.type)).reduce((s, a) => s + (accountBalances[a.id] ?? 0), 0);
+  const [view,setView] = useState<"dashboard"|"accounts"|"transactions">("dashboard");
+  const [selected,setSelected] = useState<Account|null>(null);
+  const [accountDialog,setAccountDialog] = useState(false);
+  const [txDialog,setTxDialog] = useState(false);
+  const [snapshotDialog,setSnapshotDialog] = useState(false);
+  const [holdingDialog,setHoldingDialog] = useState(false);
+  const [editingAccount,setEditingAccount] = useState<Account|null>(null);
+  const [editingTx,setEditingTx] = useState<Transaction|null>(null);
+  const [accountForm,setAccountForm] = useState<Partial<Account>>({name:"",type:"Compte courant",institution:"",balance:0,currency:"EUR"});
+  const [txForm,setTxForm] = useState<Transaction>({id:"",date:new Date().toISOString().slice(0,10),description:"",amount:0,type:"expense",accountId:"",category:"Autre",notes:""});
+  const [snapForm,setSnapForm] = useState<Snapshot>({id:"",accountId:"",date:new Date().toISOString().slice(0,10),value:0,contributions:0,withdrawals:0,note:""});
+  const [holdForm,setHoldForm] = useState<Holding>({id:"",accountId:"",date:new Date().toISOString().slice(0,10),name:"",ticker:"",quantity:0,price:0,value:0,note:""});
 
-  const categoryData = useMemo(() => {
-    const map: Record<string, number> = {};
-    monthTx.filter(t => t.type === 'expense').forEach(t => { map[t.category] = (map[t.category] || 0) + Number(t.amount); });
-    return Object.entries(map).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value }));
-  }, [monthTx]);
+  const balances = useMemo(() => {
+    const out:Record<string,number> = {};
+    for (const a of accounts) {
+      const net = transactions.filter(t=>t.accountId===a.id).reduce((s,t)=>s+(t.type==="income"?Number(t.amount):-Number(t.amount)),0);
+      out[a.id] = Number(a.openingBalance ?? a.balance ?? 0) + net;
+    }
+    return out;
+  },[accounts,transactions]);
 
-  const trendData = useMemo(() => {
-    const days = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate();
-    let running = 0;
-    return Array.from({ length: days }, (_, i) => {
-      const date = `${key}-${String(i + 1).padStart(2, '0')}`;
-      const day = monthTx.filter(t => dateKey(t.date) === date);
-      running += day.reduce((s, t) => s + (t.type === 'income' ? Number(t.amount) : -Number(t.amount)), 0);
-      return { day: String(i + 1), net: running };
-    });
-  }, [cursor, key, monthTx]);
+  const total = accounts.reduce((s,a)=>s+(balances[a.id] ?? 0),0);
+  const month = new Date().toISOString().slice(0,7);
+  const monthTx = transactions.filter(t=>day(t.date).slice(0,7)===month);
+  const income = monthTx.filter(t=>t.type==="income").reduce((s,t)=>s+Number(t.amount),0);
+  const expenses = monthTx.filter(t=>t.type==="expense").reduce((s,t)=>s+Number(t.amount),0);
 
-  const yearData = useMemo(() => {
-    const year = cursor.getFullYear();
-    return Array.from({ length: 12 }, (_, month) => {
-      const prefix = `${year}-${String(month + 1).padStart(2, '0')}`;
-      const txs = transactions.filter(t => monthKey(t.date) === prefix);
-      const income = txs.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
-      const expenses = txs.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
-      return { month: new Date(year, month, 1).toLocaleDateString('fr-FR', { month: 'short' }).replace('.', ''), income, expenses, cashflow: income - expenses, savingsRate: income > 0 ? ((income - expenses) / income) * 100 : 0 };
-    });
-  }, [cursor, transactions]);
-
-  const yearTotals = useMemo(() => yearData.reduce((a, m) => ({ income: a.income + m.income, expenses: a.expenses + m.expenses, cashflow: a.cashflow + m.cashflow }), { income: 0, expenses: 0, cashflow: 0 }), [yearData]);
-  const yearSavingsRate = yearTotals.income > 0 ? (yearTotals.cashflow / yearTotals.income) * 100 : 0;
-
-  const accountData = accounts.filter(a => !a.archived).map(a => ({ name: a.name, balance: accountBalances[a.id] ?? 0 }));
-  const upcomingSubs = subscriptions.filter(s => s.active).sort((a, b) => a.nextDate.localeCompare(b.nextDate)).slice(0, 6);
-  const recurringMonthly = subscriptions.filter(s => s.active).reduce((s, x) => s + (x.frequency === 'monthly' ? x.amount : x.frequency === 'yearly' ? x.amount / 12 : x.amount * 52 / 12), 0);
-
-  const moveMonth = (delta: number) => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + delta, 1));
-  const accountName = (accountId: string) => accounts.find(a => a.id === accountId)?.name || 'Compte supprimé';
-
-  const saveTx = async () => {
-    if (!tx.description || !tx.accountId || tx.amount <= 0) return toast.error('Complète la description, le compte et le montant.');
-    const row = { ...tx, id: tx.id || id('tx'), amount: Math.abs(Number(tx.amount)) };
-    if (tx.id) await updateRow('financeTransactions' as any, tx.id, row); else await addRow('financeTransactions' as any, row);
-    setTxOpen(false); setTx({ ...emptyTx, accountId: accounts[0]?.id || '' }); toast.success('Transaction enregistrée');
+  const openAccount = (a?:Account) => {
+    setEditingAccount(a || null);
+    setAccountForm(a ? {...a,balance:balances[a.id] ?? a.balance} : {name:"",type:"Compte courant",institution:"",balance:0,currency:"EUR"});
+    setAccountDialog(true);
   };
-
   const saveAccount = async () => {
-    if (!accountForm.name) return toast.error('Donne un nom au compte.');
-    const txNet = editingAccount ? transactions.filter(t => t.accountId === editingAccount.id).reduce((sum, t) => sum + (t.type === 'income' ? Number(t.amount) : -Number(t.amount)), 0) : 0;
-    const transferNet = editingAccount ? transfers.reduce((sum, t) => sum + (t.toAccountId === editingAccount.id ? Number(t.amount) : t.fromAccountId === editingAccount.id ? -Number(t.amount) : 0), 0) : 0;
-    const openingBalance = editingAccount ? Number(accountForm.balance) - txNet - transferNet : Number(accountForm.balance);
-    const row = { ...accountForm, id: accountForm.id || id('acc'), balance: Number(accountForm.balance), openingBalance };
-    if (editingAccount) await updateRow('financeAccounts' as any, editingAccount.id, row); else await addRow('financeAccounts' as any, row);
-    setAccountOpen(false); setEditingAccount(null); toast.success('Compte enregistré');
+    if (!accountForm.name) return toast.error("Nom du compte obligatoire.");
+    const current = Number(accountForm.balance || 0);
+    const a = editingAccount;
+    const txNet = a ? transactions.filter(t=>t.accountId===a.id).reduce((s,t)=>s+(t.type==="income"?Number(t.amount):-Number(t.amount)),0) : 0;
+    const openingBalance = a ? current - txNet : current;
+    const row = {...accountForm,id:a?.id || uid("acc"),balance:current,openingBalance};
+    if (a) await updateRow("financeAccounts" as any,a.id,row); else await addRow("financeAccounts" as any,row);
+    setAccountDialog(false); toast.success("Compte enregistré");
   };
 
-  const saveSub = async () => {
-    if (!subForm.name || !subForm.accountId || subForm.amount <= 0) return toast.error('Complète les informations de l’abonnement.');
-    const row = { ...subForm, id: subForm.id || id('sub'), amount: Math.abs(Number(subForm.amount)) };
-    if (subForm.id) await updateRow('financeSubscriptions' as any, subForm.id, row); else await addRow('financeSubscriptions' as any, row);
-    setSubOpen(false); setSubForm({ ...subForm, id: '', name: '', amount: 0 }); toast.success('Abonnement enregistré');
+  const openTx = (t?:Transaction) => {
+    setEditingTx(t || null);
+    setTxForm(t ? {...t} : {...txForm,id:"",accountId:accounts[0]?.id || "",description:"",amount:0,type:"expense",category:"Autre"});
+    setTxDialog(true);
+  };
+  const saveTx = async () => {
+    if (!txForm.description || !txForm.accountId || txForm.amount<=0) return toast.error("Complète la date, le compte, la description et le montant.");
+    const row = {...txForm,id:txForm.id || uid("tx"),amount:Math.abs(Number(txForm.amount)),date:day(txForm.date)};
+    if (editingTx) await updateRow("financeTransactions" as any,editingTx.id,row); else await addRow("financeTransactions" as any,row);
+    setTxDialog(false); toast.success("Transaction enregistrée");
   };
 
-  const saveTransfer = async () => {
-    if (!transferForm.fromAccountId || !transferForm.toAccountId || transferForm.fromAccountId === transferForm.toAccountId || transferForm.amount <= 0) return toast.error('Choisis deux comptes différents et un montant valide.');
-    await addRow('financeTransfers' as any, { ...transferForm, id: id('trf'), amount: Math.abs(Number(transferForm.amount)) });
-    setTransferOpen(false); toast.success('Virement enregistré');
+  const openSnapshot = (s?:Snapshot) => {
+    const a=selected!;
+    setSnapForm(s ? {...s} : {id:"",accountId:a.id,date:new Date().toISOString().slice(0,10),value:balances[a.id]??0,contributions:0,withdrawals:0,note:""});
+    setSnapshotDialog(true);
+  };
+  const saveSnapshot = async () => {
+    if (!snapForm.accountId || snapForm.value<0) return toast.error("Valeur du relevé invalide.");
+    const row={...snapForm,id:snapForm.id||uid("snap"),date:day(snapForm.date)};
+    if (snapForm.id && snapshots.some(x=>x.id===snapForm.id)) await updateRow("financeAccountSnapshots" as any,snapForm.id,row);
+    else await addRow("financeAccountSnapshots" as any,row);
+    setSnapshotDialog(false); toast.success("Relevé enregistré");
   };
 
-  return (
-    <div className="min-h-screen bg-background text-foreground -mx-4 md:-mx-6 -mb-4 md:-mb-6">
-      <LogoSwitch floating />
-      <div className="sticky top-0 z-30 border-b border-border/60 bg-background/90 backdrop-blur-xl">
-        <div className="max-w-[1500px] mx-auto px-5 py-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-h-[60px] pl-[96px]">
-            <div className="h-10 w-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center"><Wallet className="h-5 w-5 text-emerald-400" /></div>
-            <div><p className="text-sm font-semibold">My Finance</p><p className="text-[11px] text-muted-foreground">Patrimoine · dépenses · revenus · automatisations</p></div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setTab('accounts')}><Landmark className="h-3.5 w-3.5" />{accounts.length} comptes</Button>
-            <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-500" onClick={() => { setTx({ ...emptyTx, accountId: accounts[0]?.id || '' }); setTxOpen(true); }}><Plus className="h-3.5 w-3.5" />Transaction</Button>
-          </div>
-        </div>
-        <div className="max-w-[1500px] mx-auto px-5 flex gap-1 overflow-x-auto">
-          {([['overview','Vue d’ensemble'],['transactions','Transactions'],['accounts','Comptes'],['subscriptions','Abonnements'],['transfers','Virements']] as [Tab,string][]).map(([value,label]) => (
-            <button key={value} onClick={() => setTab(value)} className={`px-4 py-3 text-xs font-medium border-b-2 transition-colors whitespace-nowrap ${tab === value ? 'text-emerald-400 border-emerald-400' : 'text-muted-foreground border-transparent hover:text-foreground'}`}>{label}</button>
-          ))}
-        </div>
+  const openHolding = (h?:Holding) => {
+    const a=selected!;
+    setHoldForm(h ? {...h} : {id:"",accountId:a.id,date:new Date().toISOString().slice(0,10),name:"",ticker:"",quantity:0,price:0,value:0,note:""});
+    setHoldingDialog(true);
+  };
+  const saveHolding = async () => {
+    if (!holdForm.name || holdForm.value<0) return toast.error("Renseigne l'actif et sa valeur.");
+    const row={...holdForm,id:holdForm.id||uid("hold"),date:day(holdForm.date),value:Number(holdForm.value)};
+    if (holdForm.id && holdings.some(x=>x.id===holdForm.id)) await updateRow("financeHoldings" as any,holdForm.id,row);
+    else await addRow("financeHoldings" as any,row);
+    setHoldingDialog(false); toast.success("Actif enregistré");
+  };
+
+  return <div className="min-h-screen bg-background text-foreground -mx-4 md:-mx-6 -mb-4 md:-mb-6">
+    <LogoSwitch floating />
+    <header className="sticky top-0 z-20 border-b border-border/60 bg-background/90 backdrop-blur-xl">
+      <div className="max-w-[1500px] mx-auto px-5 py-4 flex items-center justify-between pl-24">
+        <div className="flex items-center gap-3"><div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center"><Wallet className="h-5 w-5 text-emerald-400"/></div><div><p className="font-semibold">My Finance</p><p className="text-[11px] text-muted-foreground">Patrimoine · comptes · investissements · dépenses</p></div></div>
+        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-500" onClick={()=>openTx()}><Plus className="h-4 w-4 mr-1"/>Transaction</Button>
       </div>
+      <div className="max-w-[1500px] mx-auto px-5 pl-24 flex gap-1">
+        {([["dashboard","Vue d’ensemble"],["accounts","Comptes"],["transactions","Transactions"]] as const).map(([v,l])=><button key={v} onClick={()=>setView(v)} className={`px-4 py-3 text-xs border-b-2 ${view===v?"text-emerald-400 border-emerald-400":"text-muted-foreground border-transparent"}`}>{l}</button>)}
+      </div>
+    </header>
 
-      <main className="max-w-[1500px] mx-auto p-5 space-y-5">
-        {tab === 'overview' && <>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div><p className="text-xs text-muted-foreground uppercase tracking-wider">Vue {overviewMode === 'month' ? 'mensuelle' : 'annuelle'}</p><div className="flex items-center gap-2 mt-1"><button onClick={() => setCursor(new Date(cursor.getFullYear() + (overviewMode === 'year' ? -1 : 0), cursor.getMonth() + (overviewMode === 'month' ? -1 : 0), 1))} className="p-1.5 rounded-lg hover:bg-muted"><ChevronLeft className="h-4 w-4" /></button><h1 className="text-xl font-bold capitalize min-w-[190px] text-center">{overviewMode === 'month' ? monthLabel : cursor.getFullYear()}</h1><button onClick={() => setCursor(new Date(cursor.getFullYear() + (overviewMode === 'year' ? 1 : 0), cursor.getMonth() + (overviewMode === 'month' ? 1 : 0), 1))} className="p-1.5 rounded-lg hover:bg-muted"><ChevronRight className="h-4 w-4" /></button></div></div>
-            <div className="flex items-center gap-1 rounded-xl border border-border p-1"><button onClick={() => setOverviewMode('month')} className={`px-3 py-1.5 rounded-lg text-xs ${overviewMode === 'month' ? 'bg-muted font-medium' : 'text-muted-foreground'}`}>Mois</button><button onClick={() => setOverviewMode('year')} className={`px-3 py-1.5 rounded-lg text-xs ${overviewMode === 'year' ? 'bg-muted font-medium' : 'text-muted-foreground'}`}>Année</button></div>
-            <div className="flex items-center gap-2"><div className="text-right"><p className="text-[10px] text-muted-foreground">Patrimoine suivi</p><p className="font-mono text-lg font-bold">{eur(balance)}</p></div></div>
-          </div>
+    <main className="max-w-[1500px] mx-auto p-5 space-y-5">
+      {view==="dashboard" && <Dashboard total={total} income={income} expenses={expenses} accounts={accounts} balances={balances} />}
+      {view==="transactions" && <Transactions transactions={transactions} accounts={accounts} onAdd={()=>openTx()} onEdit={openTx} onDelete={async t=>{await deleteRow("financeTransactions" as any,t.id);toast.success("Transaction supprimée")}} />}
+      {view==="accounts" && !selected && <div className="space-y-4">
+        <Header title="Comptes & patrimoine" subtitle="Clique sur un compte pour suivre son évolution dans le temps" action={<Button size="sm" onClick={()=>openAccount()}><Plus className="h-4 w-4 mr-1"/>Nouveau compte</Button>}/>
+        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">{accounts.map(a=><div key={a.id} className="rounded-2xl border border-border bg-card p-4">
+          <div className="flex justify-between"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-xl bg-sky-500/10 flex items-center justify-center"><Landmark className="h-5 w-5 text-sky-400"/></div><div><p className="font-semibold text-sm">{a.name}</p><p className="text-[10px] text-muted-foreground">{a.type} · {a.institution||"—"}</p></div></div><div className="flex gap-1"><button className="p-1.5" onClick={()=>openAccount(a)}><Pencil className="h-3.5 w-3.5"/></button><button className="p-1.5 text-rose-400" onClick={async()=>{await deleteRow("financeAccounts" as any,a.id)}}><X className="h-3.5 w-3.5"/></button></div></div>
+          <button className="text-left w-full mt-5" onClick={()=>setSelected(a)}><p className="font-mono text-2xl font-bold">{euro(balances[a.id]??0)}</p><p className="text-[10px] text-muted-foreground mt-1">Voir l’évolution et les relevés →</p></button>
+        </div>)}</div>
+      </div>}
 
-          {overviewMode === 'year' && <>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <Metric title="Revenus annuels" value={eur(yearTotals.income)} icon={<ArrowDownLeft className="h-4 w-4" />} tone="text-emerald-400" />
-              <Metric title="Dépenses annuelles" value={eur(yearTotals.expenses)} icon={<ArrowUpRight className="h-4 w-4" />} tone="text-rose-400" />
-              <Metric title="Cash-flow annuel" value={eur(yearTotals.cashflow)} icon={<TrendingUp className="h-4 w-4" />} tone={yearTotals.cashflow >= 0 ? 'text-emerald-400' : 'text-rose-400'} />
-              <Metric title="Taux d’épargne annuel" value={`${yearSavingsRate.toFixed(1)} %`} icon={<PiggyBank className="h-4 w-4" />} tone="text-violet-400" />
-            </div>
-            <div className="grid lg:grid-cols-[1.6fr_1fr] gap-4">
-              <Card title={`Flux de ${cursor.getFullYear()}`} subtitle="Revenus, dépenses et cash-flow par mois"><div className="h-[320px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={yearData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.35}/><XAxis dataKey="month" tick={{fontSize:10}}/><YAxis tick={{fontSize:10}} tickFormatter={(v)=>`${Math.round(v)}€`}/><Tooltip formatter={(v:number)=>eur(v)} contentStyle={{background:'hsl(var(--card))',border:'1px solid hsl(var(--border))',borderRadius:10,fontSize:12}}/><Bar dataKey="income" name="Revenus" fill="#34d399" radius={[4,4,0,0]}/><Bar dataKey="expenses" name="Dépenses" fill="#fb7185" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div></Card>
-              <Card title="Cash-flow mensuel" subtitle="Évolution sur l’année"><div className="h-[320px]"><ResponsiveContainer width="100%" height="100%"><LineChart data={yearData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.35}/><XAxis dataKey="month" tick={{fontSize:10}}/><YAxis tick={{fontSize:10}} tickFormatter={(v)=>`${Math.round(v)}€`}/><Tooltip formatter={(v:number)=>eur(v)} contentStyle={{background:'hsl(var(--card))',border:'1px solid hsl(var(--border))',borderRadius:10,fontSize:12}}/><Line type="monotone" dataKey="cashflow" name="Cash-flow" stroke="#60a5fa" strokeWidth={2.5} dot={{r:3}}/></LineChart></ResponsiveContainer></div></Card>
-            </div>
-            <Card title="Détail des 12 mois" subtitle="Vue complète de l’année"><div className="overflow-x-auto"><table className="w-full text-xs"><thead><tr className="text-muted-foreground border-b border-border"><th className="text-left py-3">Mois</th><th className="text-right py-3">Revenus</th><th className="text-right py-3">Dépenses</th><th className="text-right py-3">Cash-flow</th><th className="text-right py-3">Taux d’épargne</th></tr></thead><tbody>{yearData.map(m=><tr key={m.month} className="border-b border-border/40"><td className="py-3 capitalize font-medium">{m.month}</td><td className="text-right py-3 text-emerald-400 font-mono">{eur(m.income)}</td><td className="text-right py-3 text-rose-400 font-mono">{eur(m.expenses)}</td><td className={`text-right py-3 font-mono ${m.cashflow >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{eur(m.cashflow)}</td><td className="text-right py-3 font-mono">{m.savingsRate.toFixed(1)} %</td></tr>)}</tbody></table></div></Card>
-          </>}
+      {view==="accounts" && selected && <AccountDetail account={selected} balance={balances[selected.id]??0} snapshots={snapshots.filter(s=>s.accountId===selected.id)} holdings={holdings.filter(h=>h.accountId===selected.id)} onBack={()=>setSelected(null)} onSnapshot={openSnapshot} onHolding={openHolding} onDeleteSnapshot={async s=>{await deleteRow("financeAccountSnapshots" as any,s.id);toast.success("Relevé supprimé")}} onDeleteHolding={async h=>{await deleteRow("financeHoldings" as any,h.id);toast.success("Actif supprimé")}} />}
+    </main>
 
-          {overviewMode === 'month' && <>
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-            <Metric title="Patrimoine suivi" value={eur(balance)} icon={<CircleDollarSign className="h-4 w-4" />} tone="text-sky-400" />
-            <Metric title="Cash-flow" value={eur(income - expenses)} icon={<TrendingUp className="h-4 w-4" />} tone={income - expenses >= 0 ? 'text-emerald-400' : 'text-rose-400'} />
-            <Metric title="Taux d’épargne" value={`${savingsRate.toFixed(1)} %`} icon={<PiggyBank className="h-4 w-4" />} tone="text-emerald-400" />
-            <Metric title="Liquidités" value={eur(cashBalance)} icon={<Banknote className="h-4 w-4" />} tone="text-cyan-400" />
-            <Metric title="Investissements" value={eur(investmentBalance)} icon={<TrendingUp className="h-4 w-4" />} tone="text-violet-400" />
-            <Metric title="Dépenses fixes" value={`${eur(fixedMonthly)} / mois`} icon={<CalendarClock className="h-4 w-4" />} tone="text-orange-400" />
-          </div>
+    <Dialog open={accountDialog} onOpenChange={setAccountDialog}><DialogContent><DialogHeader><DialogTitle>{editingAccount?"Modifier le compte":"Nouveau compte"}</DialogTitle></DialogHeader><div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3"><div><Label>Nom</Label><Input value={accountForm.name||""} onChange={e=>setAccountForm(x=>({...x,name:e.target.value}))}/></div><div><Label>Banque / établissement</Label><Input value={accountForm.institution||""} onChange={e=>setAccountForm(x=>({...x,institution:e.target.value}))}/></div></div>
+      <div className="grid grid-cols-2 gap-3"><div><Label>Type</Label><Select value={accountForm.type as string} onValueChange={v=>setAccountForm(x=>({...x,type:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{TYPES.map(x=><SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent></Select></div><div><Label>Solde actuel</Label><Input type="number" value={accountForm.balance as number || ""} onChange={e=>setAccountForm(x=>({...x,balance:Number(e.target.value)}))}/></div></div>
+      <Button className="w-full bg-emerald-600 hover:bg-emerald-500" onClick={saveAccount}>Enregistrer</Button>
+    </div></DialogContent></Dialog>
 
-          <div className="grid md:grid-cols-3 gap-3">
-            <Metric title="Revenus du mois" value={eur(income)} icon={<ArrowDownLeft className="h-4 w-4" />} tone="text-emerald-400" />
-            <Metric title="Dépenses du mois" value={eur(expenses)} icon={<ArrowUpRight className="h-4 w-4" />} tone="text-rose-400" />
-            <Metric title="Épargne potentielle" value={eur(Math.max(0, income - expenses))} icon={<PiggyBank className="h-4 w-4" />} tone="text-emerald-400" />
-          </div>
+    <Dialog open={txDialog} onOpenChange={setTxDialog}><DialogContent><DialogHeader><DialogTitle>{editingTx?"Modifier la transaction":"Nouvelle transaction"}</DialogTitle></DialogHeader><div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3"><div><Label>Date</Label><Input type="date" value={txForm.date} onChange={e=>setTxForm(x=>({...x,date:e.target.value}))}/></div><div><Label>Montant</Label><Input type="number" value={txForm.amount||""} onChange={e=>setTxForm(x=>({...x,amount:Number(e.target.value)}))}/></div></div>
+      <div><Label>Description</Label><Input value={txForm.description} onChange={e=>setTxForm(x=>({...x,description:e.target.value}))}/></div>
+      <div className="grid grid-cols-2 gap-3"><div><Label>Compte</Label><Select value={txForm.accountId} onValueChange={v=>setTxForm(x=>({...x,accountId:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div><div><Label>Type</Label><Select value={txForm.type} onValueChange={(v:any)=>setTxForm(x=>({...x,type:v,category:"Autre"}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="expense">Dépense</SelectItem><SelectItem value="income">Revenu</SelectItem></SelectContent></Select></div></div>
+      <div><Label>Catégorie</Label><Select value={txForm.category} onValueChange={v=>setTxForm(x=>({...x,category:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{(txForm.type==="expense"?CATEGORIES:INCOME_CATEGORIES).map(x=><SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent></Select></div>
+      <Button className="w-full bg-emerald-600 hover:bg-emerald-500" onClick={saveTx}><Save className="h-4 w-4 mr-2"/>Enregistrer</Button>
+    </div></DialogContent></Dialog>
 
-          <div className="grid lg:grid-cols-[1.6fr_1fr] gap-4">
-            <Card title="Flux du mois" subtitle="Cumul revenus − dépenses">
-              <div className="h-[280px]"><ResponsiveContainer width="100%" height="100%"><AreaChart data={trendData}><defs><linearGradient id="financeArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#34d399" stopOpacity={0.25}/><stop offset="100%" stopColor="#34d399" stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.45}/><XAxis dataKey="day" tick={{fontSize:10}} stroke="hsl(var(--muted-foreground))"/><YAxis tick={{fontSize:10}} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `${Math.round(v)}€`}/><Tooltip formatter={(v:number) => [eur(v), 'Net cumulé']} contentStyle={{background:'hsl(var(--card))',border:'1px solid hsl(var(--border))',borderRadius:10,fontSize:12}}/><Area type="monotone" dataKey="net" stroke="#34d399" fill="url(#financeArea)" strokeWidth={2}/></AreaChart></ResponsiveContainer></div>
-            </Card>
-            <Card title="Dépenses par catégorie" subtitle="Répartition du mois">
-              {categoryData.length ? <div className="h-[280px] flex items-center"><ResponsiveContainer width="55%" height="100%"><PieChart><Pie data={categoryData} dataKey="value" nameKey="name" innerRadius={58} outerRadius={90} paddingAngle={2}>{categoryData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie><Tooltip formatter={(v:number) => eur(v)} /></PieChart></ResponsiveContainer><div className="flex-1 space-y-2">{categoryData.slice(0,6).map((x,i)=><div key={x.name} className="flex items-center justify-between gap-2 text-xs"><span className="flex items-center gap-2 truncate"><span className="h-2 w-2 rounded-full" style={{background:COLORS[i%COLORS.length]}} />{x.name}</span><span className="font-mono">{eur(x.value)}</span></div>)}</div></div> : <Empty text="Aucune dépense ce mois-ci" />}
-            </Card>
-          </div>
+    <Dialog open={snapshotDialog} onOpenChange={setSnapshotDialog}><DialogContent><DialogHeader><DialogTitle>Relevé du compte</DialogTitle></DialogHeader><div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3"><div><Label>Date du relevé</Label><Input type="date" value={snapForm.date} onChange={e=>setSnapForm(x=>({...x,date:e.target.value}))}/></div><div><Label>Valeur totale</Label><Input type="number" value={snapForm.value||""} onChange={e=>setSnapForm(x=>({...x,value:Number(e.target.value)}))}/></div></div>
+      <div className="grid grid-cols-2 gap-3"><div><Label>Versements</Label><Input type="number" value={snapForm.contributions||""} onChange={e=>setSnapForm(x=>({...x,contributions:Number(e.target.value)}))}/></div><div><Label>Retraits</Label><Input type="number" value={snapForm.withdrawals||""} onChange={e=>setSnapForm(x=>({...x,withdrawals:Number(e.target.value)}))}/></div></div>
+      <div><Label>Note</Label><Input value={snapForm.note||""} onChange={e=>setSnapForm(x=>({...x,note:e.target.value}))} placeholder="Marché, arbitrage, commentaire…"/></div>
+      <Button className="w-full bg-emerald-600 hover:bg-emerald-500" onClick={saveSnapshot}>Enregistrer le relevé</Button>
+    </div></DialogContent></Dialog>
 
-          <div className="grid lg:grid-cols-[1.2fr_1fr] gap-4">
-            <Card title="Répartition des comptes" subtitle="Solde actuel"><div className="h-[230px]">{accountData.length ? <ResponsiveContainer width="100%" height="100%"><BarChart data={accountData} layout="vertical" margin={{left:10,right:20}}><CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.35}/><XAxis type="number" tick={{fontSize:10}} tickFormatter={(v)=>`${Math.round(v)}€`} /><YAxis type="category" dataKey="name" width={100} tick={{fontSize:10}}/><Tooltip formatter={(v:number)=>[eur(v),'Solde']} contentStyle={{background:'hsl(var(--card))',border:'1px solid hsl(var(--border))',borderRadius:10,fontSize:12}}/><Bar dataKey="balance" fill="#60a5fa" radius={[0,5,5,0]} /></BarChart></ResponsiveContainer> : <Empty text="Crée ton premier compte" />}</div></Card>
-            <Card title="Abonnements à venir" subtitle={`${eur(recurringMonthly)} / mois environ`}><div className="space-y-2">{upcomingSubs.length ? upcomingSubs.map(s=><div key={s.id} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30 border border-border/40"><div className="flex items-center gap-2 min-w-0"><div className="h-7 w-7 rounded-lg bg-orange-500/10 flex items-center justify-center"><Repeat2 className="h-3.5 w-3.5 text-orange-400"/></div><div className="min-w-0"><p className="text-xs font-medium truncate">{s.name}</p><p className="text-[10px] text-muted-foreground">{s.nextDate} · {accountName(s.accountId)}</p></div></div><span className="font-mono text-xs">{eur(s.amount)}</span></div>) : <Empty text="Aucun abonnement" />}</div></Card>
-          </div>
-          </>}
-        </>}
-
-        {tab === 'transactions' && <TransactionsView transactions={transactions} accounts={accounts} onAdd={() => { setTx({ ...emptyTx, accountId: accounts[0]?.id || '' }); setTxOpen(true); }} onEdit={(x)=>{setTx(x);setTxOpen(true)}} onDelete={async (x)=>{await deleteRow('financeTransactions' as any,x.id);toast.success('Transaction supprimée')}} />}
-        {tab === 'accounts' && <AccountsView accounts={accounts.map(a=>({...a,balance:accountBalances[a.id] ?? Number(a.balance || 0)}))} onNew={() => {setEditingAccount(null);setAccountForm({id:'',name:'',type:'Compte courant',institution:'',balance:0,currency:'EUR'});setAccountOpen(true)}} onEdit={(a)=>{const original=accounts.find(x=>x.id===a.id)||a;setEditingAccount(original);setAccountForm(a);setAccountOpen(true)}} onDelete={async a=>{await deleteRow('financeAccounts' as any,a.id);toast.success('Compte supprimé')}} />}
-        {tab === 'subscriptions' && <SubscriptionsView subscriptions={subscriptions} accounts={accounts} onNew={()=>{setSubForm({...subForm,id:'',name:'',amount:0,accountId:accounts[0]?.id||''});setSubOpen(true)}} onToggle={async s=>await updateRow('financeSubscriptions' as any,s.id,{active:!s.active})} onDelete={async s=>{await deleteRow('financeSubscriptions' as any,s.id);toast.success('Abonnement supprimé')}} />}
-        {tab === 'transfers' && <TransfersView transfers={transfers} accounts={accounts} onNew={()=>{setTransferForm({...transferForm,id:'',fromAccountId:accounts[0]?.id||'',toAccountId:accounts[1]?.id||''});setTransferOpen(true)}} onDelete={async t=>{await deleteRow('financeTransfers' as any,t.id);toast.success('Virement supprimé')}} />}
-      </main>
-
-      <Dialog open={txOpen} onOpenChange={setTxOpen}><DialogContent className="bg-card border-border sm:max-w-lg"><DialogHeader><DialogTitle>Nouvelle transaction</DialogTitle></DialogHeader><div className="space-y-4"><div className="grid grid-cols-2 gap-2"><button onClick={()=>setTx(x=>({...x,type:'expense',category:'Autre'}))} className={`p-3 rounded-xl border text-xs ${tx.type==='expense'?'border-rose-500/50 bg-rose-500/10 text-rose-300':'border-border'}`}>Dépense</button><button onClick={()=>setTx(x=>({...x,type:'income',category:'Autre'}))} className={`p-3 rounded-xl border text-xs ${tx.type==='income'?'border-emerald-500/50 bg-emerald-500/10 text-emerald-300':'border-border'}`}>Revenu</button></div><div className="grid grid-cols-2 gap-3"><div><Label>Date</Label><Input type="date" value={tx.date} onChange={e=>setTx(x=>({...x,date:e.target.value}))}/></div><div><Label>Montant</Label><Input type="number" step="0.01" value={tx.amount||''} onChange={e=>setTx(x=>({...x,amount:Number(e.target.value)}))}/></div></div><div><Label>Description</Label><Input value={tx.description} onChange={e=>setTx(x=>({...x,description:e.target.value}))} placeholder="Courses, salaire, abonnement…"/></div><div className="grid grid-cols-2 gap-3"><div><Label>Compte</Label><Select value={tx.accountId} onValueChange={v=>setTx(x=>({...x,accountId:v}))}><SelectTrigger><SelectValue placeholder="Compte"/></SelectTrigger><SelectContent>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div><div><Label>Catégorie</Label><Select value={tx.category} onValueChange={v=>setTx(x=>({...x,category:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{(tx.type==='expense'?EXPENSE_CATEGORIES:INCOME_CATEGORIES).map(c=><SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div></div><div><Label>Note</Label><Input value={tx.notes||''} onChange={e=>setTx(x=>({...x,notes:e.target.value}))}/></div><Button onClick={saveTx} className="w-full bg-emerald-600 hover:bg-emerald-500"><Save className="h-4 w-4 mr-2"/>Enregistrer</Button></div></DialogContent></Dialog>
-
-      <Dialog open={accountOpen} onOpenChange={setAccountOpen}><DialogContent className="bg-card border-border sm:max-w-lg"><DialogHeader><DialogTitle>{editingAccount?'Modifier le compte':'Nouveau compte'}</DialogTitle></DialogHeader><div className="space-y-4"><div className="grid grid-cols-2 gap-3"><div><Label>Nom</Label><Input value={accountForm.name} onChange={e=>setAccountForm(x=>({...x,name:e.target.value}))} placeholder="Compte courant"/></div><div><Label>Banque / établissement</Label><Input value={accountForm.institution} onChange={e=>setAccountForm(x=>({...x,institution:e.target.value}))} placeholder="Boursobank, Fortuneo…"/></div></div><div className="grid grid-cols-2 gap-3"><div><Label>Type</Label><Select value={accountForm.type} onValueChange={v=>setAccountForm(x=>({...x,type:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{ACCOUNT_TYPES.map(x=><SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent></Select></div><div><Label>Solde actuel</Label><Input type="number" step="0.01" value={accountForm.balance||''} onChange={e=>setAccountForm(x=>({...x,balance:Number(e.target.value)}))}/></div></div><div><Label>Devise</Label><Input value={accountForm.currency} onChange={e=>setAccountForm(x=>({...x,currency:e.target.value.toUpperCase()}))}/></div><Button onClick={saveAccount} className="w-full bg-emerald-600 hover:bg-emerald-500">Enregistrer</Button></div></DialogContent></Dialog>
-
-      <Dialog open={subOpen} onOpenChange={setSubOpen}><DialogContent className="bg-card border-border sm:max-w-lg"><DialogHeader><DialogTitle>Nouvel abonnement</DialogTitle></DialogHeader><div className="space-y-4"><div className="grid grid-cols-2 gap-3"><div><Label>Nom</Label><Input value={subForm.name} onChange={e=>setSubForm(x=>({...x,name:e.target.value}))} placeholder="Netflix, salle, téléphone…"/></div><div><Label>Montant</Label><Input type="number" step="0.01" value={subForm.amount||''} onChange={e=>setSubForm(x=>({...x,amount:Number(e.target.value)}))}/></div></div><div className="grid grid-cols-2 gap-3"><div><Label>Fréquence</Label><Select value={subForm.frequency} onValueChange={(v:any)=>setSubForm(x=>({...x,frequency:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="monthly">Mensuel</SelectItem><SelectItem value="yearly">Annuel</SelectItem><SelectItem value="weekly">Hebdomadaire</SelectItem></SelectContent></Select></div><div><Label>Prochain prélèvement</Label><Input type="date" value={subForm.nextDate} onChange={e=>setSubForm(x=>({...x,nextDate:e.target.value}))}/></div></div><div><Label>Compte débité</Label><Select value={subForm.accountId} onValueChange={v=>setSubForm(x=>({...x,accountId:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div><Button onClick={saveSub} className="w-full bg-emerald-600 hover:bg-emerald-500">Enregistrer</Button></div></DialogContent></Dialog>
-
-      <Dialog open={transferOpen} onOpenChange={setTransferOpen}><DialogContent className="bg-card border-border sm:max-w-lg"><DialogHeader><DialogTitle>Virement automatique / ponctuel</DialogTitle></DialogHeader><div className="space-y-4"><div className="grid grid-cols-2 gap-3"><div><Label>Compte source</Label><Select value={transferForm.fromAccountId} onValueChange={v=>setTransferForm(x=>({...x,fromAccountId:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div><div><Label>Compte destination</Label><Select value={transferForm.toAccountId} onValueChange={v=>setTransferForm(x=>({...x,toAccountId:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div></div><div className="grid grid-cols-2 gap-3"><div><Label>Montant</Label><Input type="number" step="0.01" value={transferForm.amount||''} onChange={e=>setTransferForm(x=>({...x,amount:Number(e.target.value)}))}/></div><div><Label>Date</Label><Input type="date" value={transferForm.date} onChange={e=>setTransferForm(x=>({...x,date:e.target.value}))}/></div></div><div className="flex items-center gap-2 p-3 rounded-xl border border-border"><Checkbox checked={transferForm.recurring} onCheckedChange={v=>setTransferForm(x=>({...x,recurring:Boolean(v)}))}/><div><p className="text-xs font-medium">Virement récurrent</p><p className="text-[10px] text-muted-foreground">Suivi d’un virement automatique vers ton épargne / investissement.</p></div></div>{transferForm.recurring&&<div className="grid grid-cols-2 gap-3"><div><Label>Fréquence</Label><Select value={transferForm.frequency} onValueChange={(v:any)=>setTransferForm(x=>({...x,frequency:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="monthly">Mensuel</SelectItem><SelectItem value="weekly">Hebdomadaire</SelectItem><SelectItem value="yearly">Annuel</SelectItem></SelectContent></Select></div><div><Label>Prochaine date</Label><Input type="date" value={transferForm.nextDate} onChange={e=>setTransferForm(x=>({...x,nextDate:e.target.value}))}/></div></div>}<Button onClick={saveTransfer} className="w-full bg-emerald-600 hover:bg-emerald-500">Enregistrer</Button></div></DialogContent></Dialog>
-    </div>
-  );
+    <Dialog open={holdingDialog} onOpenChange={setHoldingDialog}><DialogContent><DialogHeader><DialogTitle>Actif du relevé</DialogTitle></DialogHeader><div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3"><div><Label>Actif</Label><Input value={holdForm.name} onChange={e=>setHoldForm(x=>({...x,name:e.target.value}))} placeholder="ETF MSCI World"/></div><div><Label>Ticker</Label><Input value={holdForm.ticker||""} onChange={e=>setHoldForm(x=>({...x,ticker:e.target.value.toUpperCase()}))}/></div></div>
+      <div className="grid grid-cols-3 gap-3"><div><Label>Quantité</Label><Input type="number" value={holdForm.quantity||""} onChange={e=>{const q=Number(e.target.value);setHoldForm(x=>({...x,quantity:q,value:q*x.price}))}}/></div><div><Label>Prix unitaire</Label><Input type="number" value={holdForm.price||""} onChange={e=>{const p=Number(e.target.value);setHoldForm(x=>({...x,price:p,value:x.quantity*p}))}}/></div><div><Label>Valeur</Label><Input type="number" value={holdForm.value||""} onChange={e=>setHoldForm(x=>({...x,value:Number(e.target.value)}))}/></div></div>
+      <div><Label>Date du relevé</Label><Input type="date" value={holdForm.date} onChange={e=>setHoldForm(x=>({...x,date:e.target.value}))}/></div>
+      <Button className="w-full bg-emerald-600 hover:bg-emerald-500" onClick={saveHolding}>Enregistrer l’actif</Button>
+    </div></DialogContent></Dialog>
+  </div>;
 }
 
-function Metric({title,value,icon,tone}:{title:string;value:string;icon:ReactNode;tone:string}){return <div className="rounded-2xl border border-border bg-card p-4"><div className="flex items-center justify-between"><span className="text-[11px] text-muted-foreground">{title}</span><span className={tone}>{icon}</span></div><p className="font-mono text-lg font-bold mt-3">{value}</p></div>}
-function Card({title,subtitle,children}:{title:string;subtitle?:string;children:ReactNode}){return <section className="rounded-2xl border border-border bg-card p-4 shadow-sm"><div className="mb-3"><h2 className="text-sm font-semibold">{title}</h2>{subtitle&&<p className="text-[10px] text-muted-foreground mt-0.5">{subtitle}</p>}</div>{children}</section>}
-function Empty({text}:{text:string}){return <div className="h-full min-h-[120px] flex items-center justify-center text-xs text-muted-foreground">{text}</div>}
+function Dashboard({total,income,expenses,accounts,balances}:{total:number;income:number;expenses:number;accounts:Account[];balances:Record<string,number>}) {
+  return <div className="space-y-5">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3"><Metric title="Patrimoine suivi" value={euro(total)} tone="text-sky-400"/><Metric title="Revenus du mois" value={euro(income)} tone="text-emerald-400"/><Metric title="Dépenses du mois" value={euro(expenses)} tone="text-rose-400"/><Metric title="Cash-flow" value={euro(income-expenses)} tone={income-expenses>=0?"text-emerald-400":"text-rose-400"}/></div>
+    <div className="rounded-2xl border border-border bg-card p-4"><h2 className="text-sm font-semibold mb-1">Comptes</h2><p className="text-[10px] text-muted-foreground mb-4">Solde actuel calculé automatiquement à partir des transactions.</p><div className="space-y-2">{accounts.map(a=><div key={a.id} className="flex justify-between text-xs border-b border-border/40 py-2"><span>{a.name}</span><span className="font-mono">{euro(balances[a.id]??0)}</span></div>)}</div></div>
+  </div>;
+}
 
-function TransactionsView({transactions,accounts,onAdd,onEdit,onDelete}:{transactions:FinanceTransaction[];accounts:FinanceAccount[];onAdd:()=>void;onEdit:(x:FinanceTransaction)=>void;onDelete:(x:FinanceTransaction)=>void}){const [filter,setFilter]=useState('');const list=transactions.filter(t=>!filter||t.description.toLowerCase().includes(filter.toLowerCase())||t.category.toLowerCase().includes(filter.toLowerCase())).sort((a,b)=>b.date.localeCompare(a.date));return <div className="space-y-4"><Header title="Transactions" subtitle={`${transactions.length} opérations enregistrées · modification en temps réel des soldes`} action={<Button size="sm" onClick={onAdd}><Plus className="h-4 w-4 mr-1"/>Ajouter</Button>} /><Input value={filter} onChange={e=>setFilter(e.target.value)} placeholder="Rechercher une transaction…" className="max-w-sm"/><div className="rounded-2xl border border-border overflow-hidden"><div className="grid grid-cols-[110px_1fr_150px_120px_110px_70px] gap-3 px-4 py-3 text-[10px] uppercase tracking-wider text-muted-foreground bg-muted/30"><span>Date</span><span>Description</span><span>Catégorie</span><span>Compte</span><span className="text-right">Montant</span><span/></div>{list.map(t=><div key={t.id} className="grid grid-cols-[110px_1fr_150px_120px_110px_70px] gap-3 items-center px-4 py-3 border-t border-border/50 text-xs"><span className="text-muted-foreground">{t.date}</span><span className="font-medium truncate">{t.description}</span><span className="text-muted-foreground truncate">{t.category}</span><span className="text-muted-foreground truncate">{accounts.find(a=>a.id===t.accountId)?.name||'—'}</span><span className={`text-right font-mono font-semibold ${t.type==='income'?'text-emerald-400':'text-rose-400'}`}>{t.type==='income'?'+':'-'}{eur(t.amount)}</span><div className="flex justify-end gap-1"><button onClick={()=>onEdit(t)} className="px-2 py-1 rounded-md text-[10px] border border-border hover:bg-muted">Modifier</button><button onClick={()=>onDelete(t)} className="p-1.5 text-muted-foreground hover:text-rose-400" aria-label="Supprimer"><X className="h-3.5 w-3.5"/></button></div></div>)}{!list.length&&<div className="p-10 text-center text-xs text-muted-foreground">Aucune transaction.</div>}</div></div>}
-function AccountsView({accounts,onNew,onEdit,onDelete}:{accounts:FinanceAccount[];onNew:()=>void;onEdit:(a:FinanceAccount)=>void;onDelete:(a:FinanceAccount)=>void}){return <div className="space-y-4"><Header title="Comptes & patrimoine" subtitle="Tous tes comptes financiers au même endroit" action={<Button size="sm" onClick={onNew}><Plus className="h-4 w-4 mr-1"/>Nouveau compte</Button>}/><div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">{accounts.map(a=><div key={a.id} className="rounded-2xl border border-border bg-card p-4"><div className="flex items-start justify-between"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-xl bg-sky-500/10 flex items-center justify-center"><Landmark className="h-5 w-5 text-sky-400"/></div><div><p className="font-semibold text-sm">{a.name}</p><p className="text-[10px] text-muted-foreground">{a.type} · {a.institution||'—'}</p></div></div><div className="flex gap-1"><button className="p-1.5 text-muted-foreground hover:text-foreground" onClick={()=>onEdit(a)}><Settings2 className="h-3.5 w-3.5"/></button><button className="p-1.5 text-muted-foreground hover:text-rose-400" onClick={()=>onDelete(a)}><X className="h-3.5 w-3.5"/></button></div></div><p className="font-mono text-2xl font-bold mt-5">{eur(a.balance)}</p><p className="text-[10px] text-muted-foreground mt-1">{a.currency}</p></div>)}{!accounts.length&&<Empty text="Crée ton premier compte bancaire, épargne ou investissement."/>}</div></div>}
+function AccountDetail({account,balance,snapshots,holdings,onBack,onSnapshot,onHolding,onDeleteSnapshot,onDeleteHolding}:{account:Account;balance:number;snapshots:Snapshot[];holdings:Holding[];onBack:()=>void;onSnapshot:(s?:Snapshot)=>void;onHolding:(h?:Holding)=>void;onDeleteSnapshot:(s:Snapshot)=>void;onDeleteHolding:(h:Holding)=>void}) {
+  const ordered=[...snapshots].sort((a,b)=>a.date.localeCompare(b.date));
+  const chart=ordered.map(s=>({date:s.date,value:s.value}));
+  const latest=ordered[ordered.length-1];
+  const previous=ordered[ordered.length-2];
+  const netChange=latest ? latest.value - (previous?.value ?? (account.openingBalance ?? account.balance)) - Number(latest.contributions||0) + Number(latest.withdrawals||0) : 0;
+  const base=previous?.value ?? (account.openingBalance ?? account.balance);
+  const pct=base ? netChange/base*100 : 0;
+  const latestHoldings=latest ? holdings.filter(h=>h.date===latest.date) : [];
 
-function SubscriptionsView({subscriptions,accounts,onNew,onToggle,onDelete}:{subscriptions:FinanceSubscription[];accounts:FinanceAccount[];onNew:()=>void;onToggle:(s:FinanceSubscription)=>void;onDelete:(s:FinanceSubscription)=>void}){const monthly=subscriptions.filter(s=>s.active).reduce((s,x)=>s+(x.frequency==='monthly'?x.amount:x.frequency==='yearly'?x.amount/12:x.amount*52/12),0);return <div className="space-y-4"><Header title="Abonnements" subtitle={`${eur(monthly)} / mois estimés · ${subscriptions.filter(x=>x.active).length} actifs`} action={<Button size="sm" onClick={onNew}><Plus className="h-4 w-4 mr-1"/>Ajouter</Button>}/><div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">{subscriptions.map(s=><div key={s.id} className={`rounded-2xl border p-4 ${s.active?'border-border bg-card':'border-border/50 bg-muted/20 opacity-60'}`}><div className="flex justify-between gap-3"><div><p className="font-semibold text-sm">{s.name}</p><p className="text-[10px] text-muted-foreground">{s.category} · {accounts.find(a=>a.id===s.accountId)?.name||'—'}</p></div><p className="font-mono font-bold">{eur(s.amount)}</p></div><div className="flex items-center justify-between mt-5 text-[10px] text-muted-foreground"><span>Prochain : {s.nextDate}</span><div className="flex gap-2"><button onClick={()=>onToggle(s)} className="text-emerald-400">{s.active?'Désactiver':'Réactiver'}</button><button onClick={()=>onDelete(s)} className="text-rose-400">Supprimer</button></div></div></div>)}</div></div>}
+  return <div className="space-y-5">
+    <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-3"><Button variant="outline" size="sm" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1"/>Comptes</Button><div><h1 className="text-xl font-bold">{account.name}</h1><p className="text-xs text-muted-foreground">{account.type} · {account.institution||"—"}</p></div></div><div className="flex gap-2"><Button size="sm" variant="outline" onClick={()=>onHolding()}><Plus className="h-4 w-4 mr-1"/>Actif</Button><Button size="sm" onClick={()=>onSnapshot()}><Plus className="h-4 w-4 mr-1"/>Relevé</Button></div></div>
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3"><Metric title="Valeur actuelle" value={euro(balance)} tone="text-sky-400"/><Metric title="Dernier relevé" value={latest?euro(latest.value):"—"} tone="text-violet-400"/><Metric title="Performance" value={latest?euro(netChange):"—"} tone={netChange>=0?"text-emerald-400":"text-rose-400"}/><Metric title="Performance %" value={latest?`${pct.toFixed(2)} %`:"—"} tone={pct>=0?"text-emerald-400":"text-rose-400"}/></div>
+    <div className="rounded-2xl border border-border bg-card p-4"><h2 className="text-sm font-semibold">Évolution du compte</h2><p className="text-[10px] text-muted-foreground mb-3">Ajoute un relevé à chaque fin de mois pour construire ton historique.</p><div className="h-[300px]">{chart.length>1?<ResponsiveContainer width="100%" height="100%"><AreaChart data={chart}><CartesianGrid strokeDasharray="3 3" opacity={.25}/><XAxis dataKey="date" tick={{fontSize:10}}/><YAxis tick={{fontSize:10}} tickFormatter={v=>`${Math.round(v)}€`}/><Tooltip formatter={(v:number)=>euro(v)}/><Area type="monotone" dataKey="value" stroke="#60a5fa" fill="#60a5fa" fillOpacity={.12}/></AreaChart></ResponsiveContainer>:<Empty text="Ajoute au moins deux relevés pour afficher le graphique."/>}</div></div>
+    <div className="grid lg:grid-cols-2 gap-4">
+      <Card title="Historique des relevés" subtitle="Valeur, versements, retraits et note">{ordered.length?ordered.slice().reverse().map(s=><div key={s.id} className="flex items-center justify-between gap-3 p-3 border-b border-border/40"><div><p className="text-xs font-medium">{s.date}</p><p className="text-[10px] text-muted-foreground">Versements {euro(s.contributions)} · Retraits {euro(s.withdrawals)}{s.note?` · ${s.note}`:""}</p></div><div className="flex items-center gap-2"><b className="font-mono text-xs">{euro(s.value)}</b><button onClick={()=>onSnapshot(s)}><Pencil className="h-3 w-3"/></button><button onClick={()=>onDeleteSnapshot(s)} className="text-rose-400"><X className="h-3 w-3"/></button></div></div>):<Empty text="Aucun relevé."/>}</Card>
+      <Card title="Actifs du dernier relevé" subtitle="Quantité × prix = valeur à la date du relevé">{latestHoldings.length?latestHoldings.map(h=><div key={h.id} className="flex justify-between gap-3 p-3 border-b border-border/40"><div><p className="text-xs font-medium">{h.name}{h.ticker?` · ${h.ticker}`:""}</p><p className="text-[10px] text-muted-foreground">{h.quantity} × {euro(h.price)}</p></div><div className="flex items-center gap-2"><b className="font-mono text-xs">{euro(h.value)}</b><button onClick={()=>onHolding(h)}><Pencil className="h-3 w-3"/></button><button onClick={()=>onDeleteHolding(h)} className="text-rose-400"><X className="h-3 w-3"/></button></div></div>):<Empty text="Aucun actif sur le dernier relevé."/>}</Card>
+    </div>
+  </div>;
+}
 
-function TransfersView({transfers,accounts,onNew,onDelete}:{transfers:FinanceTransfer[];accounts:FinanceAccount[];onNew:()=>void;onDelete:(t:FinanceTransfer)=>void}){return <div className="space-y-4"><Header title="Virements" subtitle="Transferts ponctuels et virements automatiques à suivre" action={<Button size="sm" onClick={onNew}><Plus className="h-4 w-4 mr-1"/>Nouveau virement</Button>}/><div className="space-y-2">{transfers.map(t=><div key={t.id} className="rounded-2xl border border-border bg-card p-4 flex items-center justify-between gap-4"><div className="flex items-center gap-3"><div className="h-9 w-9 rounded-xl bg-violet-500/10 flex items-center justify-center"><Repeat2 className="h-4 w-4 text-violet-400"/></div><div><p className="text-xs font-medium">{accounts.find(a=>a.id===t.fromAccountId)?.name||'—'} <span className="text-muted-foreground">→</span> {accounts.find(a=>a.id===t.toAccountId)?.name||'—'}</p><p className="text-[10px] text-muted-foreground">{t.date}{t.recurring?` · ${t.frequency} · prochain ${t.nextDate}`:''}</p></div></div><div className="flex items-center gap-4"><span className="font-mono font-semibold">{eur(t.amount)}</span><button onClick={()=>onDelete(t)} className="text-muted-foreground hover:text-rose-400"><X className="h-3.5 w-3.5"/></button></div></div>)}{!transfers.length&&<Empty text="Aucun virement enregistré."/>}</div></div>}
-function Header({title,subtitle,action}:{title:string;subtitle:string;action:ReactNode}){return <div className="flex items-center justify-between gap-3"><div><h1 className="text-xl font-bold">{title}</h1><p className="text-xs text-muted-foreground mt-1">{subtitle}</p></div>{action}</div>}
+function Transactions({transactions,accounts,onAdd,onEdit,onDelete}:{transactions:Transaction[];accounts:Account[];onAdd:()=>void;onEdit:(t:Transaction)=>void;onDelete:(t:Transaction)=>void}) {
+  const [q,setQ]=useState("");
+  const list=transactions.filter(t=>!q||t.description.toLowerCase().includes(q.toLowerCase())||t.category.toLowerCase().includes(q.toLowerCase())).sort((a,b)=>day(b.date).localeCompare(day(a.date)));
+  return <div className="space-y-4"><Header title="Transactions" subtitle={`${transactions.length} opérations · les soldes sont recalculés automatiquement`} action={<Button size="sm" onClick={onAdd}><Plus className="h-4 w-4 mr-1"/>Ajouter</Button>}/><Input value={q} onChange={e=>setQ(e.target.value)} placeholder="Rechercher…"/><div className="rounded-2xl border border-border overflow-hidden">{list.map(t=><div key={t.id} className="grid grid-cols-[100px_1fr_130px_130px_130px] gap-3 items-center p-3 border-b border-border/40 text-xs"><span>{day(t.date)}</span><span className="font-medium truncate">{t.description}</span><span>{t.category}</span><span>{accounts.find(a=>a.id===t.accountId)?.name||"—"}</span><span className={`text-right font-mono ${t.type==="income"?"text-emerald-400":"text-rose-400"}`}>{t.type==="income"?"+":"-"}{euro(t.amount)} <button onClick={()=>onEdit(t)} className="ml-2 underline">Modifier</button> <button onClick={()=>onDelete(t)} className="ml-1 text-rose-400">×</button></span></div>)}{!list.length&&<Empty text="Aucune transaction."/>}</div></div>;
+}
+
+function Metric({title,value,tone}:{title:string;value:string;tone:string}){return <div className="rounded-2xl border border-border bg-card p-4"><p className="text-[11px] text-muted-foreground">{title}</p><p className={`font-mono text-lg font-bold mt-3 ${tone}`}>{value}</p></div>}
+function Card({title,subtitle,children}:{title:string;subtitle?:string;children:React.ReactNode}){return <section className="rounded-2xl border border-border bg-card p-4"><h2 className="text-sm font-semibold">{title}</h2>{subtitle&&<p className="text-[10px] text-muted-foreground mb-3">{subtitle}</p>}<div className="mt-2">{children}</div></section>}
+function Header({title,subtitle,action}:{title:string;subtitle:string;action:React.ReactNode}){return <div className="flex items-center justify-between gap-3"><div><h1 className="text-xl font-bold">{title}</h1><p className="text-xs text-muted-foreground mt-1">{subtitle}</p></div>{action}</div>}
+function Empty({text}:{text:string}){return <div className="p-8 text-center text-xs text-muted-foreground">{text}</div>}
