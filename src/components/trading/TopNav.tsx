@@ -37,14 +37,14 @@ export function TopNav() {
 
   return (
     <>
-      <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 h-[60px] px-2.5 rounded-full bg-[#141414] border border-white/[0.06] shadow-[0_10px_40px_rgba(0,0,0,0.55)] max-w-[95vw]">
+      <nav className="pointer-events-auto mx-auto min-w-0 max-w-full flex items-center gap-1 h-[60px] px-2.5 rounded-full bg-[#141414] border border-white/[0.06] shadow-[0_10px_40px_rgba(0,0,0,0.55)]">
         <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
           {navEntries.map(entry => (
             <NavLink
               key={entry.id}
               to={entry.url}
               end={entry.url === '/'}
-              className={({ isActive }) => `flex flex-col items-center justify-center whitespace-nowrap px-5 py-2.5 rounded-full text-[14px] font-medium transition-all duration-150 ${isActive ? 'bg-white/[0.09] text-white font-semibold' : 'text-white/40 hover:text-white/90 hover:bg-white/[0.05]'}`}
+              className={({ isActive }) => `flex flex-col items-center justify-center whitespace-nowrap px-3 2xl:px-5 py-2.5 rounded-full text-[13px] 2xl:text-[14px] font-medium transition-all duration-150 ${isActive ? 'bg-white/[0.09] text-white font-semibold' : 'text-white/40 hover:text-white/90 hover:bg-white/[0.05]'}`}
             >
               {({ isActive }) => (
                 <>
