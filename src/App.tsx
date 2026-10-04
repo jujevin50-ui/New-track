@@ -10,6 +10,7 @@ import { useState, useEffect, useMemo, lazy, Suspense, type ComponentType } from
 import { BarChart3, FolderOpen, FilePlus, HardDrive, RefreshCw } from "lucide-react";
 import { Trade } from "@/types/trade";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { LogoTransitionProvider } from "@/components/trading/LogoTransition";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { WelcomeSplash } from "@/components/trading/WelcomeSplash";
 
@@ -139,7 +140,7 @@ const AppContent = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider><Toaster /><Sonner /><BrowserRouter><DataProvider><Routes><Route path="/*" element={<AppContent />} /></Routes></DataProvider></BrowserRouter></TooltipProvider>
+    <TooltipProvider><Toaster /><Sonner /><BrowserRouter><LogoTransitionProvider><DataProvider><Routes><Route path="/*" element={<AppContent />} /></Routes></DataProvider></LogoTransitionProvider></BrowserRouter></TooltipProvider>
   </QueryClientProvider>
 );
 
