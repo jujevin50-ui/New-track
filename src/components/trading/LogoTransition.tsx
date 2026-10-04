@@ -2,8 +2,9 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useNavigate } from 'react-router-dom';
 
 /* Transition "logo" entre Track Record ("/") et My Finance ("/finance") :
-   le logo quitte sa place, grandit jusqu'au centre de l'écran en tournant, la page change
-   derrière le voile, puis le voile se lève et la nouvelle page apparaît. */
+   1. le logo tourne vite en grandissant jusqu'à couvrir TOUTE la page ;
+   2. la page change derrière lui ;
+   3. il continue de tourner en rétrécissant vers le centre, ce qui dévoile la nouvelle page. */
 
 export interface LogoRect { x: number; y: number; w: number; h: number }
 
@@ -16,12 +17,18 @@ interface Ctx {
 const LogoTransitionContext = createContext<Ctx | null>(null);
 export const useLogoTransition = () => useContext(LogoTransitionContext);
 
-type Phase = 'start' | 'grow' | 'out';
+type Phase = 'start' | 'cover' | 'reveal' | 'leave';
 
-const GROW_MS = 950;   // le logo grandit, tourne et se centre
-const HOLD_MS = 320;   // la page se monte derrière le voile
-const OUT_MS = 520;    // le voile se lève
-const TURNS = 2;       // nombre de tours pendant la transition
+const COVER_MS = 600;    // le logo grandit et prend toute la page (rotation rapide, qui accélère)
+const HOLD_MS = 110;     // la nouvelle page se monte derrière le logo plein écran
+const REVEAL_MS = 780;   // le logo rétrécit vers le centre en tournant et dévoile la page
+const LEAVE_MS = 240;    // dernier effet : le logo se résorbe au centre
+const TURNS_COVER = 3;   // tours pendant la prise de la page
+const TURNS_REVEAL = 3;  // tours pendant le rétrécissement
+const END_SIZE = 170;    // taille du logo (px) quand il arrive au centre
+
+// Précharge le logo HD utilisé en plein écran
+if (typeof window !== 'undefined') { const i = new Image(); i.src = '/logo-large.png'; }
 
 /** Précharge la page cible pendant l'animation pour qu'elle apparaisse sans écran de chargement. */
 const preload = (target: string) => {
@@ -49,14 +56,18 @@ export function LogoTransitionProvider({ children }: { children: ReactNode }) {
     busy.current = true;
     setState({ phase: 'start', from, target });
     // deux frames : le navigateur enregistre l'état de départ avant de lancer la transition
-    requestAnimationFrame(() => requestAnimationFrame(() => setState(s => (s ? { ...s, phase: 'grow' } : s))));
+    requestAnimationFrame(() => requestAnimationFrame(() => setState(s => (s ? { ...s, phase: 'cover' } : s))));
 
-    const minDelay = new Promise<void>(res => timers.current.push(setTimeout(res, GROW_MS)));
+    const minDelay = new Promise<void>(res => timers.current.push(setTimeout(res, COVER_MS)));
+    // La page ne change qu'une fois le logo plein écran ET la page cible prête
     Promise.all([minDelay, preload(target)]).then(() => {
       navigate(target);
       timers.current.push(setTimeout(() => {
-        setState(s => (s ? { ...s, phase: 'out' } : s));
-        timers.current.push(setTimeout(() => { setState(null); busy.current = false; }, OUT_MS));
+        setState(s => (s ? { ...s, phase: 'reveal' } : s));
+        timers.current.push(setTimeout(() => {
+          setState(s => (s ? { ...s, phase: 'leave' } : s));
+          timers.current.push(setTimeout(() => { setState(null); busy.current = false; }, LEAVE_MS));
+        }, REVEAL_MS));
       }, HOLD_MS));
     });
   }, [navigate]);
@@ -74,31 +85,49 @@ export function LogoTransitionProvider({ children }: { children: ReactNode }) {
 function Overlay({ phase, from }: { phase: Phase; from: LogoRect; target: string }) {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  // taille finale : ~28 % du plus petit côté de l'écran (bornée)
-  const finalSize = Math.max(140, Math.min(280, Math.min(vw, vh) * 0.28));
-  const scale = finalSize / from.w;
   const dx = vw / 2 - (from.x + from.w / 2);
   const dy = vh / 2 - (from.y + from.h / 2);
 
-  const grown = phase !== 'start';
-  const leaving = phase === 'out';
+  // Plein écran : le logo (avec ses vides) doit couvrir toute la page, même en tournant.
+  const coverSize = Math.min(Math.hypot(vw, vh) * 1.7, 4200);
+  const sBig = coverSize / from.w;
+  const sSmall = END_SIZE / from.w;
 
-  const transform = grown
-    ? `translate(${dx}px, ${dy}px) scale(${leaving ? scale * 1.12 : scale}) rotate(${TURNS * 360}deg)`
-    : 'translate(0px, 0px) scale(1) rotate(0deg)';
+  const centered = `translate(${dx}px, ${dy}px)`;
+  const transform =
+    phase === 'start' ? 'translate(0px, 0px) scale(1) rotate(0deg)'
+    : phase === 'cover' ? `${centered} scale(${sBig}) rotate(${TURNS_COVER * 360}deg)`
+    : phase === 'reveal' ? `${centered} scale(${sSmall}) rotate(${(TURNS_COVER + TURNS_REVEAL) * 360}deg)`
+    : `${centered} scale(${sSmall * 0.3}) rotate(${(TURNS_COVER + TURNS_REVEAL) * 360 + 180}deg)`;
+
+  const imgTransition =
+    phase === 'cover' ? `transform ${COVER_MS}ms cubic-bezier(0.55, 0, 0.9, 0.6)`          // accélère jusqu'au plein écran
+    : phase === 'reveal' ? `transform ${REVEAL_MS}ms cubic-bezier(0.1, 0.55, 0.25, 1)`      // part vite, ralentit au centre
+    : phase === 'leave' ? `transform ${LEAVE_MS}ms ease-in, opacity ${LEAVE_MS}ms ease-in`
+    : 'none';
+
+  // Voile sombre : se referme vite pendant la prise de la page, se lève pendant le rétrécissement.
+  const veilOpacity = phase === 'cover' ? 1 : 0;
+  const veilTransition =
+    phase === 'cover' ? `opacity ${COVER_MS * 0.45}ms ease-out`
+    : phase === 'reveal' ? `opacity ${REVEAL_MS * 0.7}ms ease-in-out ${REVEAL_MS * 0.12}ms`
+    : 'none';
+
+  // Fond aux couleurs du logo : comble les creux quand le logo est plein écran (plus aucune zone noire),
+  // puis se dissipe pendant le rétrécissement.
+  const washOpacity = phase === 'cover' ? 0.85 : 0;
+  const washTransition =
+    phase === 'cover' ? `opacity ${COVER_MS * 0.5}ms ease-in ${COVER_MS * 0.45}ms`
+    : phase === 'reveal' ? `opacity ${REVEAL_MS * 0.55}ms ease-out`
+    : 'none';
 
   return (
-    <div
-      className="fixed inset-0 z-[200] pointer-events-auto"
-      style={{
-        background: 'hsl(var(--background))',
-        opacity: phase === 'start' ? 0 : leaving ? 0 : 1,
-        transition: `opacity ${leaving ? OUT_MS : GROW_MS * 0.7}ms ease-in-out`,
-      }}
-      aria-hidden
-    >
+    <div className="fixed inset-0 z-[200] pointer-events-auto overflow-hidden" aria-hidden>
+      <div className="absolute inset-0" style={{ background: 'hsl(var(--background))', opacity: veilOpacity, transition: veilTransition }} />
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #ff8a2a 0%, #d6243a 28%, #8b2fc9 62%, #3b6fe0 100%)', opacity: washOpacity, transition: washTransition }} />
       <img
-        src="/logo.png"
+        src="/logo-large.png"
+        onError={e => { const el = e.currentTarget; if (!el.src.endsWith('/logo.png')) el.src = '/logo.png'; }}
         alt=""
         draggable={false}
         style={{
@@ -110,11 +139,8 @@ function Overlay({ phase, from }: { phase: Phase; from: LogoRect; target: string
           objectFit: 'contain',
           transformOrigin: 'center center',
           transform,
-          opacity: leaving ? 0 : 1,
-          transition: leaving
-            ? `transform ${OUT_MS}ms ease-out, opacity ${OUT_MS}ms ease-in`
-            : `transform ${GROW_MS}ms cubic-bezier(0.65, 0, 0.2, 1)`,
-          filter: 'drop-shadow(0 12px 40px rgba(0,0,0,0.45))',
+          opacity: phase === 'leave' ? 0 : 1,
+          transition: imgTransition,
           willChange: 'transform',
         }}
       />

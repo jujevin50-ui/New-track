@@ -50,7 +50,7 @@ export function LogoSwitch({ floating = false, className = '', size = 38 }: Logo
         alt=""
         draggable={false}
         className="object-contain select-none pointer-events-none"
-        style={{ width: size, height: size, opacity: transition?.active ? 0 : 1 }}
+        style={{ width: size, height: size, opacity: transition?.active ? 0 : 1, transition: transition?.active ? 'none' : 'opacity 350ms ease' }}
       />
     </button>
   );
