@@ -376,7 +376,7 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
         </div>
         <div className="flex items-center gap-2">
           <Select value={selected} onValueChange={setSelectedRaw}>
-            <SelectTrigger className="w-[220px] h-9 text-xs"><SelectValue placeholder="Compte" /></SelectTrigger>
+            <SelectTrigger className="w-[220px] h-10 text-xs rounded-full bg-background/60 border-border/60"><SelectValue placeholder="Compte" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tous les comptes</SelectItem>
               {orderedAccounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}{byAccount[a.id]?.length ? ` · ${byAccount[a.id].length} relevé${byAccount[a.id].length > 1 ? 's' : ''}` : ''}</SelectItem>)}

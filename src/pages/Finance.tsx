@@ -175,31 +175,31 @@ export default function Finance() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground -mx-4 md:-mx-6 -mb-4 md:-mb-6">
-      <LogoSwitch floating />
-      <div className="sticky top-0 z-30 border-b border-border/60 bg-background/90 backdrop-blur-xl">
-        <div className="max-w-[1500px] mx-auto px-5 py-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-h-[60px] pl-[96px]">
-            <div className="h-10 w-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center"><Wallet className="h-5 w-5 text-emerald-400" /></div>
-            <div><p className="text-sm font-semibold">My Finance</p><p className="text-[11px] text-muted-foreground">Patrimoine · dépenses · revenus · automatisations</p></div>
+    <div className="min-h-screen bg-background text-foreground">
+      {/* En-tête : même DA que le trading (logo + menu en pilule + actions) */}
+      <header className="pointer-events-none md:sticky md:top-4 z-50 mt-4 ml-6 mr-4 flex flex-wrap items-start gap-x-3 gap-y-3">
+        <LogoSwitch className="pointer-events-auto h-[60px] w-[60px] shrink-0" />
+        <nav className="pointer-events-auto mx-auto min-w-0 max-w-full flex items-center gap-1 h-[60px] px-2.5 rounded-full bg-[#141414] border border-white/[0.06] shadow-[0_10px_40px_rgba(0,0,0,0.55)]">
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+            {([['overview','Vue d’ensemble'],['transactions','Transactions'],['accounts','Comptes'],['subscriptions','Abonnements'],['transfers','Virements']] as [Tab,string][]).map(([value,label]) => (
+              <button key={value} onClick={() => setTab(value)} className={`flex flex-col items-center justify-center whitespace-nowrap px-3 2xl:px-5 py-2.5 rounded-full text-[13px] 2xl:text-[14px] font-medium transition-all duration-150 ${tab === value ? 'bg-white/[0.09] text-white font-semibold' : 'text-white/40 hover:text-white/90 hover:bg-white/[0.05]'}`}>
+                <span>{label}</span>
+                <span className={`h-1 w-1 rounded-full bg-green-400 mt-1 transition-opacity ${tab === value ? 'opacity-100' : 'opacity-0'}`} />
+              </button>
+            ))}
           </div>
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setTab('accounts')}><Landmark className="h-3.5 w-3.5" />{accounts.length} comptes</Button>
-            <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-500" onClick={() => { setTx({ ...emptyTx, accountId: accounts[0]?.id || '' }); setTxOpen(true); }}><Plus className="h-3.5 w-3.5" />Transaction</Button>
-          </div>
+        </nav>
+        <div className="pointer-events-auto ml-auto shrink-0 flex items-center gap-1.5 h-[60px] px-2.5 rounded-full bg-card/95 backdrop-blur-sm border border-border/60 shadow-[0_8px_24px_rgba(0,0,0,0.15)]">
+          <Button size="sm" variant="outline" className="h-10 rounded-full gap-1.5" onClick={() => setTab('accounts')}><Landmark className="h-3.5 w-3.5" />{accounts.length} comptes</Button>
+          <Button size="sm" className="h-10 rounded-full gap-1.5 bg-emerald-600 hover:bg-emerald-500" onClick={() => { setTx({ ...emptyTx, accountId: accounts[0]?.id || '' }); setTxOpen(true); }}><Plus className="h-3.5 w-3.5" />Transaction</Button>
         </div>
-        <div className="max-w-[1500px] mx-auto px-5 flex gap-1 overflow-x-auto">
-          {([['overview','Vue d’ensemble'],['transactions','Transactions'],['accounts','Comptes'],['subscriptions','Abonnements'],['transfers','Virements']] as [Tab,string][]).map(([value,label]) => (
-            <button key={value} onClick={() => setTab(value)} className={`px-4 py-3 text-xs font-medium border-b-2 transition-colors whitespace-nowrap ${tab === value ? 'text-emerald-400 border-emerald-400' : 'text-muted-foreground border-transparent hover:text-foreground'}`}>{label}</button>
-          ))}
-        </div>
-      </div>
+      </header>
 
-      <main className="max-w-[1500px] mx-auto p-5 space-y-5">
+      <main className="max-w-[1500px] mx-auto px-5 pb-5 pt-[74px] space-y-5">
         {tab === 'overview' && <>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div><p className="text-xs text-muted-foreground uppercase tracking-wider">Vue {overviewMode === 'month' ? 'mensuelle' : 'annuelle'}</p><div className="flex items-center gap-2 mt-1"><button onClick={() => setCursor(new Date(cursor.getFullYear() + (overviewMode === 'year' ? -1 : 0), cursor.getMonth() + (overviewMode === 'month' ? -1 : 0), 1))} className="p-1.5 rounded-lg hover:bg-muted"><ChevronLeft className="h-4 w-4" /></button><h1 className="text-xl font-bold capitalize min-w-[190px] text-center">{overviewMode === 'month' ? monthLabel : cursor.getFullYear()}</h1><button onClick={() => setCursor(new Date(cursor.getFullYear() + (overviewMode === 'year' ? 1 : 0), cursor.getMonth() + (overviewMode === 'month' ? 1 : 0), 1))} className="p-1.5 rounded-lg hover:bg-muted"><ChevronRight className="h-4 w-4" /></button></div></div>
-            <div className="flex items-center gap-1 rounded-xl border border-border p-1"><button onClick={() => setOverviewMode('month')} className={`px-3 py-1.5 rounded-lg text-xs ${overviewMode === 'month' ? 'bg-muted font-medium' : 'text-muted-foreground'}`}>Mois</button><button onClick={() => setOverviewMode('year')} className={`px-3 py-1.5 rounded-lg text-xs ${overviewMode === 'year' ? 'bg-muted font-medium' : 'text-muted-foreground'}`}>Année</button></div>
+            <div><p className="text-xs text-muted-foreground uppercase tracking-wider">Vue {overviewMode === 'month' ? 'mensuelle' : 'annuelle'}</p><div className="flex items-center gap-2 mt-1"><button onClick={() => setCursor(new Date(cursor.getFullYear() + (overviewMode === 'year' ? -1 : 0), cursor.getMonth() + (overviewMode === 'month' ? -1 : 0), 1))} className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"><ChevronLeft className="h-4 w-4" /></button><h1 className="text-xl font-bold capitalize min-w-[190px] text-center">{overviewMode === 'month' ? monthLabel : cursor.getFullYear()}</h1><button onClick={() => setCursor(new Date(cursor.getFullYear() + (overviewMode === 'year' ? 1 : 0), cursor.getMonth() + (overviewMode === 'month' ? 1 : 0), 1))} className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"><ChevronRight className="h-4 w-4" /></button></div></div>
+            <PillSwitch<'month' | 'year'> value={overviewMode} onChange={setOverviewMode} options={[['month','Mois'],['year','Année']]} />
             <div className="flex items-center gap-2"><div className="text-right"><p className="text-[10px] text-muted-foreground">Patrimoine suivi</p><p className="font-mono text-lg font-bold">{eur(balance)}</p></div></div>
           </div>
 
@@ -251,10 +251,7 @@ export default function Finance() {
 
         {tab === 'transactions' && <TransactionsView transactions={transactions} accounts={accounts} onAdd={() => { setTx({ ...emptyTx, accountId: accounts[0]?.id || '' }); setTxOpen(true); }} onEdit={(x)=>{setTx(x);setTxOpen(true)}} onDelete={async (x)=>{await deleteRow('financeTransactions' as any,x.id);toast.success('Transaction supprimée')}} />}
         {tab === 'accounts' && (
-          <div className="flex items-center gap-1 rounded-xl border border-border p-1 w-fit">
-            <button onClick={() => setAccountsView('list')} className={`px-3 py-1.5 rounded-lg text-xs ${accountsView === 'list' ? 'bg-muted font-medium' : 'text-muted-foreground hover:text-foreground'}`}>Mes comptes</button>
-            <button onClick={() => { setStatementsAccountId(undefined); setAccountsView('statements'); }} className={`px-3 py-1.5 rounded-lg text-xs ${accountsView === 'statements' ? 'bg-muted font-medium' : 'text-muted-foreground hover:text-foreground'}`}>Relevés & évolution</button>
-          </div>
+          <PillSwitch<'list' | 'statements'> value={accountsView} onChange={(v) => { if (v === 'statements') setStatementsAccountId(undefined); setAccountsView(v); }} options={[['list', 'Mes comptes'], ['statements', 'Relevés & évolution']]} />
         )}
         {tab === 'accounts' && accountsView === 'list' && <AccountsView onStatements={(a)=>{setStatementsAccountId(a.id);setAccountsView('statements')}} accounts={accounts.map(a=>({...a,balance:accountBalances[a.id] ?? Number(a.balance || 0)}))} onNew={() => {setEditingAccount(null);setAccountForm({id:'',name:'',type:'Compte courant',institution:'',balance:0,currency:'EUR'});setAccountOpen(true)}} onEdit={(a)=>{const original=accounts.find(x=>x.id===a.id)||a;setEditingAccount(original);setAccountForm(a);setAccountOpen(true)}} onDelete={async a=>{await deleteRow('financeAccounts' as any,a.id);toast.success('Compte supprimé')}} />}
         {tab === 'accounts' && accountsView === 'statements' && <StatementsView key={statementsAccountId || 'all'} accounts={accounts} statements={statements} initialAccountId={statementsAccountId} onSave={saveStatement} onDelete={deleteStatement} onSetInitial={setInitialCapital} />}
@@ -277,6 +274,16 @@ function Metric({title,value,icon,tone}:{title:string;value:string;icon:ReactNod
 function Card({title,subtitle,children}:{title:string;subtitle?:string;children:ReactNode}){return <section className="rounded-2xl border border-border bg-card p-4 shadow-sm"><div className="mb-3"><h2 className="text-sm font-semibold">{title}</h2>{subtitle&&<p className="text-[10px] text-muted-foreground mt-0.5">{subtitle}</p>}</div>{children}</section>}
 function Empty({text}:{text:string}){return <div className="h-full min-h-[120px] flex items-center justify-center text-xs text-muted-foreground">{text}</div>}
 
+/** Interrupteur segmenté : même DA que le menu du trading (pilule sombre, onglet actif en surbrillance). */
+function PillSwitch<T extends string>({ value, onChange, options }: { value: T; onChange: (v: T) => void; options: [T, string][] }) {
+  return (
+    <div className="inline-flex items-center gap-1 h-11 px-1.5 rounded-full bg-[#141414] border border-white/[0.06] shadow-[0_6px_20px_rgba(0,0,0,0.35)] w-fit">
+      {options.map(([v, label]) => (
+        <button key={v} onClick={() => onChange(v)} className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all duration-150 ${value === v ? 'bg-white/[0.09] text-white font-semibold' : 'text-white/40 hover:text-white/90 hover:bg-white/[0.05]'}`}>{label}</button>
+      ))}
+    </div>
+  );
+}
 function TransactionsView({transactions,accounts,onAdd,onEdit,onDelete}:{transactions:FinanceTransaction[];accounts:FinanceAccount[];onAdd:()=>void;onEdit:(x:FinanceTransaction)=>void;onDelete:(x:FinanceTransaction)=>void}){const [filter,setFilter]=useState('');const list=transactions.filter(t=>!filter||t.description.toLowerCase().includes(filter.toLowerCase())||t.category.toLowerCase().includes(filter.toLowerCase())).sort((a,b)=>b.date.localeCompare(a.date));return <div className="space-y-4"><Header title="Transactions" subtitle={`${transactions.length} opérations enregistrées · modification en temps réel des soldes`} action={<Button size="sm" onClick={onAdd}><Plus className="h-4 w-4 mr-1"/>Ajouter</Button>} /><Input value={filter} onChange={e=>setFilter(e.target.value)} placeholder="Rechercher une transaction…" className="max-w-sm"/><div className="rounded-2xl border border-border overflow-x-auto"><div className="min-w-[760px]"><div className="grid grid-cols-[100px_minmax(140px,1fr)_140px_150px_120px_72px] gap-3 px-4 py-3 text-[10px] uppercase tracking-wider text-muted-foreground bg-muted/30"><span>Date</span><span>Description</span><span>Catégorie</span><span>Compte</span><span className="text-right">Montant</span><span/></div>{list.map(t=><div key={t.id} className="grid grid-cols-[100px_minmax(140px,1fr)_140px_150px_120px_72px] gap-3 items-center px-4 py-3 border-t border-border/50 text-xs"><span className="text-muted-foreground">{t.date}</span><span className="font-medium truncate">{t.description}</span><span className="text-muted-foreground truncate">{t.category}</span><span className="text-muted-foreground truncate">{accounts.find(a=>a.id===t.accountId)?.name||'—'}</span><span className={`text-right font-mono font-semibold ${t.type==='income'?'text-emerald-400':'text-rose-400'}`}>{t.type==='income'?'+':'-'}{eur(t.amount)}</span><div className="flex justify-end items-center gap-0.5"><button onClick={()=>onEdit(t)} className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" aria-label="Modifier" title="Modifier"><Pencil className="h-3.5 w-3.5"/></button><button onClick={()=>onDelete(t)} className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors" aria-label="Supprimer" title="Supprimer"><X className="h-3.5 w-3.5"/></button></div></div>)}{!list.length&&<div className="p-10 text-center text-xs text-muted-foreground">Aucune transaction.</div>}</div></div></div>}
 function AccountsView({accounts,onNew,onEdit,onDelete,onStatements}:{accounts:FinanceAccount[];onNew:()=>void;onEdit:(a:FinanceAccount)=>void;onDelete:(a:FinanceAccount)=>void;onStatements:(a:FinanceAccount)=>void}){return <div className="space-y-4"><Header title="Comptes & patrimoine" subtitle="Tous tes comptes financiers au même endroit" action={<Button size="sm" onClick={onNew}><Plus className="h-4 w-4 mr-1"/>Nouveau compte</Button>}/><div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">{accounts.map(a=><div key={a.id} className="rounded-2xl border border-border bg-card p-4"><div className="flex items-start justify-between"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-xl bg-sky-500/10 flex items-center justify-center"><Landmark className="h-5 w-5 text-sky-400"/></div><div><p className="font-semibold text-sm">{a.name}</p><p className="text-[10px] text-muted-foreground">{a.type} · {a.institution||'—'}</p></div></div><div className="flex gap-1"><button className="p-1.5 text-muted-foreground hover:text-foreground" onClick={()=>onEdit(a)}><Settings2 className="h-3.5 w-3.5"/></button><button className="p-1.5 text-muted-foreground hover:text-rose-400" onClick={()=>onDelete(a)}><X className="h-3.5 w-3.5"/></button></div></div><p className="font-mono text-2xl font-bold mt-5">{eur(a.balance)}</p><div className="flex items-center justify-between mt-1"><p className="text-[10px] text-muted-foreground">{a.currency}</p><button className="text-[11px] text-sky-400 hover:underline" onClick={()=>onStatements(a)}>Relevés & évolution →</button></div></div>)}{!accounts.length&&<Empty text="Crée ton premier compte bancaire, épargne ou investissement."/>}</div></div>}
 
