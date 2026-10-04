@@ -53,6 +53,18 @@ function applyMode(mode: ThemeMode) {
   }
 }
 
+/** Applique le thème (couleur + mode) dès le démarrage de l'app, sur TOUTES les pages.
+ *  Sombre par défaut ; le mode clair n'est utilisé que si tu l'as choisi dans les réglages. */
+export function initTheme() {
+  try {
+    const saved = localStorage.getItem(THEME_KEY);
+    applyTheme(saved ? JSON.parse(saved) : DEFAULT_THEME);
+  } catch { applyTheme(DEFAULT_THEME); }
+  let mode: ThemeMode = 'dark';
+  try { if (localStorage.getItem(MODE_KEY) === 'light') mode = 'light'; } catch { /* sombre */ }
+  applyMode(mode);
+}
+
 export const useTheme = () => {
   const [theme, setTheme] = useState<ThemeConfig>(() => {
     try {
@@ -62,7 +74,7 @@ export const useTheme = () => {
   });
 
   const [mode, setModeState] = useState<ThemeMode>(() => {
-    return (localStorage.getItem(MODE_KEY) as ThemeMode) || 'dark';
+    return localStorage.getItem(MODE_KEY) === 'light' ? 'light' : 'dark';
   });
 
   useEffect(() => {
