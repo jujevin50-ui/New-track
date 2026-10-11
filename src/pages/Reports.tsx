@@ -8,6 +8,8 @@ import {
   getPeriodKey,
   getPeriodLabel,
   getPeriodRange,
+  getTradesRange,
+  listPeriodKeys,
   usePeriodReports,
 } from '@/hooks/usePeriodReports';
 import { Button } from '@/components/ui/button';
@@ -58,6 +60,9 @@ const SECTION_META: Record<PeriodType, { title: string; icon: typeof CalendarDay
 const periodWord = (type: PeriodType) => (
   type === 'weekly' ? 'week' : type === 'monthly' ? 'month' : 'year'
 );
+
+// Les comptes rendus hebdo sont rédigés la semaine suivante : ils portent sur "la semaine dernière".
+const tradesPeriodPhrase = (type: PeriodType) => (type === 'weekly' ? 'last week' : `this ${periodWord(type)}`);
 
 const periodStorageTitle = (type: PeriodType) => (
   type === 'weekly' ? 'Weekly Trading Report' : type === 'monthly' ? 'Monthly Trading Report' : 'Yearly Trading Report'
@@ -137,11 +142,24 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
 
   const buildEntries = (type: PeriodType): PeriodEntry[] => {
     const keys = new Set<string>(Object.keys(reports[type]));
+
+    // Une période existe même sans trade : on génère toutes les périodes depuis la plus ancienne
+    // activité (1er trade ou compte rendu enregistré) jusqu'à aujourd'hui.
+    const now = new Date();
+    let earliest = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
     for (const trade of allTrades) {
-      keys.add(getPeriodKey(type, new Date(trade.date.slice(0, 10))));
+      const d = new Date(trade.date.slice(0, 10));
+      if (!Number.isNaN(d.getTime()) && d < earliest) earliest = d;
     }
+    for (const key of Object.keys(reports[type])) {
+      const start = getPeriodRange(type, key).start;
+      if (!Number.isNaN(start.getTime()) && start < earliest) earliest = start;
+    }
+    for (const key of listPeriodKeys(type, earliest, now)) keys.add(key);
+
     return [...keys].map(key => {
-      const range = getPeriodRange(type, key);
+      // Hebdo : les trades de la semaine précédente apparaissent dans le compte rendu de la semaine suivante
+      const range = getTradesRange(type, key);
       const start = range.start.toISOString().slice(0, 10);
       const end = range.end.toISOString().slice(0, 10);
       const tradesInPeriod = allTrades.filter(t => t.date.slice(0, 10) >= start && t.date.slice(0, 10) <= end);
@@ -177,10 +195,19 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
   useEffect(() => {
     if (!selected) return;
     const next = getReport(selected.type, selected.key);
+    let tradeNotes: Record<string, string> = next.tradeNotes || {};
+    if (selected.type === 'weekly') {
+      // Avant, les trades d'une semaine étaient notés dans le compte rendu de cette même semaine :
+      // on les retrouve (sans écraser ce qui est déjà saisi ici).
+      const prevStart = getTradesRange('weekly', selected.key).start;
+      const prevKey = getPeriodKey('weekly', prevStart);
+      const older = reports.weekly[prevKey]?.tradeNotes || {};
+      tradeNotes = { ...older, ...tradeNotes };
+    }
     setFormData({
       emotionGenerale: next.emotionGenerale,
       tradesEmotionnels: next.tradesEmotionnels,
-      tradeNotes: next.tradeNotes || {},
+      tradeNotes,
       conclusion: next.conclusion,
       objectifPrincipal: next.objectifPrincipal,
       objectifsSecondaires: next.objectifsSecondaires,
@@ -191,7 +218,7 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
 
   const selectedTrades = useMemo(() => {
     if (!selected) return [] as Trade[];
-    const range = getPeriodRange(selected.type, selected.key);
+    const range = getTradesRange(selected.type, selected.key);
     const start = range.start.toISOString().slice(0, 10);
     const end = range.end.toISOString().slice(0, 10);
     return allTrades
@@ -277,6 +304,15 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
     pdf.setFontSize(11);
     pdf.setFont('helvetica', 'normal');
     pdf.text(`${formatDate(range.start)} – ${formatDate(range.end)}`, margin, y);
+    if (selected.type === 'weekly') {
+      const tr = getTradesRange('weekly', selected.key);
+      y += 6;
+      pdf.setFontSize(9);
+      pdf.setTextColor(120, 120, 130);
+      pdf.text(`Trades taken ${formatDate(tr.start)} – ${formatDate(tr.end)} (previous week)`, margin, y);
+      pdf.setTextColor(0, 0, 0);
+      pdf.setFontSize(11);
+    }
     y += 12;
     pdf.setDrawColor(80, 80, 90);
     pdf.line(margin, y, pageW - margin, y);
@@ -527,7 +563,7 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
                               {entry.hasReport && <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" title="Saved report" />}
                             </div>
                             <div className="flex items-center justify-between mt-1.5">
-                              <span className="text-[10px] text-muted-foreground">{entry.tradeCount} trades</span>
+                              <span className="text-[10px] text-muted-foreground">{entry.tradeCount} trades{type === 'weekly' ? ' · previous week' : ''}</span>
                               <span className={`text-[10px] font-mono tabular-nums ${entry.pnl >= 0 ? 'text-profit' : 'text-loss'}`}>
                                 {fmt(entry.pnl)}$
                               </span>
@@ -569,6 +605,10 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
                     {!selectedSaved && <span className="text-[9px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">Not saved</span>}
                   </div>
                   <h2 className="text-xl font-bold tracking-tight">{selectedEntry?.label || getPeriodLabel(selected.type, selected.key)}</h2>
+                  {selected.type === 'weekly' && (() => {
+                    const tr = getTradesRange('weekly', selected.key);
+                    return <p className="text-[11px] text-muted-foreground mt-1">Trades of the previous week · {formatDate(tr.start)} – {formatDate(tr.end)}</p>;
+                  })()}
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   {!isEditing ? (
@@ -624,7 +664,7 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
                 </div>
 
                 <div className="space-y-7 max-w-3xl">
-                  <Question n={1} q={`How did you feel overall this ${periodWord(selected.type)}?`}>
+                  <Question n={1} q={`How did you feel overall ${tradesPeriodPhrase(selected.type)}?`}>
                     <Select value={formData.emotionGenerale} onValueChange={v => updateField('emotionGenerale', v)}>
                       <SelectTrigger className="h-10 text-sm bg-secondary border-border">
                         <SelectValue placeholder="Select an emotion..." />
@@ -633,7 +673,7 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
                     </Select>
                   </Question>
 
-                  <Question n={2} q={`How many emotional trades did you take this ${periodWord(selected.type)}?`}>
+                  <Question n={2} q={`How many emotional trades did you take ${tradesPeriodPhrase(selected.type)}?`}>
                     <Input
                       type="number"
                       min={0}
@@ -643,7 +683,7 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
                     />
                   </Question>
 
-                  <Question n={3} q={`What did you learn this ${periodWord(selected.type)}? What should you have done differently?`}>
+                  <Question n={3} q={`What did you learn ${tradesPeriodPhrase(selected.type)}? What should you have done differently?`}>
                     <Textarea
                       placeholder="Your reflection..."
                       className="h-28 text-sm resize-none bg-secondary border-border"

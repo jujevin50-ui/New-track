@@ -71,6 +71,34 @@ export const getPeriodRange = (type: PeriodType, periodKey: string): { start: Da
   return { start, end };
 };
 
+const DAY = 86400000;
+const iso = (d: Date) => d.toISOString().slice(0, 10);
+
+/** Période dont les trades alimentent le compte rendu.
+ *  Hebdo : le compte rendu de la semaine N regroupe les trades pris la semaine N-1 (rédigé la semaine suivante).
+ *  Mensuel / annuel : inchangé (trades de la période elle-même). */
+export const getTradesRange = (type: PeriodType, periodKey: string): { start: Date; end: Date } => {
+  const range = getPeriodRange(type, periodKey);
+  if (type !== 'weekly') return range;
+  return { start: new Date(range.start.getTime() - 7 * DAY), end: new Date(range.end.getTime() - 7 * DAY) };
+};
+
+/** Toutes les clés de période entre deux dates (incluses), même sans trade : une semaine ou un mois sans trade a quand même son compte rendu. */
+export const listPeriodKeys = (type: PeriodType, from: Date, to: Date): string[] => {
+  const keys: string[] = [];
+  const last = getPeriodKey(type, to);
+  let cursor = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate()));
+  let guard = 0;
+  while (guard++ < 2000) {
+    const key = getPeriodKey(type, cursor);
+    if (!keys.includes(key)) keys.push(key);
+    if (key >= last) break;
+    const range = getPeriodRange(type, key);
+    cursor = new Date(range.end.getTime() + DAY); // jour suivant la fin de la période
+  }
+  return keys;
+};
+
 export const getPeriodLabel = (type: PeriodType, periodKey: string): string => {
   if (type === 'yearly') return periodKey;
   if (type === 'monthly') {
