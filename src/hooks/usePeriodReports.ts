@@ -74,14 +74,11 @@ export const getPeriodRange = (type: PeriodType, periodKey: string): { start: Da
 const DAY = 86400000;
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
-/** Période dont les trades alimentent le compte rendu.
- *  Hebdo : le compte rendu de la semaine N regroupe les trades pris la semaine N-1 (rédigé la semaine suivante).
- *  Mensuel / annuel : inchangé (trades de la période elle-même). */
-export const getTradesRange = (type: PeriodType, periodKey: string): { start: Date; end: Date } => {
-  const range = getPeriodRange(type, periodKey);
-  if (type !== 'weekly') return range;
-  return { start: new Date(range.start.getTime() - 7 * DAY), end: new Date(range.end.getTime() - 7 * DAY) };
-};
+/** Date qui range un trade dans un compte rendu : sa DATE DE FIN (clôture).
+ *  Un trade ouvert la semaine N et clôturé la semaine N+1 apparaît donc dans le rapport de la semaine N+1.
+ *  Si le trade n'a pas de date de fin (encore ouvert), on utilise sa date de début. */
+export const getTradeReportDate = (t: { date: string; endDate?: string }): string =>
+  ((t.endDate && t.endDate.trim()) ? t.endDate : t.date).slice(0, 10);
 
 /** Toutes les clés de période entre deux dates (incluses), même sans trade : une semaine ou un mois sans trade a quand même son compte rendu. */
 export const listPeriodKeys = (type: PeriodType, from: Date, to: Date): string[] => {

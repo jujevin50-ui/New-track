@@ -8,7 +8,7 @@ import {
   getPeriodKey,
   getPeriodLabel,
   getPeriodRange,
-  getTradesRange,
+  getTradeReportDate,
   listPeriodKeys,
   usePeriodReports,
 } from '@/hooks/usePeriodReports';
@@ -60,9 +60,6 @@ const SECTION_META: Record<PeriodType, { title: string; icon: typeof CalendarDay
 const periodWord = (type: PeriodType) => (
   type === 'weekly' ? 'week' : type === 'monthly' ? 'month' : 'year'
 );
-
-// Les comptes rendus hebdo sont rédigés la semaine suivante : ils portent sur "la semaine dernière".
-const tradesPeriodPhrase = (type: PeriodType) => (type === 'weekly' ? 'last week' : `this ${periodWord(type)}`);
 
 const periodStorageTitle = (type: PeriodType) => (
   type === 'weekly' ? 'Weekly Trading Report' : type === 'monthly' ? 'Monthly Trading Report' : 'Yearly Trading Report'
@@ -148,7 +145,7 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
     const now = new Date();
     let earliest = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
     for (const trade of allTrades) {
-      const d = new Date(trade.date.slice(0, 10));
+      const d = new Date(getTradeReportDate(trade));
       if (!Number.isNaN(d.getTime()) && d < earliest) earliest = d;
     }
     for (const key of Object.keys(reports[type])) {
@@ -158,11 +155,11 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
     for (const key of listPeriodKeys(type, earliest, now)) keys.add(key);
 
     return [...keys].map(key => {
-      // Hebdo : les trades de la semaine précédente apparaissent dans le compte rendu de la semaine suivante
-      const range = getTradesRange(type, key);
+      // Un trade est rangé dans la période de sa DATE DE FIN
+      const range = getPeriodRange(type, key);
       const start = range.start.toISOString().slice(0, 10);
       const end = range.end.toISOString().slice(0, 10);
-      const tradesInPeriod = allTrades.filter(t => t.date.slice(0, 10) >= start && t.date.slice(0, 10) <= end);
+      const tradesInPeriod = allTrades.filter(t => { const d = getTradeReportDate(t); return d >= start && d <= end; });
       return {
         key,
         label: getPeriodLabel(type, key),
@@ -195,14 +192,22 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
   useEffect(() => {
     if (!selected) return;
     const next = getReport(selected.type, selected.key);
+    // Un trade peut avoir changé de semaine (rangé par date de fin) : on retrouve ses notes saisies
+    // dans un autre compte rendu de même type, sans écraser ce qui est déjà noté ici.
     let tradeNotes: Record<string, string> = next.tradeNotes || {};
-    if (selected.type === 'weekly') {
-      // Avant, les trades d'une semaine étaient notés dans le compte rendu de cette même semaine :
-      // on les retrouve (sans écraser ce qui est déjà saisi ici).
-      const prevStart = getTradesRange('weekly', selected.key).start;
-      const prevKey = getPeriodKey('weekly', prevStart);
-      const older = reports.weekly[prevKey]?.tradeNotes || {};
-      tradeNotes = { ...older, ...tradeNotes };
+    {
+      const range = getPeriodRange(selected.type, selected.key);
+      const start = range.start.toISOString().slice(0, 10);
+      const end = range.end.toISOString().slice(0, 10);
+      const ids = new Set(allTrades.filter(t => { const d = getTradeReportDate(t); return d >= start && d <= end; }).map(t => t.id));
+      const inherited: Record<string, string> = {};
+      for (const [key, rep] of Object.entries(reports[selected.type])) {
+        if (key === selected.key) continue;
+        for (const [id, note] of Object.entries(rep.tradeNotes || {})) {
+          if (ids.has(id) && note && !inherited[id]) inherited[id] = note;
+        }
+      }
+      tradeNotes = { ...inherited, ...tradeNotes };
     }
     setFormData({
       emotionGenerale: next.emotionGenerale,
@@ -218,12 +223,12 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
 
   const selectedTrades = useMemo(() => {
     if (!selected) return [] as Trade[];
-    const range = getTradesRange(selected.type, selected.key);
+    const range = getPeriodRange(selected.type, selected.key);
     const start = range.start.toISOString().slice(0, 10);
     const end = range.end.toISOString().slice(0, 10);
     return allTrades
-      .filter(t => t.date.slice(0, 10) >= start && t.date.slice(0, 10) <= end)
-      .sort((a, b) => a.date.localeCompare(b.date) || (a.tradeNumber || 0) - (b.tradeNumber || 0));
+      .filter(t => { const d = getTradeReportDate(t); return d >= start && d <= end; })
+      .sort((a, b) => getTradeReportDate(a).localeCompare(getTradeReportDate(b)) || (a.tradeNumber || 0) - (b.tradeNumber || 0));
   }, [allTrades, selected]);
 
   const stats = useMemo(() => {
@@ -304,15 +309,6 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
     pdf.setFontSize(11);
     pdf.setFont('helvetica', 'normal');
     pdf.text(`${formatDate(range.start)} – ${formatDate(range.end)}`, margin, y);
-    if (selected.type === 'weekly') {
-      const tr = getTradesRange('weekly', selected.key);
-      y += 6;
-      pdf.setFontSize(9);
-      pdf.setTextColor(120, 120, 130);
-      pdf.text(`Trades taken ${formatDate(tr.start)} – ${formatDate(tr.end)} (previous week)`, margin, y);
-      pdf.setTextColor(0, 0, 0);
-      pdf.setFontSize(11);
-    }
     y += 12;
     pdf.setDrawColor(80, 80, 90);
     pdf.line(margin, y, pageW - margin, y);
@@ -563,7 +559,7 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
                               {entry.hasReport && <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" title="Saved report" />}
                             </div>
                             <div className="flex items-center justify-between mt-1.5">
-                              <span className="text-[10px] text-muted-foreground">{entry.tradeCount} trades{type === 'weekly' ? ' · previous week' : ''}</span>
+                              <span className="text-[10px] text-muted-foreground">{entry.tradeCount} trades</span>
                               <span className={`text-[10px] font-mono tabular-nums ${entry.pnl >= 0 ? 'text-profit' : 'text-loss'}`}>
                                 {fmt(entry.pnl)}$
                               </span>
@@ -605,10 +601,7 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
                     {!selectedSaved && <span className="text-[9px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">Not saved</span>}
                   </div>
                   <h2 className="text-xl font-bold tracking-tight">{selectedEntry?.label || getPeriodLabel(selected.type, selected.key)}</h2>
-                  {selected.type === 'weekly' && (() => {
-                    const tr = getTradesRange('weekly', selected.key);
-                    return <p className="text-[11px] text-muted-foreground mt-1">Trades of the previous week · {formatDate(tr.start)} – {formatDate(tr.end)}</p>;
-                  })()}
+                  <p className="text-[11px] text-muted-foreground mt-1">Trades are placed by their end date</p>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   {!isEditing ? (
@@ -664,7 +657,7 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
                 </div>
 
                 <div className="space-y-7 max-w-3xl">
-                  <Question n={1} q={`How did you feel overall ${tradesPeriodPhrase(selected.type)}?`}>
+                  <Question n={1} q={`How did you feel overall this ${periodWord(selected.type)}?`}>
                     <Select value={formData.emotionGenerale} onValueChange={v => updateField('emotionGenerale', v)}>
                       <SelectTrigger className="h-10 text-sm bg-secondary border-border">
                         <SelectValue placeholder="Select an emotion..." />
@@ -673,7 +666,7 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
                     </Select>
                   </Question>
 
-                  <Question n={2} q={`How many emotional trades did you take ${tradesPeriodPhrase(selected.type)}?`}>
+                  <Question n={2} q={`How many emotional trades did you take this ${periodWord(selected.type)}?`}>
                     <Input
                       type="number"
                       min={0}
@@ -683,7 +676,7 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
                     />
                   </Question>
 
-                  <Question n={3} q={`What did you learn ${tradesPeriodPhrase(selected.type)}? What should you have done differently?`}>
+                  <Question n={3} q={`What did you learn this ${periodWord(selected.type)}? What should you have done differently?`}>
                     <Textarea
                       placeholder="Your reflection..."
                       className="h-28 text-sm resize-none bg-secondary border-border"
@@ -757,7 +750,7 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
                                 {trade.type === 'Buy' ? 'L' : 'S'}
                               </span>
                               <span className="text-xs font-semibold">{trade.pair}</span>
-                              <span className="text-[10px] text-muted-foreground ml-auto">{trade.date.slice(0, 10)}</span>
+                              <span className="text-[10px] text-muted-foreground ml-auto">{trade.endDate && trade.endDate.slice(0, 10) !== trade.date.slice(0, 10) ? `${trade.date.slice(0, 10)} → ${trade.endDate.slice(0, 10)}` : trade.date.slice(0, 10)}</span>
                             </div>
 
                             <div className="flex items-start gap-2 mt-2">
