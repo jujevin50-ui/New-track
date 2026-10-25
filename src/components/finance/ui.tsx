@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import {
   ArrowDownRight, ArrowUpRight, Banknote, Briefcase, Car, CandlestickChart, GraduationCap, Gamepad2, HeartPulse,
-  Home, MoreHorizontal, Percent, Receipt, Repeat2, ShoppingBag, ShoppingBasket, Tag, Users, Inbox,
+  Home, MoreHorizontal, Percent, Receipt, Repeat2, ShoppingBag, ShoppingBasket, Tag, Undo2, Users, Inbox,
 } from 'lucide-react';
 import { PALETTE } from './financeCharts';
 
@@ -26,6 +26,7 @@ export const CATEGORY_META: Record<string, { icon: typeof Home; color: string }>
   Impôts: { icon: Receipt, color: PALETTE[7] },
   Salaire: { icon: Briefcase, color: PALETTE[1] },
   Payout: { icon: Banknote, color: PALETTE[1] },
+  Remboursement: { icon: Undo2, color: PALETTE[4] },
   Intérêts: { icon: Percent, color: PALETTE[4] },
   Vente: { icon: Tag, color: PALETTE[2] },
   Autre: { icon: MoreHorizontal, color: PALETTE[7] },

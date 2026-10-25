@@ -26,7 +26,7 @@ type Tab = 'overview' | 'transactions' | 'accounts' | 'subscriptions' | 'transfe
 
 const ACCOUNT_TYPES = ['Compte courant', 'Épargne', 'Assurance-vie', 'PEA', 'CTO', 'Crypto', 'Espèces', 'Autre'];
 const EXPENSE_CATEGORIES = ['Logement', 'Alimentation', 'Transport', 'Abonnements', 'Loisirs', 'Shopping', 'Santé', 'Formation', 'Trading', 'Famille', 'Impôts', 'Autre'];
-const INCOME_CATEGORIES = ['Salaire', 'Trading', 'Payout', 'Intérêts', 'Vente', 'Autre'];
+const INCOME_CATEGORIES = ['Salaire', 'Trading', 'Payout', 'Remboursement', 'Intérêts', 'Vente', 'Autre'];
 const id = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 const dateKey = (d: string) => String(d || '').slice(0, 10);
 const monthKey = (d: string) => dateKey(d).slice(0, 7);
