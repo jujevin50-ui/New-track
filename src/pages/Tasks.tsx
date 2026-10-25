@@ -54,7 +54,7 @@ function uid() {
 /* ───────────────── Page ───────────────── */
 
 export default function Tasks() {
-  const { data, addRow, updateRow, deleteRow, saveTable } = useData();
+  const { data, updateRow, deleteRow, saveTable, saveData } = useData();
   const lists = ((data.taskLists || []) as TaskList[]).slice().sort(
     (a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''),
   );
@@ -85,7 +85,6 @@ export default function Tasks() {
   const today = todayStr();
 
   // Ensure at least one default list exists conceptually for new tasks
-  const defaultListId = lists[0]?.id;
 
   const counts = useMemo(() => {
     const byList: Record<string, { active: number; done: number }> = {};
@@ -163,15 +162,24 @@ export default function Tasks() {
       await updateRow('taskLists', editingList.id, { name, color: listForm.color });
       toast.success('Liste mise à jour');
     } else {
-      const id = uid();
-      await addRow('taskLists', {
-        id,
-        name,
-        color: listForm.color,
-        createdAt: new Date().toISOString(),
-      });
-      setActiveListId(id);
-      toast.success('Liste créée');
+      try {
+        const id = uid();
+        const cur = data;
+        const existingLists = Array.isArray(cur.taskLists) ? (cur.taskLists as TaskList[]) : [];
+        await saveData({
+          ...cur,
+          taskLists: [
+            ...existingLists,
+            { id, name, color: listForm.color, createdAt: new Date().toISOString() },
+          ],
+          tasks: Array.isArray(cur.tasks) ? cur.tasks : [],
+        });
+        setActiveListId(id);
+        toast.success('Liste créée');
+      } catch (e: any) {
+        toast.error(e?.message || 'Impossible de créer la liste');
+        return;
+      }
     }
     setListDialog(false);
   };
@@ -187,37 +195,62 @@ export default function Tasks() {
 
   /* ── Tasks CRUD ── */
 
-  const ensureList = async (): Promise<string> => {
-    if (activeListId !== 'all') return activeListId;
-    if (defaultListId) return defaultListId;
-    const id = uid();
-    await addRow('taskLists', {
-      id,
-      name: 'Inbox',
-      color: LIST_COLORS[0],
-      createdAt: new Date().toISOString(),
-    });
-    return id;
-  };
-
   const addQuickTask = async () => {
     const title = newTitle.trim();
-    if (!title) return;
-    const listId = await ensureList();
-    await addRow('tasks', {
-      id: uid(),
-      listId,
-      title,
-      done: false,
-      dueDate: quickDue || null,
-      priority: quickPriority || 'medium',
-      notes: '',
-      createdAt: new Date().toISOString(),
-      completedAt: null,
-    } satisfies Task);
-    setNewTitle('');
-    setQuickDue('');
-    inputRef.current?.focus();
+    if (!title) {
+      toast.error('Écris le titre de la tâche');
+      inputRef.current?.focus();
+      return;
+    }
+    try {
+      const cur = data;
+      const existingLists = Array.isArray(cur.taskLists) ? (cur.taskLists as TaskList[]) : [];
+      const existingTasks = Array.isArray(cur.tasks) ? (cur.tasks as Task[]) : [];
+
+      let listId = activeListId !== 'all' ? activeListId : (existingLists[0]?.id ?? '');
+      let nextLists = existingLists;
+
+      if (!listId) {
+        listId = uid();
+        nextLists = [
+          ...existingLists,
+          {
+            id: listId,
+            name: 'Inbox',
+            color: LIST_COLORS[0],
+            createdAt: new Date().toISOString(),
+          },
+        ];
+      }
+
+      const newTask: Task = {
+        id: uid(),
+        listId,
+        title,
+        done: false,
+        dueDate: quickDue || null,
+        priority: quickPriority || 'medium',
+        notes: '',
+        createdAt: new Date().toISOString(),
+        completedAt: null,
+      };
+
+      await saveData({
+        ...cur,
+        taskLists: nextLists,
+        tasks: [...existingTasks, newTask],
+      });
+
+      if (activeListId === 'all' && !existingLists.length) {
+        setActiveListId(listId);
+      }
+      setNewTitle('');
+      setQuickDue('');
+      inputRef.current?.focus();
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "Impossible d'ajouter la tâche");
+    }
   };
 
   const toggleDone = async (task: Task) => {
