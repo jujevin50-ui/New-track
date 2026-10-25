@@ -185,7 +185,7 @@ export function NotionImportDialog({ open, onOpenChange, accounts }: Props) {
                   {preview.rowCount} {preview.csvType === 'accounts' ? 'comptes' : 'trades'} détectés
                 </p>
               </div>
-              <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-medium ${preview.csvType === 'accounts' ? 'bg-blue-500/15 text-blue-400' : 'bg-green-500/15 text-green-400'}`}>
+              <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-medium ${preview.csvType === 'accounts' ? 'bg-primary/15 text-primary' : 'bg-profit/15 text-profit'}`}>
                 {preview.csvType === 'accounts' ? 'Comptes' : 'Trades'}
               </span>
             </div>
@@ -195,7 +195,7 @@ export function NotionImportDialog({ open, onOpenChange, accounts }: Props) {
               <div className="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto">
                 {Object.entries(preview.mapping).map(([field, col]) => (
                   <div key={field} className="flex items-center gap-1.5 text-[11px]">
-                    <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0" />
+                    <CheckCircle2 className="h-3 w-3 text-profit shrink-0" />
                     <span className="text-muted-foreground shrink-0">{fieldLabels[field] || field}</span>
                     <span className="text-foreground truncate">→ {col}</span>
                   </div>
@@ -232,7 +232,7 @@ export function NotionImportDialog({ open, onOpenChange, accounts }: Props) {
 
         {step === 'done' && result && (
           <div className="flex flex-col items-center gap-4 py-4">
-            <CheckCircle2 className="h-12 w-12 text-green-500" />
+            <CheckCircle2 className="h-12 w-12 text-profit" />
             <div className="text-center">
               <p className="font-semibold">{result.imported} {result.type === 'accounts' ? 'comptes' : 'trades'} importés</p>
               {result.skipped > 0 && <p className="text-xs text-muted-foreground mt-1">{result.skipped} ignorés (déjà présents)</p>}

@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 
 const THEME_KEY = 'trading-journal-theme';
-const MODE_KEY = 'trading-journal-mode';
+/** v2 : la nouvelle DA (type Finary) démarre en mode clair ; le choix sombre reste mémorisé ensuite. */
+const MODE_KEY = 'trading-journal-mode-v2';
 
 export type ThemeMode = 'dark' | 'light';
 
@@ -11,7 +12,16 @@ export interface ThemeConfig {
   primaryLight: number;
 }
 
-const DEFAULT_THEME: ThemeConfig = { primaryHue: 246, primarySat: 90, primaryLight: 63 };
+const DEFAULT_THEME: ThemeConfig = { primaryHue: 244, primarySat: 76, primaryLight: 58 };
+/** Ancien accent par défaut : s'il est encore enregistré, on passe au nouvel indigo. */
+const isOldDefault = (c: ThemeConfig) => c.primaryHue === 246 && c.primarySat === 90 && c.primaryLight === 63;
+const readTheme = (): ThemeConfig => {
+  try {
+    const saved = localStorage.getItem(THEME_KEY);
+    const parsed = saved ? (JSON.parse(saved) as ThemeConfig) : DEFAULT_THEME;
+    return isOldDefault(parsed) ? DEFAULT_THEME : parsed;
+  } catch { return DEFAULT_THEME; }
+};
 
 const COLOR_PRESETS = [
   { name: 'Blanc', hue: 0, sat: 0, light: 95 },
@@ -54,27 +64,19 @@ function applyMode(mode: ThemeMode) {
 }
 
 /** Applique le thème (couleur + mode) dès le démarrage de l'app, sur TOUTES les pages.
- *  Sombre par défaut ; le mode clair n'est utilisé que si tu l'as choisi dans les réglages. */
+ *  Clair par défaut (DA Finary) ; le mode sombre reste disponible dans les réglages. */
 export function initTheme() {
-  try {
-    const saved = localStorage.getItem(THEME_KEY);
-    applyTheme(saved ? JSON.parse(saved) : DEFAULT_THEME);
-  } catch { applyTheme(DEFAULT_THEME); }
-  let mode: ThemeMode = 'dark';
-  try { if (localStorage.getItem(MODE_KEY) === 'light') mode = 'light'; } catch { /* sombre */ }
+  applyTheme(readTheme());
+  let mode: ThemeMode = 'light';
+  try { if (localStorage.getItem(MODE_KEY) === 'dark') mode = 'dark'; } catch { /* clair */ }
   applyMode(mode);
 }
 
 export const useTheme = () => {
-  const [theme, setTheme] = useState<ThemeConfig>(() => {
-    try {
-      const saved = localStorage.getItem(THEME_KEY);
-      return saved ? JSON.parse(saved) : DEFAULT_THEME;
-    } catch { return DEFAULT_THEME; }
-  });
+  const [theme, setTheme] = useState<ThemeConfig>(readTheme);
 
   const [mode, setModeState] = useState<ThemeMode>(() => {
-    return localStorage.getItem(MODE_KEY) === 'light' ? 'light' : 'dark';
+    try { return localStorage.getItem(MODE_KEY) === 'dark' ? 'dark' : 'light'; } catch { return 'light'; }
   });
 
   useEffect(() => {

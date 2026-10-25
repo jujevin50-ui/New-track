@@ -1,137 +1,145 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Oswald:wght@700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  /* ── DA « Finary » : fond gris très clair, cartes blanches, bordures fines,
+        encre bleu nuit, un seul accent indigo, vert/rouge pour les variations. ── */
   :root {
-    --background: 240 5% 96%;
-    --foreground: 240 20% 6%;
+    --background: 220 20% 97%;
+    --foreground: 226 32% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 240 20% 6%;
+    --card-foreground: 226 32% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 20% 6%;
+    --popover-foreground: 226 32% 11%;
 
-    --primary: 246 90% 58%;
+    --primary: 244 76% 58%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 8% 93%;
-    --secondary-foreground: 240 10% 20%;
+    --secondary: 220 16% 94%;
+    --secondary-foreground: 226 24% 20%;
 
-    --muted: 240 6% 90%;
-    --muted-foreground: 240 10% 40%;
+    --muted: 220 16% 94%;
+    --muted-foreground: 222 10% 45%;
 
-    --accent: 246 60% 95%;
-    --accent-foreground: 246 90% 50%;
+    --accent: 244 80% 96%;
+    --accent-foreground: 244 70% 48%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 12% 85%;
-    --input: 240 12% 85%;
-    --ring: 246 90% 58%;
+    --border: 220 14% 90%;
+    --input: 220 14% 88%;
+    --ring: 244 76% 58%;
 
-    --radius: 0.625rem;
+    --radius: 0.75rem;
 
     /* Trading semantic colors */
-    --profit: 142 72% 29%;
+    --profit: 154 62% 33%;
     --profit-foreground: 0 0% 100%;
-    --loss: 0 84% 45%;
+    --loss: 357 74% 51%;
     --loss-foreground: 0 0% 100%;
-    --balance: 246 90% 55%;
-    --drawdown: 36 92% 45%;
-    --neutral: 240 10% 40%;
+    --balance: 244 76% 58%;
+    --drawdown: 32 92% 46%;
+    --neutral: 222 10% 45%;
 
-    /* Semantic soft backgrounds */
-    --success-soft: 140 45% 93%;
-    --warning-soft: 48 90% 93%;
-    --danger-soft: 0 90% 95%;
+    /* Semantic soft backgrounds (pastilles de variation) */
+    --success-soft: 152 54% 93%;
+    --warning-soft: 42 95% 91%;
+    --danger-soft: 357 90% 95%;
 
     /* Chart colors */
-    --chart-profit: 142 72% 29%;
-    --chart-loss: 0 84% 45%;
-    --chart-balance: 246 90% 55%;
-    --chart-drawdown: 36 92% 45%;
+    --chart-profit: 154 62% 38%;
+    --chart-loss: 357 74% 54%;
+    --chart-balance: 244 76% 58%;
+    --chart-drawdown: 32 92% 50%;
 
-    /* Shadows — minimal, border-based design */
-    --shadow-card: none;
-    --shadow-sm: none;
+    /* Ombres : très discrètes, la structure vient des bordures */
+    --shadow-card: 0 1px 2px hsl(226 32% 11% / 0.04);
+    --shadow-sm: 0 1px 2px hsl(226 32% 11% / 0.05);
+    --shadow-pop: 0 8px 30px -8px hsl(226 32% 11% / 0.14);
     --shadow-glow-profit: none;
     --shadow-glow-loss: none;
     --shadow-glow-primary: none;
 
-    --sidebar-background: 240 8% 97%;
-    --sidebar-foreground: 240 20% 6%;
-    --sidebar-primary: 246 90% 58%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 226 32% 11%;
+    --sidebar-primary: 244 76% 58%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 246 60% 95%;
-    --sidebar-accent-foreground: 246 90% 50%;
-    --sidebar-border: 240 12% 85%;
-    --sidebar-ring: 246 90% 58%;
+    --sidebar-accent: 220 16% 94%;
+    --sidebar-accent-foreground: 226 32% 11%;
+    --sidebar-border: 220 14% 90%;
+    --sidebar-ring: 244 76% 58%;
 
     --font-heading: 'Inter', system-ui, sans-serif;
     --font-mono: 'Inter', system-ui, sans-serif;
   }
 
   .dark {
-    --background: 0 0% 0%;           /* noir pur */
-    --foreground: 0 0% 94%;
+    --background: 228 24% 7%;
+    --foreground: 220 20% 95%;
 
-    --card: 0 0% 5%;                 /* quasi-noir, légèrement distinct */
-    --card-foreground: 0 0% 94%;
+    --card: 228 22% 10%;
+    --card-foreground: 220 20% 95%;
 
-    --popover: 0 0% 6%;
-    --popover-foreground: 0 0% 94%;
+    --popover: 228 22% 11%;
+    --popover-foreground: 220 20% 95%;
 
-    --primary: 255 92% 68%;          /* violet vif */
+    --primary: 248 90% 70%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 9%;
-    --secondary-foreground: 0 0% 84%;
+    --secondary: 228 18% 15%;
+    --secondary-foreground: 220 16% 84%;
 
-    --muted: 0 0% 7%;
-    --muted-foreground: 0 0% 50%;
+    --muted: 228 18% 14%;
+    --muted-foreground: 222 10% 62%;
 
-    --accent: 0 0% 12%;
-    --accent-foreground: 0 0% 94%;
+    --accent: 248 40% 20%;
+    --accent-foreground: 248 90% 82%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 14%;
-    --input: 0 0% 10%;
-    --ring: 255 92% 68%;
+    --border: 228 16% 18%;
+    --input: 228 16% 20%;
+    --ring: 248 90% 70%;
 
-    --profit: 142 71% 45%;
+    --profit: 152 60% 48%;
     --profit-foreground: 0 0% 100%;
-    --loss: 0 84% 60%;
+    --loss: 357 84% 64%;
     --loss-foreground: 0 0% 100%;
-    --balance: 255 92% 68%;
-    --drawdown: 25 95% 53%;
-    --neutral: 0 0% 50%;
+    --balance: 248 90% 70%;
+    --drawdown: 32 92% 55%;
+    --neutral: 222 10% 62%;
 
-    --chart-profit: 142 71% 45%;
-    --chart-loss: 0 84% 60%;
-    --chart-balance: 255 92% 68%;
-    --chart-drawdown: 25 95% 53%;
+    --success-soft: 152 40% 14%;
+    --warning-soft: 42 50% 14%;
+    --danger-soft: 357 45% 16%;
 
-    --shadow-card: 0 4px 32px -4px hsl(0 0% 0% / 0.9);
-    --shadow-sm: 0 1px 4px hsl(0 0% 0% / 0.6);
-    --shadow-glow-profit: 0 0 20px hsl(142 71% 45% / 0.12);
-    --shadow-glow-loss: 0 0 20px hsl(0 84% 60% / 0.12);
-    --shadow-glow-primary: 0 0 28px hsl(255 92% 68% / 0.18);
+    --chart-profit: 152 60% 48%;
+    --chart-loss: 357 84% 64%;
+    --chart-balance: 248 90% 70%;
+    --chart-drawdown: 32 92% 55%;
 
-    --sidebar-background: 0 0% 0%;   /* noir pur */
-    --sidebar-foreground: 0 0% 68%;
-    --sidebar-primary: 255 92% 68%;
+    --shadow-card: none;
+    --shadow-sm: none;
+    --shadow-pop: 0 12px 40px -8px hsl(0 0% 0% / 0.6);
+    --shadow-glow-profit: none;
+    --shadow-glow-loss: none;
+    --shadow-glow-primary: none;
+
+    --sidebar-background: 228 22% 9%;
+    --sidebar-foreground: 220 16% 78%;
+    --sidebar-primary: 248 90% 70%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 8%;
-    --sidebar-accent-foreground: 0 0% 94%;
-    --sidebar-border: 0 0% 10%;
-    --sidebar-ring: 255 92% 68%;
+    --sidebar-accent: 228 18% 14%;
+    --sidebar-accent-foreground: 220 20% 95%;
+    --sidebar-border: 228 16% 16%;
+    --sidebar-ring: 248 90% 70%;
   }
 }
 
@@ -143,15 +151,18 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
-    letter-spacing: -0.01em;
+    font-feature-settings: 'cv11', 'ss01', 'tnum';
+    letter-spacing: -0.011em;
     font-size: 14px;
-    line-height: 1.6;
+    line-height: 1.55;
   }
 
-  h1 { font-size: 22px; font-weight: 500; }
-  h2 { font-size: 18px; font-weight: 500; }
-  h3 { font-size: 15px; font-weight: 500; }
+  h1 { font-size: 24px; font-weight: 600; letter-spacing: -0.025em; }
+  h2 { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; }
+  h3 { font-size: 15px; font-weight: 600; letter-spacing: -0.015em; }
+
+  /* Les montants gardent la même largeur de chiffres (alignement des colonnes) */
+  .font-mono { font-variant-numeric: tabular-nums; letter-spacing: -0.015em; }
 
   /* Custom scrollbar */
   ::-webkit-scrollbar {
@@ -196,12 +207,19 @@
     background-color: hsl(var(--loss));
   }
   .section-label {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 500;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
     color: hsl(var(--muted-foreground));
   }
+  /* Surface Finary : carte blanche, bordure fine, ombre quasi invisible */
+  .surface {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: 1.25rem;
+    box-shadow: var(--shadow-card);
+  }
+  .bg-profit-soft { background-color: hsl(var(--success-soft)); }
+  .bg-loss-soft { background-color: hsl(var(--danger-soft)); }
 }
 
 
@@ -427,3 +445,7 @@
 .strategy-paper td {
   border-color: #e5e7eb;
 }
+
+/* Défilement horizontal sans barre visible (menu en pilule) */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }

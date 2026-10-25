@@ -42,7 +42,7 @@ export function LogoSwitch({ floating = false, className = '', size = 38 }: Logo
       onClick={handleClick}
       aria-label={label}
       title={label}
-      className={`flex items-center justify-center rounded-full bg-card/95 backdrop-blur-sm border border-border/60 shadow-[0_8px_24px_rgba(0,0,0,0.15)] hover:border-primary/50 active:scale-95 transition-[border-color,transform] ${floating ? FLOATING_CLASS : ''} ${className}`}
+      className={`flex items-center justify-center rounded-full bg-card border border-border shadow-[var(--shadow-card)] hover:border-primary/50 active:scale-95 transition-[border-color,transform] ${floating ? FLOATING_CLASS : ''} ${className}`}
     >
       <img
         ref={imgRef}

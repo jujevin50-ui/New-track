@@ -272,7 +272,7 @@ const Accounts = ({ accounts, activeAccountId, onSelectAccount, onAdd, onUpdate,
                               <span className="font-mono text-xs text-muted-foreground">{p.date}</span>
                               {p.note && <span className="text-[11px] text-muted-foreground/60 italic">{p.note}</span>}
                             </div>
-                            <span className="font-mono text-base font-black text-blue-400">
+                            <span className="font-mono text-base font-black text-primary">
                               +{curr}{p.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                             </span>
                           </div>
@@ -281,7 +281,7 @@ const Accounts = ({ accounts, activeAccountId, onSelectAccount, onAdd, onUpdate,
                       {accPayouts.length > 1 && (
                         <div className="flex items-center justify-between border-t border-border/30 pt-2 mt-1">
                           <span className="text-xs font-semibold text-muted-foreground">Total payouts</span>
-                          <span className="font-mono text-lg font-black text-blue-400">
+                          <span className="font-mono text-lg font-black text-primary">
                             +{curr}{totalPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                           </span>
                         </div>

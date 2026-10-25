@@ -165,7 +165,7 @@ const DailyReport = ({ activeAccount }: DailyReportProps) => {
             const strategy = journal?.strategyRespected;
 
             return (
-              <div key={date} className={isGood ? 'bg-emerald-500/[0.08]' : ''}>
+              <div key={date} className={isGood ? 'bg-profit/[0.08]' : ''}>
                 <button
                   type="button"
                   onClick={() => openDay(date)}
@@ -175,9 +175,9 @@ const DailyReport = ({ activeAccount }: DailyReportProps) => {
                   <span className="text-xs text-muted-foreground capitalize">{shortDate(date)}</span>
                   <span className="flex items-center gap-2">
                     {strategy === true ? (
-                      <span className="inline-flex items-center gap-1.5 text-xs text-emerald-400"><Check className="h-3.5 w-3.5" /> Respectée</span>
+                      <span className="inline-flex items-center gap-1.5 text-xs text-profit"><Check className="h-3.5 w-3.5" /> Respectée</span>
                     ) : strategy === false ? (
-                      <span className="inline-flex items-center gap-1.5 text-xs text-red-400"><X className="h-3.5 w-3.5" /> Non</span>
+                      <span className="inline-flex items-center gap-1.5 text-xs text-loss"><X className="h-3.5 w-3.5" /> Non</span>
                     ) : (
                       <span className="text-xs text-muted-foreground/50">—</span>
                     )}
@@ -185,7 +185,7 @@ const DailyReport = ({ activeAccount }: DailyReportProps) => {
                   <span className="truncate text-xs text-muted-foreground">
                     {journal?.notes ? journal.notes : <span className="text-muted-foreground/30">Aucune note</span>}
                   </span>
-                  <span className={`text-right text-xs font-medium tabular-nums ${stats.pct > 0 ? 'text-emerald-400' : stats.pct < 0 ? 'text-red-400' : 'text-muted-foreground'}`}>
+                  <span className={`text-right text-xs font-medium tabular-nums ${stats.pct > 0 ? 'text-profit' : stats.pct < 0 ? 'text-loss' : 'text-muted-foreground'}`}>
                     {pct(stats.pct)}
                   </span>
                 </button>
@@ -204,7 +204,7 @@ const DailyReport = ({ activeAccount }: DailyReportProps) => {
                           />
                         </div>
                         <div className="text-[11px] text-muted-foreground">
-                          Résultat du jour : <span className={stats.pct >= 0 ? 'text-emerald-400 font-semibold' : 'text-red-400 font-semibold'}>{pct(stats.pct)}</span>
+                          Résultat du jour : <span className={stats.pct >= 0 ? 'text-profit font-semibold' : 'text-loss font-semibold'}>{pct(stats.pct)}</span>
                         </div>
                       </div>
 
@@ -215,14 +215,14 @@ const DailyReport = ({ activeAccount }: DailyReportProps) => {
                             <button
                               type="button"
                               onClick={() => updateDraft({ strategyRespected: true })}
-                              className={`h-9 rounded-lg border text-xs font-medium transition-colors ${draft.strategyRespected ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400' : 'border-border text-muted-foreground hover:bg-secondary'}`}
+                              className={`h-9 rounded-lg border text-xs font-medium transition-colors ${draft.strategyRespected ? 'border-profit/50 bg-profit/10 text-profit' : 'border-border text-muted-foreground hover:bg-secondary'}`}
                             >
                               ✓ Oui
                             </button>
                             <button
                               type="button"
                               onClick={() => updateDraft({ strategyRespected: false })}
-                              className={`h-9 rounded-lg border text-xs font-medium transition-colors ${!draft.strategyRespected ? 'border-red-500/50 bg-red-500/10 text-red-400' : 'border-border text-muted-foreground hover:bg-secondary'}`}
+                              className={`h-9 rounded-lg border text-xs font-medium transition-colors ${!draft.strategyRespected ? 'border-loss/50 bg-loss/10 text-loss' : 'border-border text-muted-foreground hover:bg-secondary'}`}
                             >
                               ✕ Non
                             </button>

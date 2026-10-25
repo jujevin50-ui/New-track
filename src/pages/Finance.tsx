@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { LogoSwitch } from '@/components/trading/LogoSwitch';
+import { HEADER_BAR, HEADER_GRID, NAV_PILL, navItemClass } from '@/components/trading/navStyles';
 import { StatementsView, type FinanceStatement } from '@/components/finance/StatementsView';
 import { useData } from '@/contexts/DataContext';
 import { Button } from '@/components/ui/button';
@@ -9,13 +10,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
-  ArrowDownLeft, ArrowUpRight, Banknote, CalendarClock, ChevronLeft, ChevronRight,
-  CreditCard, Landmark, Pencil, Plus, Repeat2, Save, Settings2, ShieldCheck, TrendingDown,
-  TrendingUp, Wallet, X, PiggyBank, CircleDollarSign
+  ArrowDownLeft, ArrowRightLeft, ArrowUpRight, CalendarClock, ChevronLeft, ChevronRight,
+  Landmark, Pencil, Plus, Repeat2, Save, Search, Settings2, TrendingUp, X, PiggyBank,
 } from 'lucide-react';
 import { YearFlowBars, CashflowChart, FlowAreaChart, Donut, AccountBars, PALETTE } from '@/components/finance/financeCharts';
+import { Card, CategoryTile, DeltaPill, Empty, Segmented, SectionHeader, SplitBar, Stat, Tile, eur } from '@/components/finance/ui';
 import { toast } from 'sonner';
-import type { ReactNode } from 'react';
 
 interface FinanceAccount { id: string; name: string; type: string; institution: string; balance: number; openingBalance?: number; currency: string; color?: string; archived?: boolean; initialCapital?: number | null; initialDate?: string | null; }
 interface FinanceTransaction { id: string; date: string; description: string; amount: number; type: 'income' | 'expense'; accountId: string; category: string; notes?: string; }
@@ -27,7 +27,6 @@ type Tab = 'overview' | 'transactions' | 'accounts' | 'subscriptions' | 'transfe
 const ACCOUNT_TYPES = ['Compte courant', 'Épargne', 'Assurance-vie', 'PEA', 'CTO', 'Crypto', 'Espèces', 'Autre'];
 const EXPENSE_CATEGORIES = ['Logement', 'Alimentation', 'Transport', 'Abonnements', 'Loisirs', 'Shopping', 'Santé', 'Formation', 'Trading', 'Famille', 'Impôts', 'Autre'];
 const INCOME_CATEGORIES = ['Salaire', 'Trading', 'Payout', 'Intérêts', 'Vente', 'Autre'];
-const eur = (n: number) => `${n < 0 ? '-' : ''}${Math.abs(n).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
 const id = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 const dateKey = (d: string) => String(d || '').slice(0, 10);
 const monthKey = (d: string) => dateKey(d).slice(0, 7);
@@ -174,120 +173,335 @@ export default function Finance() {
     await updateRow('financeAccounts' as any, accountId, { initialCapital: capital, initialDate: date });
   };
 
+  const TABS: [Tab, string][] = [['overview', 'Vue d’ensemble'], ['transactions', 'Transactions'], ['accounts', 'Comptes'], ['subscriptions', 'Abonnements'], ['transfers', 'Virements']];
+  const openNewTx = () => { setTx({ ...emptyTx, accountId: accounts[0]?.id || '' }); setTxOpen(true); };
+  const prev = () => setCursor(new Date(cursor.getFullYear() + (overviewMode === 'year' ? -1 : 0), cursor.getMonth() + (overviewMode === 'month' ? -1 : 0), 1));
+  const next = () => setCursor(new Date(cursor.getFullYear() + (overviewMode === 'year' ? 1 : 0), cursor.getMonth() + (overviewMode === 'month' ? 1 : 0), 1));
+  const otherBalance = balance - cashBalance - investmentBalance;
+  const recentTx = [...monthTx].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6);
+  const topCategories = categoryData.slice(0, 6);
+  const expenseTotal = categoryData.reduce((s, c) => s + c.value, 0);
+
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* En-tête : même DA que le trading (logo + menu en pilule + actions) */}
-      <header className="pointer-events-none md:sticky md:top-4 z-50 mt-4 ml-6 mr-4 flex flex-wrap items-start gap-x-3 gap-y-3">
-        <LogoSwitch className="pointer-events-auto h-[60px] w-[60px] shrink-0" />
-        <nav className="pointer-events-auto mx-auto min-w-0 max-w-full flex items-center gap-1 h-[60px] px-2.5 rounded-full bg-[#141414] border border-white/[0.06] shadow-[0_10px_40px_rgba(0,0,0,0.55)]">
-          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
-            {([['overview','Vue d’ensemble'],['transactions','Transactions'],['accounts','Comptes'],['subscriptions','Abonnements'],['transfers','Virements']] as [Tab,string][]).map(([value,label]) => (
-              <button key={value} onClick={() => setTab(value)} className={`flex flex-col items-center justify-center whitespace-nowrap px-3 2xl:px-5 py-2.5 rounded-full text-[13px] 2xl:text-[14px] font-medium transition-all duration-150 ${tab === value ? 'bg-white/[0.09] text-white font-semibold' : 'text-white/40 hover:text-white/90 hover:bg-white/[0.05]'}`}>
-                <span>{label}</span>
-                <span className={`h-1 w-1 rounded-full bg-green-400 mt-1 transition-opacity ${tab === value ? 'opacity-100' : 'opacity-0'}`} />
-              </button>
-            ))}
+      {/* Barre du haut : logo | menu CENTRÉ | colonne symétrique (aucun élément ne peut se superposer au menu) */}
+      <header className={HEADER_BAR}>
+        <div className={HEADER_GRID}>
+          <LogoSwitch className="pointer-events-auto h-[56px] w-[56px] shrink-0" />
+          <div className="flex justify-center min-w-0">
+            <nav className={NAV_PILL} aria-label="Navigation My Finance">
+              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar min-w-0">
+                {TABS.map(([value, label]) => (
+                  <button key={value} onClick={() => setTab(value)} aria-current={tab === value ? 'page' : undefined} className={navItemClass(tab === value)}>{label}</button>
+                ))}
+              </div>
+            </nav>
           </div>
-        </nav>
-        <div className="pointer-events-auto ml-auto shrink-0 flex items-center gap-1.5 h-[60px] px-2.5 rounded-full bg-card/95 backdrop-blur-sm border border-border/60 shadow-[0_8px_24px_rgba(0,0,0,0.15)]">
-          <Button size="sm" variant="outline" className="h-10 rounded-full gap-1.5" onClick={() => setTab('accounts')}><Landmark className="h-3.5 w-3.5" />{accounts.length} comptes</Button>
-          <Button size="sm" className="h-10 rounded-full gap-1.5 bg-emerald-600 hover:bg-emerald-500" onClick={() => { setTx({ ...emptyTx, accountId: accounts[0]?.id || '' }); setTxOpen(true); }}><Plus className="h-3.5 w-3.5" />Transaction</Button>
+          <div aria-hidden />
         </div>
       </header>
 
-      <main className="max-w-[1500px] mx-auto px-5 pb-5 pt-[74px] space-y-5">
-        {tab === 'overview' && <>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div><p className="text-xs text-muted-foreground uppercase tracking-wider">Vue {overviewMode === 'month' ? 'mensuelle' : 'annuelle'}</p><div className="flex items-center gap-2 mt-1"><button onClick={() => setCursor(new Date(cursor.getFullYear() + (overviewMode === 'year' ? -1 : 0), cursor.getMonth() + (overviewMode === 'month' ? -1 : 0), 1))} className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"><ChevronLeft className="h-4 w-4" /></button><h1 className="text-xl font-bold capitalize min-w-[190px] text-center">{overviewMode === 'month' ? monthLabel : cursor.getFullYear()}</h1><button onClick={() => setCursor(new Date(cursor.getFullYear() + (overviewMode === 'year' ? 1 : 0), cursor.getMonth() + (overviewMode === 'month' ? 1 : 0), 1))} className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"><ChevronRight className="h-4 w-4" /></button></div></div>
-            <PillSwitch<'month' | 'year'> value={overviewMode} onChange={setOverviewMode} options={[['month','Mois'],['year','Année']]} />
-            <div className="flex items-center gap-2"><div className="text-right"><p className="text-[10px] text-muted-foreground">Patrimoine suivi</p><p className="font-mono text-lg font-bold">{eur(balance)}</p></div></div>
-          </div>
-
-          {overviewMode === 'year' && <>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <Metric title="Revenus annuels" value={eur(yearTotals.income)} icon={<ArrowDownLeft className="h-4 w-4" />} tone="text-emerald-400" />
-              <Metric title="Dépenses annuelles" value={eur(yearTotals.expenses)} icon={<ArrowUpRight className="h-4 w-4" />} tone="text-rose-400" />
-              <Metric title="Cash-flow annuel" value={eur(yearTotals.cashflow)} icon={<TrendingUp className="h-4 w-4" />} tone={yearTotals.cashflow >= 0 ? 'text-emerald-400' : 'text-rose-400'} />
-              <Metric title="Taux d’épargne annuel" value={`${yearSavingsRate.toFixed(1)} %`} icon={<PiggyBank className="h-4 w-4" />} tone="text-violet-400" />
+      {/* Barre d'outils descendue sous le menu : période à gauche, actions à droite */}
+      <div className="max-w-[1500px] mx-auto px-4 md:px-6 pt-1 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3 min-h-10">
+          {tab === 'overview' && <>
+            <div className="inline-flex items-center gap-1">
+              <button onClick={prev} aria-label="Période précédente" className="h-9 w-9 inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"><ChevronLeft className="h-4 w-4" /></button>
+              <h1 className="text-lg font-semibold capitalize min-w-[150px] text-center">{overviewMode === 'month' ? monthLabel : cursor.getFullYear()}</h1>
+              <button onClick={next} aria-label="Période suivante" className="h-9 w-9 inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"><ChevronRight className="h-4 w-4" /></button>
             </div>
-            <div className="grid lg:grid-cols-[1.6fr_1fr] gap-4">
-              <Card title={`Flux de ${cursor.getFullYear()}`} subtitle="Revenus, dépenses et cash-flow par mois"><div className="h-[320px]"><YearFlowBars data={yearData} /></div></Card>
-              <Card title="Cash-flow mensuel" subtitle="Évolution sur l’année"><div className="h-[320px]"><CashflowChart data={yearData} /></div></Card>
-            </div>
-            <Card title="Détail des 12 mois" subtitle="Vue complète de l’année"><div className="overflow-x-auto"><table className="w-full text-xs"><thead><tr className="text-muted-foreground border-b border-border"><th className="text-left py-3">Mois</th><th className="text-right py-3">Revenus</th><th className="text-right py-3">Dépenses</th><th className="text-right py-3">Cash-flow</th><th className="text-right py-3">Taux d’épargne</th></tr></thead><tbody>{yearData.map(m=><tr key={m.month} className="border-b border-border/40"><td className="py-3 capitalize font-medium">{m.month}</td><td className="text-right py-3 text-emerald-400 font-mono">{eur(m.income)}</td><td className="text-right py-3 text-rose-400 font-mono">{eur(m.expenses)}</td><td className={`text-right py-3 font-mono ${m.cashflow >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{eur(m.cashflow)}</td><td className="text-right py-3 font-mono">{m.savingsRate.toFixed(1)} %</td></tr>)}</tbody></table></div></Card>
+            <Segmented<'month' | 'year'> value={overviewMode} onChange={setOverviewMode} options={[['month', 'Mois'], ['year', 'Année']]} />
           </>}
+          {tab === 'accounts' && (
+            <Segmented<'list' | 'statements'> value={accountsView} onChange={(v) => { if (v === 'statements') setStatementsAccountId(undefined); setAccountsView(v); }} options={[['list', 'Mes comptes'], ['statements', 'Relevés & évolution']]} />
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="h-10 rounded-full gap-1.5 px-4" onClick={() => setTab('accounts')}><Landmark className="h-4 w-4" />{accounts.length} {accounts.length > 1 ? 'comptes' : 'compte'}</Button>
+          <Button size="sm" className="h-10 rounded-full gap-1.5 px-4" onClick={openNewTx}><Plus className="h-4 w-4" />Transaction</Button>
+        </div>
+      </div>
 
-          {overviewMode === 'month' && <>
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-            <Metric title="Patrimoine suivi" value={eur(balance)} icon={<CircleDollarSign className="h-4 w-4" />} tone="text-sky-400" />
-            <Metric title="Cash-flow" value={eur(income - expenses)} icon={<TrendingUp className="h-4 w-4" />} tone={income - expenses >= 0 ? 'text-emerald-400' : 'text-rose-400'} />
-            <Metric title="Taux d’épargne" value={`${savingsRate.toFixed(1)} %`} icon={<PiggyBank className="h-4 w-4" />} tone="text-emerald-400" />
-            <Metric title="Liquidités" value={eur(cashBalance)} icon={<Banknote className="h-4 w-4" />} tone="text-cyan-400" />
-            <Metric title="Investissements" value={eur(investmentBalance)} icon={<TrendingUp className="h-4 w-4" />} tone="text-violet-400" />
-            <Metric title="Dépenses fixes" value={`${eur(fixedMonthly)} / mois`} icon={<CalendarClock className="h-4 w-4" />} tone="text-orange-400" />
+      <main className="max-w-[1500px] mx-auto px-4 md:px-6 pb-10 pt-5 space-y-4">
+        {tab === 'overview' && overviewMode === 'year' && <>
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+            <Stat label="Revenus annuels" value={eur(yearTotals.income)} icon={<ArrowDownLeft className="h-4 w-4" />} color="hsl(var(--profit))" />
+            <Stat label="Dépenses annuelles" value={eur(yearTotals.expenses)} icon={<ArrowUpRight className="h-4 w-4" />} color="hsl(var(--loss))" />
+            <Stat label="Cash-flow annuel" value={eur(yearTotals.cashflow)} icon={<TrendingUp className="h-4 w-4" />} color={yearTotals.cashflow >= 0 ? 'hsl(var(--profit))' : 'hsl(var(--loss))'} />
+            <Stat label="Taux d’épargne annuel" value={`${yearSavingsRate.toFixed(1)} %`} icon={<PiggyBank className="h-4 w-4" />} color={PALETTE[0]} />
           </div>
-
-          <div className="grid md:grid-cols-3 gap-3">
-            <Metric title="Revenus du mois" value={eur(income)} icon={<ArrowDownLeft className="h-4 w-4" />} tone="text-emerald-400" />
-            <Metric title="Dépenses du mois" value={eur(expenses)} icon={<ArrowUpRight className="h-4 w-4" />} tone="text-rose-400" />
-            <Metric title="Épargne potentielle" value={eur(Math.max(0, income - expenses))} icon={<PiggyBank className="h-4 w-4" />} tone="text-emerald-400" />
-          </div>
-
           <div className="grid lg:grid-cols-[1.6fr_1fr] gap-4">
-            <Card title="Flux du mois" subtitle="Cumul revenus − dépenses">
-              <div className="h-[280px]"><FlowAreaChart data={trendData} lastIndex={trendData.length - 1} /></div>
+            <Card title={`Flux de ${cursor.getFullYear()}`} subtitle="Revenus et dépenses par mois"><div className="h-[320px]"><YearFlowBars data={yearData} /></div></Card>
+            <Card title="Cash-flow mensuel" subtitle="Évolution sur l’année"><div className="h-[320px]"><CashflowChart data={yearData} /></div></Card>
+          </div>
+          <Card title="Détail des 12 mois" subtitle="Vue complète de l’année">
+            <div className="overflow-x-auto -mx-2">
+              <table className="w-full text-[13px] min-w-[560px]">
+                <thead><tr className="text-muted-foreground text-xs"><th className="text-left font-medium px-2 py-2.5">Mois</th><th className="text-right font-medium px-2 py-2.5">Revenus</th><th className="text-right font-medium px-2 py-2.5">Dépenses</th><th className="text-right font-medium px-2 py-2.5">Cash-flow</th><th className="text-right font-medium px-2 py-2.5">Taux d’épargne</th></tr></thead>
+                <tbody>{yearData.map(m => (
+                  <tr key={m.month} className="border-t border-border/70 hover:bg-secondary/50 transition-colors">
+                    <td className="px-2 py-3 capitalize font-medium">{m.month}</td>
+                    <td className="px-2 py-3 text-right text-profit font-mono">{eur(m.income)}</td>
+                    <td className="px-2 py-3 text-right text-loss font-mono">{eur(m.expenses)}</td>
+                    <td className={`px-2 py-3 text-right font-mono font-semibold ${m.cashflow >= 0 ? 'text-profit' : 'text-loss'}`}>{eur(m.cashflow)}</td>
+                    <td className="px-2 py-3 text-right font-mono text-muted-foreground">{m.savingsRate.toFixed(1)} %</td>
+                  </tr>))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </>}
+
+        {tab === 'overview' && overviewMode === 'month' && <>
+          <div className="grid lg:grid-cols-[1.65fr_1fr] gap-4">
+            {/* Héro : patrimoine, variation du mois, courbe, répartition */}
+            <section className="surface p-6 flex flex-col">
+              <p className="text-[13px] text-muted-foreground">Patrimoine suivi</p>
+              <p className="font-mono text-[40px] leading-[1.1] font-semibold tracking-tight mt-1">{eur(balance)}</p>
+              <div className="flex flex-wrap items-center gap-2 mt-3">
+                <DeltaPill value={income - expenses} label={`${income - expenses >= 0 ? '+' : ''}${eur(income - expenses)}`} />
+                <span className="text-[13px] text-muted-foreground">cash-flow de <span className="capitalize">{monthLabel}</span></span>
+              </div>
+              <div className="h-[220px] mt-5 -mx-2"><FlowAreaChart data={trendData} lastIndex={trendData.length - 1} /></div>
+              <div className="mt-5 pt-5 border-t border-border">
+                {balance > 0 || cashBalance > 0 || investmentBalance > 0 ? (
+                  <SplitBar parts={[
+                    { label: 'Liquidités', value: cashBalance, color: PALETTE[4] },
+                    { label: 'Investissements', value: investmentBalance, color: PALETTE[0] },
+                    ...(Math.abs(otherBalance) > 0.5 ? [{ label: 'Autres', value: otherBalance, color: PALETTE[7] }] : []),
+                  ]} />
+                ) : <p className="text-sm text-muted-foreground">Ajoute un compte pour voir la répartition de ton patrimoine.</p>}
+              </div>
+            </section>
+
+            <Card title="Dépenses par catégorie" subtitle={<span className="capitalize">{monthLabel}</span>}>
+              {categoryData.length ? <>
+                <div className="h-[190px]"><Donut data={categoryData} centerLabel="dépensés" /></div>
+                <div className="mt-5 space-y-3.5">
+                  {topCategories.map((x, i) => {
+                    const pct = expenseTotal > 0 ? (x.value / expenseTotal) * 100 : 0;
+                    const color = PALETTE[i % PALETTE.length];
+                    return (
+                      <div key={x.name} className="flex items-center gap-3">
+                        <CategoryTile category={x.name} color={color} size="sm" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-baseline justify-between gap-2 text-[13px]"><span className="font-medium truncate">{x.name}</span><span className="font-mono font-semibold">{eur(x.value)}</span></div>
+                          <div className="mt-1.5 h-1.5 rounded-full bg-secondary overflow-hidden"><div className="h-full rounded-full" style={{ width: `${Math.max(pct, 2)}%`, background: color }} /></div>
+                        </div>
+                        <span className="w-10 text-right text-xs text-muted-foreground font-mono">{Math.round(pct)} %</span>
+                      </div>
+                    );
+                  })}
+                  {categoryData.length > topCategories.length && <p className="text-xs text-muted-foreground">+ {categoryData.length - topCategories.length} autre{categoryData.length - topCategories.length > 1 ? 's' : ''} catégorie{categoryData.length - topCategories.length > 1 ? 's' : ''}</p>}
+                </div>
+              </> : <Empty text="Aucune dépense ce mois-ci" />}
             </Card>
-            <Card title="Dépenses par catégorie" subtitle="Répartition du mois">
-              {categoryData.length ? <div className="h-[280px] flex items-center"><div className="w-[55%] h-full"><Donut data={categoryData} centerLabel="Dépenses" /></div><div className="flex-1 space-y-2">{categoryData.slice(0,6).map((x,i)=><div key={x.name} className="flex items-center justify-between gap-2 text-xs"><span className="flex items-center gap-2 truncate"><span className="h-2 w-2 rounded-full" style={{background:PALETTE[i%PALETTE.length]}} />{x.name}</span><span className="font-mono">{eur(x.value)}</span></div>)}</div></div> : <Empty text="Aucune dépense ce mois-ci" />}
-            </Card>
+          </div>
+
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+            <Stat label="Revenus du mois" value={eur(income)} icon={<ArrowDownLeft className="h-4 w-4" />} color="hsl(var(--profit))" hint={`${monthTx.filter(t => t.type === 'income').length} opération(s)`} />
+            <Stat label="Dépenses du mois" value={eur(expenses)} icon={<ArrowUpRight className="h-4 w-4" />} color="hsl(var(--loss))" hint={`${monthTx.filter(t => t.type === 'expense').length} opération(s)`} />
+            <Stat label="Épargne du mois" value={eur(Math.max(0, income - expenses))} icon={<PiggyBank className="h-4 w-4" />} color={PALETTE[1]}>
+              <div className="mt-3 h-1.5 rounded-full bg-secondary overflow-hidden"><div className="h-full rounded-full" style={{ width: `${Math.min(100, Math.max(0, savingsRate))}%`, background: PALETTE[1] }} /></div>
+              <p className="text-xs text-muted-foreground mt-2">Taux d’épargne : <span className="font-mono font-semibold text-foreground">{savingsRate.toFixed(1)} %</span></p>
+            </Stat>
+            <Stat label="Dépenses fixes" value={eur(fixedMonthly)} icon={<CalendarClock className="h-4 w-4" />} color={PALETTE[2]} hint={`par mois · ${subscriptions.filter(s => s.active).length} abonnement(s) actif(s)`} />
           </div>
 
           <div className="grid lg:grid-cols-[1.2fr_1fr] gap-4">
-            <Card title="Répartition des comptes" subtitle="Solde actuel"><div className="h-[230px]">{accountData.length ? <AccountBars data={accountData} /> : <Empty text="Crée ton premier compte" />}</div></Card>
-            <Card title="Abonnements à venir" subtitle={`${eur(recurringMonthly)} / mois environ`}><div className="space-y-2">{upcomingSubs.length ? upcomingSubs.map(s=><div key={s.id} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30 border border-border/40"><div className="flex items-center gap-2 min-w-0"><div className="h-7 w-7 rounded-lg bg-orange-500/10 flex items-center justify-center"><Repeat2 className="h-3.5 w-3.5 text-orange-400"/></div><div className="min-w-0"><p className="text-xs font-medium truncate">{s.name}</p><p className="text-[10px] text-muted-foreground">{s.nextDate} · {accountName(s.accountId)}</p></div></div><span className="font-mono text-xs">{eur(s.amount)}</span></div>) : <Empty text="Aucun abonnement" />}</div></Card>
+            <Card title="Dernières opérations" subtitle={`${monthTx.length} ce mois-ci`} action={<button onClick={() => setTab('transactions')} className="text-[13px] font-medium text-primary hover:underline">Tout voir</button>}>
+              {recentTx.length ? <div className="-mx-2">{recentTx.map(t => <TxRow key={t.id} t={t} accountName={accountName(t.accountId)} />)}</div> : <Empty text="Aucune opération ce mois-ci" />}
+            </Card>
+            <Card title="Abonnements à venir" subtitle={`${eur(recurringMonthly)} / mois environ`}>
+              <div className="space-y-1 -mx-2">{upcomingSubs.length ? upcomingSubs.map(s => (
+                <div key={s.id} className="flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-secondary/60 transition-colors">
+                  <Tile color={PALETTE[5]}><Repeat2 className="h-[18px] w-[18px]" /></Tile>
+                  <div className="min-w-0 flex-1"><p className="text-[13px] font-medium truncate">{s.name}</p><p className="text-xs text-muted-foreground truncate">{s.nextDate} · {accountName(s.accountId)}</p></div>
+                  <span className="font-mono text-[13px] font-semibold">{eur(s.amount)}</span>
+                </div>)) : <Empty text="Aucun abonnement" />}</div>
+            </Card>
           </div>
-          </>}
+
+          <Card title="Répartition des comptes" subtitle="Solde actuel"><div className="h-[230px]">{accountData.length ? <AccountBars data={accountData} /> : <Empty text="Crée ton premier compte" />}</div></Card>
         </>}
 
-        {tab === 'transactions' && <TransactionsView transactions={transactions} accounts={accounts} onAdd={() => { setTx({ ...emptyTx, accountId: accounts[0]?.id || '' }); setTxOpen(true); }} onEdit={(x)=>{setTx(x);setTxOpen(true)}} onDelete={async (x)=>{await deleteRow('financeTransactions' as any,x.id);toast.success('Transaction supprimée')}} />}
-        {tab === 'accounts' && (
-          <PillSwitch<'list' | 'statements'> value={accountsView} onChange={(v) => { if (v === 'statements') setStatementsAccountId(undefined); setAccountsView(v); }} options={[['list', 'Mes comptes'], ['statements', 'Relevés & évolution']]} />
-        )}
-        {tab === 'accounts' && accountsView === 'list' && <AccountsView onStatements={(a)=>{setStatementsAccountId(a.id);setAccountsView('statements')}} accounts={accounts.map(a=>({...a,balance:accountBalances[a.id] ?? Number(a.balance || 0)}))} onNew={() => {setEditingAccount(null);setAccountForm({id:'',name:'',type:'Compte courant',institution:'',balance:0,currency:'EUR'});setAccountOpen(true)}} onEdit={(a)=>{const original=accounts.find(x=>x.id===a.id)||a;setEditingAccount(original);setAccountForm(a);setAccountOpen(true)}} onDelete={async a=>{await deleteRow('financeAccounts' as any,a.id);toast.success('Compte supprimé')}} />}
+        {tab === 'transactions' && <TransactionsView transactions={transactions} accounts={accounts} onAdd={openNewTx} onEdit={(x) => { setTx(x); setTxOpen(true); }} onDelete={async (x) => { await deleteRow('financeTransactions' as any, x.id); toast.success('Transaction supprimée'); }} />}
+        {tab === 'accounts' && accountsView === 'list' && <AccountsView onStatements={(a) => { setStatementsAccountId(a.id); setAccountsView('statements'); }} accounts={accounts.map(a => ({ ...a, balance: accountBalances[a.id] ?? Number(a.balance || 0) }))} onNew={() => { setEditingAccount(null); setAccountForm({ id: '', name: '', type: 'Compte courant', institution: '', balance: 0, currency: 'EUR' }); setAccountOpen(true); }} onEdit={(a) => { const original = accounts.find(x => x.id === a.id) || a; setEditingAccount(original); setAccountForm(a); setAccountOpen(true); }} onDelete={async a => { await deleteRow('financeAccounts' as any, a.id); toast.success('Compte supprimé'); }} />}
         {tab === 'accounts' && accountsView === 'statements' && <StatementsView key={statementsAccountId || 'all'} accounts={accounts} statements={statements} initialAccountId={statementsAccountId} onSave={saveStatement} onDelete={deleteStatement} onSetInitial={setInitialCapital} />}
-        {tab === 'subscriptions' && <SubscriptionsView subscriptions={subscriptions} accounts={accounts} onNew={()=>{setSubForm({...subForm,id:'',name:'',amount:0,accountId:accounts[0]?.id||''});setSubOpen(true)}} onToggle={async s=>await updateRow('financeSubscriptions' as any,s.id,{active:!s.active})} onDelete={async s=>{await deleteRow('financeSubscriptions' as any,s.id);toast.success('Abonnement supprimé')}} />}
-        {tab === 'transfers' && <TransfersView transfers={transfers} accounts={accounts} onNew={()=>{setTransferForm({...transferForm,id:'',fromAccountId:accounts[0]?.id||'',toAccountId:accounts[1]?.id||''});setTransferOpen(true)}} onDelete={async t=>{await deleteRow('financeTransfers' as any,t.id);toast.success('Virement supprimé')}} />}
+        {tab === 'subscriptions' && <SubscriptionsView subscriptions={subscriptions} accounts={accounts} onNew={() => { setSubForm({ ...subForm, id: '', name: '', amount: 0, accountId: accounts[0]?.id || '' }); setSubOpen(true); }} onToggle={async s => await updateRow('financeSubscriptions' as any, s.id, { active: !s.active })} onDelete={async s => { await deleteRow('financeSubscriptions' as any, s.id); toast.success('Abonnement supprimé'); }} />}
+        {tab === 'transfers' && <TransfersView transfers={transfers} accounts={accounts} onNew={() => { setTransferForm({ ...transferForm, id: '', fromAccountId: accounts[0]?.id || '', toAccountId: accounts[1]?.id || '' }); setTransferOpen(true); }} onDelete={async t => { await deleteRow('financeTransfers' as any, t.id); toast.success('Virement supprimé'); }} />}
       </main>
 
-      <Dialog open={txOpen} onOpenChange={setTxOpen}><DialogContent className="bg-card border-border sm:max-w-lg"><DialogHeader><DialogTitle>Nouvelle transaction</DialogTitle></DialogHeader><div className="space-y-4"><div className="grid grid-cols-2 gap-2"><button onClick={()=>setTx(x=>({...x,type:'expense',category:'Autre'}))} className={`p-3 rounded-xl border text-xs ${tx.type==='expense'?'border-rose-500/50 bg-rose-500/10 text-rose-300':'border-border'}`}>Dépense</button><button onClick={()=>setTx(x=>({...x,type:'income',category:'Autre'}))} className={`p-3 rounded-xl border text-xs ${tx.type==='income'?'border-emerald-500/50 bg-emerald-500/10 text-emerald-300':'border-border'}`}>Revenu</button></div><div className="grid grid-cols-2 gap-3"><div><Label>Date</Label><Input type="date" value={tx.date} onChange={e=>setTx(x=>({...x,date:e.target.value}))}/></div><div><Label>Montant</Label><Input type="number" step="0.01" value={tx.amount||''} onChange={e=>setTx(x=>({...x,amount:Number(e.target.value)}))}/></div></div><div><Label>Description</Label><Input value={tx.description} onChange={e=>setTx(x=>({...x,description:e.target.value}))} placeholder="Courses, salaire, abonnement…"/></div><div className="grid grid-cols-2 gap-3"><div><Label>Compte</Label><Select value={tx.accountId} onValueChange={v=>setTx(x=>({...x,accountId:v}))}><SelectTrigger><SelectValue placeholder="Compte"/></SelectTrigger><SelectContent>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div><div><Label>Catégorie</Label><Select value={tx.category} onValueChange={v=>setTx(x=>({...x,category:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{(tx.type==='expense'?EXPENSE_CATEGORIES:INCOME_CATEGORIES).map(c=><SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div></div><div><Label>Note</Label><Input value={tx.notes||''} onChange={e=>setTx(x=>({...x,notes:e.target.value}))}/></div><Button onClick={saveTx} className="w-full bg-emerald-600 hover:bg-emerald-500"><Save className="h-4 w-4 mr-2"/>Enregistrer</Button></div></DialogContent></Dialog>
+      <Dialog open={txOpen} onOpenChange={setTxOpen}><DialogContent className="bg-card border-border sm:max-w-lg rounded-2xl"><DialogHeader><DialogTitle>Nouvelle transaction</DialogTitle></DialogHeader><div className="space-y-4"><div className="grid grid-cols-2 gap-2"><button onClick={()=>setTx(x=>({...x,type:'expense',category:'Autre'}))} className={`p-3 rounded-xl border text-sm ${tx.type==='expense'?'border-loss/40 bg-loss-soft text-loss font-medium':'border-border'}`}>Dépense</button><button onClick={()=>setTx(x=>({...x,type:'income',category:'Autre'}))} className={`p-3 rounded-xl border text-sm ${tx.type==='income'?'border-profit/40 bg-profit-soft text-profit font-medium':'border-border'}`}>Revenu</button></div><div className="grid grid-cols-2 gap-3"><div><Label>Date</Label><Input type="date" value={tx.date} onChange={e=>setTx(x=>({...x,date:e.target.value}))}/></div><div><Label>Montant</Label><Input type="number" step="0.01" value={tx.amount||''} onChange={e=>setTx(x=>({...x,amount:Number(e.target.value)}))}/></div></div><div><Label>Description</Label><Input value={tx.description} onChange={e=>setTx(x=>({...x,description:e.target.value}))} placeholder="Courses, salaire, abonnement…"/></div><div className="grid grid-cols-2 gap-3"><div><Label>Compte</Label><Select value={tx.accountId} onValueChange={v=>setTx(x=>({...x,accountId:v}))}><SelectTrigger><SelectValue placeholder="Compte"/></SelectTrigger><SelectContent>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div><div><Label>Catégorie</Label><Select value={tx.category} onValueChange={v=>setTx(x=>({...x,category:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{(tx.type==='expense'?EXPENSE_CATEGORIES:INCOME_CATEGORIES).map(c=><SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div></div><div><Label>Note</Label><Input value={tx.notes||''} onChange={e=>setTx(x=>({...x,notes:e.target.value}))}/></div><Button onClick={saveTx} className="w-full"><Save className="h-4 w-4 mr-2"/>Enregistrer</Button></div></DialogContent></Dialog>
 
-      <Dialog open={accountOpen} onOpenChange={setAccountOpen}><DialogContent className="bg-card border-border sm:max-w-lg"><DialogHeader><DialogTitle>{editingAccount?'Modifier le compte':'Nouveau compte'}</DialogTitle></DialogHeader><div className="space-y-4"><div className="grid grid-cols-2 gap-3"><div><Label>Nom</Label><Input value={accountForm.name} onChange={e=>setAccountForm(x=>({...x,name:e.target.value}))} placeholder="Compte courant"/></div><div><Label>Banque / établissement</Label><Input value={accountForm.institution} onChange={e=>setAccountForm(x=>({...x,institution:e.target.value}))} placeholder="Boursobank, Fortuneo…"/></div></div><div className="grid grid-cols-2 gap-3"><div><Label>Type</Label><Select value={accountForm.type} onValueChange={v=>setAccountForm(x=>({...x,type:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{ACCOUNT_TYPES.map(x=><SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent></Select></div><div><Label>Solde actuel</Label><Input type="number" step="0.01" value={accountForm.balance||''} onChange={e=>setAccountForm(x=>({...x,balance:Number(e.target.value)}))}/></div></div><div><Label>Devise</Label><Input value={accountForm.currency} onChange={e=>setAccountForm(x=>({...x,currency:e.target.value.toUpperCase()}))}/></div><Button onClick={saveAccount} className="w-full bg-emerald-600 hover:bg-emerald-500">Enregistrer</Button></div></DialogContent></Dialog>
+      <Dialog open={accountOpen} onOpenChange={setAccountOpen}><DialogContent className="bg-card border-border sm:max-w-lg rounded-2xl"><DialogHeader><DialogTitle>{editingAccount?'Modifier le compte':'Nouveau compte'}</DialogTitle></DialogHeader><div className="space-y-4"><div className="grid grid-cols-2 gap-3"><div><Label>Nom</Label><Input value={accountForm.name} onChange={e=>setAccountForm(x=>({...x,name:e.target.value}))} placeholder="Compte courant"/></div><div><Label>Banque / établissement</Label><Input value={accountForm.institution} onChange={e=>setAccountForm(x=>({...x,institution:e.target.value}))} placeholder="Boursobank, Fortuneo…"/></div></div><div className="grid grid-cols-2 gap-3"><div><Label>Type</Label><Select value={accountForm.type} onValueChange={v=>setAccountForm(x=>({...x,type:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{ACCOUNT_TYPES.map(x=><SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent></Select></div><div><Label>Solde actuel</Label><Input type="number" step="0.01" value={accountForm.balance||''} onChange={e=>setAccountForm(x=>({...x,balance:Number(e.target.value)}))}/></div></div><div><Label>Devise</Label><Input value={accountForm.currency} onChange={e=>setAccountForm(x=>({...x,currency:e.target.value.toUpperCase()}))}/></div><Button onClick={saveAccount} className="w-full">Enregistrer</Button></div></DialogContent></Dialog>
 
-      <Dialog open={subOpen} onOpenChange={setSubOpen}><DialogContent className="bg-card border-border sm:max-w-lg"><DialogHeader><DialogTitle>Nouvel abonnement</DialogTitle></DialogHeader><div className="space-y-4"><div className="grid grid-cols-2 gap-3"><div><Label>Nom</Label><Input value={subForm.name} onChange={e=>setSubForm(x=>({...x,name:e.target.value}))} placeholder="Netflix, salle, téléphone…"/></div><div><Label>Montant</Label><Input type="number" step="0.01" value={subForm.amount||''} onChange={e=>setSubForm(x=>({...x,amount:Number(e.target.value)}))}/></div></div><div className="grid grid-cols-2 gap-3"><div><Label>Fréquence</Label><Select value={subForm.frequency} onValueChange={(v:any)=>setSubForm(x=>({...x,frequency:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="monthly">Mensuel</SelectItem><SelectItem value="yearly">Annuel</SelectItem><SelectItem value="weekly">Hebdomadaire</SelectItem></SelectContent></Select></div><div><Label>Prochain prélèvement</Label><Input type="date" value={subForm.nextDate} onChange={e=>setSubForm(x=>({...x,nextDate:e.target.value}))}/></div></div><div><Label>Compte débité</Label><Select value={subForm.accountId} onValueChange={v=>setSubForm(x=>({...x,accountId:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div><Button onClick={saveSub} className="w-full bg-emerald-600 hover:bg-emerald-500">Enregistrer</Button></div></DialogContent></Dialog>
+      <Dialog open={subOpen} onOpenChange={setSubOpen}><DialogContent className="bg-card border-border sm:max-w-lg rounded-2xl"><DialogHeader><DialogTitle>Nouvel abonnement</DialogTitle></DialogHeader><div className="space-y-4"><div className="grid grid-cols-2 gap-3"><div><Label>Nom</Label><Input value={subForm.name} onChange={e=>setSubForm(x=>({...x,name:e.target.value}))} placeholder="Netflix, salle, téléphone…"/></div><div><Label>Montant</Label><Input type="number" step="0.01" value={subForm.amount||''} onChange={e=>setSubForm(x=>({...x,amount:Number(e.target.value)}))}/></div></div><div className="grid grid-cols-2 gap-3"><div><Label>Fréquence</Label><Select value={subForm.frequency} onValueChange={(v:any)=>setSubForm(x=>({...x,frequency:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="monthly">Mensuel</SelectItem><SelectItem value="yearly">Annuel</SelectItem><SelectItem value="weekly">Hebdomadaire</SelectItem></SelectContent></Select></div><div><Label>Prochain prélèvement</Label><Input type="date" value={subForm.nextDate} onChange={e=>setSubForm(x=>({...x,nextDate:e.target.value}))}/></div></div><div><Label>Compte débité</Label><Select value={subForm.accountId} onValueChange={v=>setSubForm(x=>({...x,accountId:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div><Button onClick={saveSub} className="w-full">Enregistrer</Button></div></DialogContent></Dialog>
 
-      <Dialog open={transferOpen} onOpenChange={setTransferOpen}><DialogContent className="bg-card border-border sm:max-w-lg"><DialogHeader><DialogTitle>Virement automatique / ponctuel</DialogTitle></DialogHeader><div className="space-y-4"><div className="grid grid-cols-2 gap-3"><div><Label>Compte source</Label><Select value={transferForm.fromAccountId} onValueChange={v=>setTransferForm(x=>({...x,fromAccountId:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div><div><Label>Compte destination</Label><Select value={transferForm.toAccountId} onValueChange={v=>setTransferForm(x=>({...x,toAccountId:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div></div><div className="grid grid-cols-2 gap-3"><div><Label>Montant</Label><Input type="number" step="0.01" value={transferForm.amount||''} onChange={e=>setTransferForm(x=>({...x,amount:Number(e.target.value)}))}/></div><div><Label>Date</Label><Input type="date" value={transferForm.date} onChange={e=>setTransferForm(x=>({...x,date:e.target.value}))}/></div></div><div className="flex items-center gap-2 p-3 rounded-xl border border-border"><Checkbox checked={transferForm.recurring} onCheckedChange={v=>setTransferForm(x=>({...x,recurring:Boolean(v)}))}/><div><p className="text-xs font-medium">Virement récurrent</p><p className="text-[10px] text-muted-foreground">Suivi d’un virement automatique vers ton épargne / investissement.</p></div></div>{transferForm.recurring&&<div className="grid grid-cols-2 gap-3"><div><Label>Fréquence</Label><Select value={transferForm.frequency} onValueChange={(v:any)=>setTransferForm(x=>({...x,frequency:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="monthly">Mensuel</SelectItem><SelectItem value="weekly">Hebdomadaire</SelectItem><SelectItem value="yearly">Annuel</SelectItem></SelectContent></Select></div><div><Label>Prochaine date</Label><Input type="date" value={transferForm.nextDate} onChange={e=>setTransferForm(x=>({...x,nextDate:e.target.value}))}/></div></div>}<Button onClick={saveTransfer} className="w-full bg-emerald-600 hover:bg-emerald-500">Enregistrer</Button></div></DialogContent></Dialog>
+      <Dialog open={transferOpen} onOpenChange={setTransferOpen}><DialogContent className="bg-card border-border sm:max-w-lg rounded-2xl"><DialogHeader><DialogTitle>Virement automatique / ponctuel</DialogTitle></DialogHeader><div className="space-y-4"><div className="grid grid-cols-2 gap-3"><div><Label>Compte source</Label><Select value={transferForm.fromAccountId} onValueChange={v=>setTransferForm(x=>({...x,fromAccountId:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div><div><Label>Compte destination</Label><Select value={transferForm.toAccountId} onValueChange={v=>setTransferForm(x=>({...x,toAccountId:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div></div><div className="grid grid-cols-2 gap-3"><div><Label>Montant</Label><Input type="number" step="0.01" value={transferForm.amount||''} onChange={e=>setTransferForm(x=>({...x,amount:Number(e.target.value)}))}/></div><div><Label>Date</Label><Input type="date" value={transferForm.date} onChange={e=>setTransferForm(x=>({...x,date:e.target.value}))}/></div></div><div className="flex items-center gap-2 p-3 rounded-xl border border-border"><Checkbox checked={transferForm.recurring} onCheckedChange={v=>setTransferForm(x=>({...x,recurring:Boolean(v)}))}/><div><p className="text-xs font-medium">Virement récurrent</p><p className="text-[10px] text-muted-foreground">Suivi d’un virement automatique vers ton épargne / investissement.</p></div></div>{transferForm.recurring&&<div className="grid grid-cols-2 gap-3"><div><Label>Fréquence</Label><Select value={transferForm.frequency} onValueChange={(v:any)=>setTransferForm(x=>({...x,frequency:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="monthly">Mensuel</SelectItem><SelectItem value="weekly">Hebdomadaire</SelectItem><SelectItem value="yearly">Annuel</SelectItem></SelectContent></Select></div><div><Label>Prochaine date</Label><Input type="date" value={transferForm.nextDate} onChange={e=>setTransferForm(x=>({...x,nextDate:e.target.value}))}/></div></div>}<Button onClick={saveTransfer} className="w-full">Enregistrer</Button></div></DialogContent></Dialog>
     </div>
   );
 }
 
-function Metric({title,value,icon,tone}:{title:string;value:string;icon:ReactNode;tone:string}){return <div className="rounded-2xl border border-border bg-card p-4"><div className="flex items-center justify-between"><span className="text-[11px] text-muted-foreground">{title}</span><span className={tone}>{icon}</span></div><p className="font-mono text-lg font-bold mt-3">{value}</p></div>}
-function Card({title,subtitle,children}:{title:string;subtitle?:string;children:ReactNode}){return <section className="rounded-2xl border border-border bg-card p-4 shadow-sm"><div className="mb-3"><h2 className="text-sm font-semibold">{title}</h2>{subtitle&&<p className="text-[10px] text-muted-foreground mt-0.5">{subtitle}</p>}</div>{children}</section>}
-function Empty({text}:{text:string}){return <div className="h-full min-h-[120px] flex items-center justify-center text-xs text-muted-foreground">{text}</div>}
-
-/** Interrupteur segmenté : même DA que le menu du trading (pilule sombre, onglet actif en surbrillance). */
-function PillSwitch<T extends string>({ value, onChange, options }: { value: T; onChange: (v: T) => void; options: [T, string][] }) {
+/* ── Ligne d'opération réutilisée (vue d'ensemble + liste) ─────────────── */
+function TxRow({ t, accountName, onEdit, onDelete }: { t: FinanceTransaction; accountName: string; onEdit?: (x: FinanceTransaction) => void; onDelete?: (x: FinanceTransaction) => void }) {
+  const income = t.type === 'income';
   return (
-    <div className="inline-flex items-center gap-1 h-11 px-1.5 rounded-full bg-[#141414] border border-white/[0.06] shadow-[0_6px_20px_rgba(0,0,0,0.35)] w-fit">
-      {options.map(([v, label]) => (
-        <button key={v} onClick={() => onChange(v)} className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all duration-150 ${value === v ? 'bg-white/[0.09] text-white font-semibold' : 'text-white/40 hover:text-white/90 hover:bg-white/[0.05]'}`}>{label}</button>
-      ))}
+    <div className="group flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-secondary/60 transition-colors">
+      <CategoryTile category={t.category} />
+      <div className="min-w-0 flex-1">
+        <p className="text-[13px] font-medium truncate">{t.description}</p>
+        <p className="text-xs text-muted-foreground truncate">{t.category} · {accountName}</p>
+      </div>
+      <span className={`font-mono text-[13px] font-semibold shrink-0 ${income ? 'text-profit' : 'text-foreground'}`}>{income ? '+' : '-'}{eur(t.amount)}</span>
+      {(onEdit || onDelete) && (
+        <div className="flex items-center gap-0.5 shrink-0 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+          {onEdit && <button onClick={() => onEdit(t)} className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors" aria-label="Modifier"><Pencil className="h-3.5 w-3.5" /></button>}
+          {onDelete && <button onClick={() => onDelete(t)} className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-loss hover:bg-loss-soft transition-colors" aria-label="Supprimer"><X className="h-3.5 w-3.5" /></button>}
+        </div>
+      )}
     </div>
   );
 }
-function TransactionsView({transactions,accounts,onAdd,onEdit,onDelete}:{transactions:FinanceTransaction[];accounts:FinanceAccount[];onAdd:()=>void;onEdit:(x:FinanceTransaction)=>void;onDelete:(x:FinanceTransaction)=>void}){const [filter,setFilter]=useState('');const list=transactions.filter(t=>!filter||t.description.toLowerCase().includes(filter.toLowerCase())||t.category.toLowerCase().includes(filter.toLowerCase())).sort((a,b)=>b.date.localeCompare(a.date));return <div className="space-y-4"><Header title="Transactions" subtitle={`${transactions.length} opérations enregistrées · modification en temps réel des soldes`} action={<Button size="sm" onClick={onAdd}><Plus className="h-4 w-4 mr-1"/>Ajouter</Button>} /><Input value={filter} onChange={e=>setFilter(e.target.value)} placeholder="Rechercher une transaction…" className="max-w-sm"/><div className="rounded-2xl border border-border overflow-x-auto"><div className="min-w-[760px]"><div className="grid grid-cols-[100px_minmax(140px,1fr)_140px_150px_120px_72px] gap-3 px-4 py-3 text-[10px] uppercase tracking-wider text-muted-foreground bg-muted/30"><span>Date</span><span>Description</span><span>Catégorie</span><span>Compte</span><span className="text-right">Montant</span><span/></div>{list.map(t=><div key={t.id} className="grid grid-cols-[100px_minmax(140px,1fr)_140px_150px_120px_72px] gap-3 items-center px-4 py-3 border-t border-border/50 text-xs"><span className="text-muted-foreground">{t.date}</span><span className="font-medium truncate">{t.description}</span><span className="text-muted-foreground truncate">{t.category}</span><span className="text-muted-foreground truncate">{accounts.find(a=>a.id===t.accountId)?.name||'—'}</span><span className={`text-right font-mono font-semibold ${t.type==='income'?'text-emerald-400':'text-rose-400'}`}>{t.type==='income'?'+':'-'}{eur(t.amount)}</span><div className="flex justify-end items-center gap-0.5"><button onClick={()=>onEdit(t)} className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" aria-label="Modifier" title="Modifier"><Pencil className="h-3.5 w-3.5"/></button><button onClick={()=>onDelete(t)} className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors" aria-label="Supprimer" title="Supprimer"><X className="h-3.5 w-3.5"/></button></div></div>)}{!list.length&&<div className="p-10 text-center text-xs text-muted-foreground">Aucune transaction.</div>}</div></div></div>}
-function AccountsView({accounts,onNew,onEdit,onDelete,onStatements}:{accounts:FinanceAccount[];onNew:()=>void;onEdit:(a:FinanceAccount)=>void;onDelete:(a:FinanceAccount)=>void;onStatements:(a:FinanceAccount)=>void}){return <div className="space-y-4"><Header title="Comptes & patrimoine" subtitle="Tous tes comptes financiers au même endroit" action={<Button size="sm" onClick={onNew}><Plus className="h-4 w-4 mr-1"/>Nouveau compte</Button>}/><div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">{accounts.map(a=><div key={a.id} className="rounded-2xl border border-border bg-card p-4"><div className="flex items-start justify-between"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-xl bg-sky-500/10 flex items-center justify-center"><Landmark className="h-5 w-5 text-sky-400"/></div><div><p className="font-semibold text-sm">{a.name}</p><p className="text-[10px] text-muted-foreground">{a.type} · {a.institution||'—'}</p></div></div><div className="flex gap-1"><button className="p-1.5 text-muted-foreground hover:text-foreground" onClick={()=>onEdit(a)}><Settings2 className="h-3.5 w-3.5"/></button><button className="p-1.5 text-muted-foreground hover:text-rose-400" onClick={()=>onDelete(a)}><X className="h-3.5 w-3.5"/></button></div></div><p className="font-mono text-2xl font-bold mt-5">{eur(a.balance)}</p><div className="flex items-center justify-between mt-1"><p className="text-[10px] text-muted-foreground">{a.currency}</p><button className="text-[11px] text-sky-400 hover:underline" onClick={()=>onStatements(a)}>Relevés & évolution →</button></div></div>)}{!accounts.length&&<Empty text="Crée ton premier compte bancaire, épargne ou investissement."/>}</div></div>}
 
-function SubscriptionsView({subscriptions,accounts,onNew,onToggle,onDelete}:{subscriptions:FinanceSubscription[];accounts:FinanceAccount[];onNew:()=>void;onToggle:(s:FinanceSubscription)=>void;onDelete:(s:FinanceSubscription)=>void}){const monthly=subscriptions.filter(s=>s.active).reduce((s,x)=>s+(x.frequency==='monthly'?x.amount:x.frequency==='yearly'?x.amount/12:x.amount*52/12),0);return <div className="space-y-4"><Header title="Abonnements" subtitle={`${eur(monthly)} / mois estimés · ${subscriptions.filter(x=>x.active).length} actifs`} action={<Button size="sm" onClick={onNew}><Plus className="h-4 w-4 mr-1"/>Ajouter</Button>}/><div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">{subscriptions.map(s=><div key={s.id} className={`rounded-2xl border p-4 ${s.active?'border-border bg-card':'border-border/50 bg-muted/20 opacity-60'}`}><div className="flex justify-between gap-3"><div><p className="font-semibold text-sm">{s.name}</p><p className="text-[10px] text-muted-foreground">{s.category} · {accounts.find(a=>a.id===s.accountId)?.name||'—'}</p></div><p className="font-mono font-bold">{eur(s.amount)}</p></div><div className="flex items-center justify-between mt-5 text-[10px] text-muted-foreground"><span>Prochain : {s.nextDate}</span><div className="flex gap-2"><button onClick={()=>onToggle(s)} className="text-emerald-400">{s.active?'Désactiver':'Réactiver'}</button><button onClick={()=>onDelete(s)} className="text-rose-400">Supprimer</button></div></div></div>)}</div></div>}
+const dayLabel = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-function TransfersView({transfers,accounts,onNew,onDelete}:{transfers:FinanceTransfer[];accounts:FinanceAccount[];onNew:()=>void;onDelete:(t:FinanceTransfer)=>void}){return <div className="space-y-4"><Header title="Virements" subtitle="Transferts ponctuels et virements automatiques à suivre" action={<Button size="sm" onClick={onNew}><Plus className="h-4 w-4 mr-1"/>Nouveau virement</Button>}/><div className="space-y-2">{transfers.map(t=><div key={t.id} className="rounded-2xl border border-border bg-card p-4 flex items-center justify-between gap-4"><div className="flex items-center gap-3"><div className="h-9 w-9 rounded-xl bg-violet-500/10 flex items-center justify-center"><Repeat2 className="h-4 w-4 text-violet-400"/></div><div><p className="text-xs font-medium">{accounts.find(a=>a.id===t.fromAccountId)?.name||'—'} <span className="text-muted-foreground">→</span> {accounts.find(a=>a.id===t.toAccountId)?.name||'—'}</p><p className="text-[10px] text-muted-foreground">{t.date}{t.recurring?` · ${t.frequency} · prochain ${t.nextDate}`:''}</p></div></div><div className="flex items-center gap-4"><span className="font-mono font-semibold">{eur(t.amount)}</span><button onClick={()=>onDelete(t)} className="text-muted-foreground hover:text-rose-400"><X className="h-3.5 w-3.5"/></button></div></div>)}{!transfers.length&&<Empty text="Aucun virement enregistré."/>}</div></div>}
-function Header({title,subtitle,action}:{title:string;subtitle:string;action:ReactNode}){return <div className="flex items-center justify-between gap-3"><div><h1 className="text-xl font-bold">{title}</h1><p className="text-xs text-muted-foreground mt-1">{subtitle}</p></div>{action}</div>}
+function TransactionsView({ transactions, accounts, onAdd, onEdit, onDelete }: { transactions: FinanceTransaction[]; accounts: FinanceAccount[]; onAdd: () => void; onEdit: (x: FinanceTransaction) => void; onDelete: (x: FinanceTransaction) => void }) {
+  const [filter, setFilter] = useState('');
+  const [kind, setKind] = useState<'all' | 'expense' | 'income'>('all');
+  const [limit, setLimit] = useState(80);
+  const q = filter.trim().toLowerCase();
+  const list = useMemo(() => transactions
+    .filter(t => kind === 'all' || t.type === kind)
+    .filter(t => !q || t.description.toLowerCase().includes(q) || t.category.toLowerCase().includes(q))
+    .sort((a, b) => b.date.localeCompare(a.date)), [transactions, kind, q]);
+  const income = list.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
+  const expenses = list.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
+  const shown = list.slice(0, limit);
+  const groups = useMemo(() => {
+    const map = new Map<string, FinanceTransaction[]>();
+    shown.forEach(t => { const k = dateKey(t.date); map.set(k, [...(map.get(k) || []), t]); });
+    return [...map.entries()];
+  }, [shown]);
+  const accName = (id: string) => accounts.find(a => a.id === id)?.name || '—';
+
+  return (
+    <div className="space-y-4">
+      <SectionHeader title="Transactions" subtitle={`${transactions.length} opérations enregistrées · soldes mis à jour en temps réel`} action={<Button size="sm" className="rounded-full h-10 px-4" onClick={onAdd}><Plus className="h-4 w-4 mr-1" />Ajouter</Button>} />
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative w-full sm:w-[320px]">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input value={filter} onChange={e => { setFilter(e.target.value); setLimit(80); }} placeholder="Rechercher une transaction…" className="h-10 pl-10 rounded-full bg-card" />
+        </div>
+        <Segmented<'all' | 'expense' | 'income'> value={kind} onChange={(v) => { setKind(v); setLimit(80); }} options={[['all', 'Tout'], ['expense', 'Dépenses'], ['income', 'Revenus']]} />
+        <div className="ml-auto flex items-center gap-4 text-[13px]">
+          <span className="text-muted-foreground">Revenus <span className="font-mono font-semibold text-profit">{eur(income)}</span></span>
+          <span className="text-muted-foreground">Dépenses <span className="font-mono font-semibold text-foreground">{eur(expenses)}</span></span>
+        </div>
+      </div>
+
+      <div className="surface overflow-hidden">
+        {groups.map(([date, items]) => {
+          const net = items.reduce((s, t) => s + (t.type === 'income' ? Number(t.amount) : -Number(t.amount)), 0);
+          return (
+            <div key={date} className="border-t border-border first:border-t-0">
+              <div className="flex items-center justify-between px-5 py-2.5 bg-secondary/60 text-xs text-muted-foreground">
+                <span className="capitalize font-medium">{dayLabel(date)}</span>
+                <span className="font-mono">{net >= 0 ? '+' : ''}{eur(net)}</span>
+              </div>
+              <div className="px-3 py-1">{items.map(t => <TxRow key={t.id} t={t} accountName={accName(t.accountId)} onEdit={onEdit} onDelete={onDelete} />)}</div>
+            </div>
+          );
+        })}
+        {!list.length && <Empty text={transactions.length ? 'Aucune transaction ne correspond à ta recherche.' : 'Aucune transaction pour le moment.'} />}
+      </div>
+      {list.length > limit && <div className="flex justify-center"><Button variant="outline" className="rounded-full" onClick={() => setLimit(l => l + 80)}>Afficher plus ({list.length - limit} restantes)</Button></div>}
+    </div>
+  );
+}
+
+function AccountsView({ accounts, onNew, onEdit, onDelete, onStatements }: { accounts: FinanceAccount[]; onNew: () => void; onEdit: (a: FinanceAccount) => void; onDelete: (a: FinanceAccount) => void; onStatements: (a: FinanceAccount) => void }) {
+  const total = accounts.filter(a => !a.archived).reduce((s, a) => s + a.balance, 0);
+  return (
+    <div className="space-y-4">
+      <SectionHeader title="Comptes & patrimoine" subtitle={`${eur(total)} au total · tous tes comptes au même endroit`} action={<Button size="sm" className="rounded-full h-10 px-4" onClick={onNew}><Plus className="h-4 w-4 mr-1" />Nouveau compte</Button>} />
+      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {accounts.map((a, i) => {
+          const color = a.color || PALETTE[i % PALETTE.length];
+          return (
+            <div key={a.id} className="surface p-5 flex flex-col">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Tile color={color} size="lg"><Landmark className="h-5 w-5" /></Tile>
+                  <div className="min-w-0"><p className="font-semibold text-[15px] truncate">{a.name}</p><p className="text-xs text-muted-foreground truncate">{a.type} · {a.institution || '—'}</p></div>
+                </div>
+                <div className="flex gap-0.5 shrink-0">
+                  <button className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors" onClick={() => onEdit(a)} aria-label="Modifier"><Settings2 className="h-4 w-4" /></button>
+                  <button className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-loss hover:bg-loss-soft transition-colors" onClick={() => onDelete(a)} aria-label="Supprimer"><X className="h-4 w-4" /></button>
+                </div>
+              </div>
+              <p className="font-mono text-[28px] leading-none font-semibold tracking-tight mt-6">{eur(a.balance)}</p>
+              <div className="flex items-center justify-between mt-3">
+                <p className="text-xs text-muted-foreground">{a.currency}</p>
+                <button className="text-[13px] font-medium text-primary hover:underline" onClick={() => onStatements(a)}>Relevés & évolution</button>
+              </div>
+            </div>
+          );
+        })}
+        {!accounts.length && <div className="md:col-span-2 xl:col-span-3 surface"><Empty text="Crée ton premier compte bancaire, épargne ou investissement." /></div>}
+      </div>
+    </div>
+  );
+}
+
+function SubscriptionsView({ subscriptions, accounts, onNew, onToggle, onDelete }: { subscriptions: FinanceSubscription[]; accounts: FinanceAccount[]; onNew: () => void; onToggle: (s: FinanceSubscription) => void; onDelete: (s: FinanceSubscription) => void }) {
+  const monthly = subscriptions.filter(s => s.active).reduce((s, x) => s + (x.frequency === 'monthly' ? x.amount : x.frequency === 'yearly' ? x.amount / 12 : x.amount * 52 / 12), 0);
+  const freq = { monthly: 'par mois', yearly: 'par an', weekly: 'par semaine' } as const;
+  return (
+    <div className="space-y-4">
+      <SectionHeader title="Abonnements" subtitle={`${eur(monthly)} / mois estimés · ${subscriptions.filter(x => x.active).length} actif(s)`} action={<Button size="sm" className="rounded-full h-10 px-4" onClick={onNew}><Plus className="h-4 w-4 mr-1" />Ajouter</Button>} />
+      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {subscriptions.map(s => (
+          <div key={s.id} className={`surface p-5 transition-opacity ${s.active ? '' : 'opacity-60'}`}>
+            <div className="flex items-center gap-3">
+              <CategoryTile category={s.category} size="lg" />
+              <div className="min-w-0 flex-1"><p className="font-semibold text-[15px] truncate">{s.name}</p><p className="text-xs text-muted-foreground truncate">{s.category} · {accounts.find(a => a.id === s.accountId)?.name || '—'}</p></div>
+            </div>
+            <p className="font-mono text-[26px] leading-none font-semibold tracking-tight mt-5">{eur(s.amount)} <span className="text-xs font-normal text-muted-foreground font-sans">{freq[s.frequency]}</span></p>
+            <div className="flex items-center justify-between mt-4 text-xs">
+              <span className="text-muted-foreground">Prochain : {s.nextDate}</span>
+              <div className="flex gap-3 font-medium">
+                <button onClick={() => onToggle(s)} className="text-primary hover:underline">{s.active ? 'Désactiver' : 'Réactiver'}</button>
+                <button onClick={() => onDelete(s)} className="text-loss hover:underline">Supprimer</button>
+              </div>
+            </div>
+          </div>
+        ))}
+        {!subscriptions.length && <div className="md:col-span-2 xl:col-span-3 surface"><Empty text="Aucun abonnement suivi pour le moment." /></div>}
+      </div>
+    </div>
+  );
+}
+
+function TransfersView({ transfers, accounts, onNew, onDelete }: { transfers: FinanceTransfer[]; accounts: FinanceAccount[]; onNew: () => void; onDelete: (t: FinanceTransfer) => void }) {
+  const name = (id: string) => accounts.find(a => a.id === id)?.name || '—';
+  return (
+    <div className="space-y-4">
+      <SectionHeader title="Virements" subtitle="Transferts ponctuels et virements automatiques à suivre" action={<Button size="sm" className="rounded-full h-10 px-4" onClick={onNew}><Plus className="h-4 w-4 mr-1" />Nouveau virement</Button>} />
+      <div className="surface px-3 py-1">
+        {transfers.map(t => (
+          <div key={t.id} className="group flex items-center gap-3 px-2 py-3 border-t border-border first:border-t-0">
+            <Tile color={PALETTE[0]}><ArrowRightLeft className="h-[18px] w-[18px]" /></Tile>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-medium truncate">{name(t.fromAccountId)} <span className="text-muted-foreground">→</span> {name(t.toAccountId)}</p>
+              <p className="text-xs text-muted-foreground">{t.date}{t.recurring ? ` · ${t.frequency} · prochain ${t.nextDate}` : ''}</p>
+            </div>
+            <span className="font-mono text-[13px] font-semibold">{eur(t.amount)}</span>
+            <button onClick={() => onDelete(t)} className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-loss hover:bg-loss-soft transition-colors" aria-label="Supprimer"><X className="h-4 w-4" /></button>
+          </div>
+        ))}
+        {!transfers.length && <Empty text="Aucun virement enregistré." />}
+      </div>
+    </div>
+  );
+}

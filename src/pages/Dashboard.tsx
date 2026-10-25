@@ -31,7 +31,7 @@ function RiskBar({ usedPct, invert }: { usedPct: number; invert?: boolean }) {
     ? (c >= 60 ? 'hsl(142,71%,45%)' : c >= 40 ? 'hsl(43,96%,56%)' : 'hsl(0,84%,60%)')
     : (c < 50 ? 'hsl(142,71%,45%)' : c < 75 ? 'hsl(43,96%,56%)' : c < 90 ? 'hsl(25,95%,53%)' : 'hsl(0,84%,60%)');
   return (
-    <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden">
+    <div className="h-1.5 w-full rounded-full bg-foreground/[0.07] overflow-hidden">
       <div className="h-full rounded-full transition-all duration-700" style={{ width: `${c}%`, backgroundColor: color }} />
     </div>
   );
@@ -140,7 +140,7 @@ function TradeCountSlider({ limits, value, onChange }: { limits: readonly TradeL
         <div ref={trackRef} className="relative h-5 flex items-center cursor-pointer"
           onPointerDown={e => { (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId); onChange(limits[idxFromPtr(e)].value); }}
           onPointerMove={e => { if (e.buttons !== 1) return; onChange(limits[idxFromPtr(e)].value); }}>
-          <div className="absolute inset-x-0 h-[3px] rounded-full bg-white/[0.08]" />
+          <div className="absolute inset-x-0 h-[3px] rounded-full bg-foreground/[0.09]" />
           <div className="absolute left-0 h-[3px] rounded-full transition-[width] duration-75"
             style={{ width: `${pct}%`, background: 'linear-gradient(90deg,hsl(var(--primary)/0.4),hsl(var(--primary)))' }} />
           <div className="absolute w-3.5 h-3.5 rounded-full -translate-x-1/2 transition-[left] duration-75"
@@ -713,7 +713,7 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
               <span>Loss</span>
               <div className="flex gap-[2px]">
                 {[0.85, 0.55, 0.3].map(o => <div key={`l${o}`} className="w-3 h-3 rounded-[2px]" style={{ backgroundColor: `hsla(0,84%,60%,${o})` }} />)}
-                <div className="w-3 h-3 rounded-[2px] bg-white/[0.06]" />
+                <div className="w-3 h-3 rounded-[2px] bg-foreground/[0.07]" />
                 {[0.3, 0.55, 0.85].map(o => <div key={`p${o}`} className="w-3 h-3 rounded-[2px]" style={{ backgroundColor: `hsla(142,71%,45%,${o})` }} />)}
               </div>
               <span>Profit</span>

@@ -72,7 +72,7 @@ const initialOfAccount = (a?: AccountLite) => {
   const c = Number(a?.initialCapital);
   return a && Number.isFinite(c) && c > 0 && a.initialDate ? { capital: c, date: a.initialDate } : null;
 };
-const tone = (n: number) => (n > 0 ? 'text-emerald-400' : n < 0 ? 'text-rose-400' : 'text-muted-foreground');
+const tone = (n: number) => (n > 0 ? 'text-profit' : n < 0 ? 'text-loss' : 'text-muted-foreground');
 
 /* Form types (champs texte pour accepter la virgule française) */
 interface HoldingDraft { id: string; name: string; quantity: string; unitPrice: string; value: string }
@@ -392,7 +392,7 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
       {accounts.length > 0 && !safeStatements.length && (
         <Box>
           <div className="py-10 flex flex-col items-center text-center gap-3">
-            <div className="h-12 w-12 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center"><ClipboardList className="h-6 w-6 text-sky-400" /></div>
+            <div className="h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center"><ClipboardList className="h-6 w-6 text-primary" /></div>
             <p className="text-sm font-semibold">Aucun relevé pour l’instant</p>
             <p className="text-xs text-muted-foreground max-w-md">Chaque mois, ajoute un relevé de ton assurance-vie ou de tes placements : la valeur totale, ou le détail par actif (quantité × prix). Tu verras ensuite l’évolution et la répartition.</p>
             <Button size="sm" onClick={openNew}><Plus className="h-4 w-4 mr-1" />Ajouter mon premier relevé</Button>
@@ -426,7 +426,7 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
                       <td className={`text-right font-mono ${tone(x.delta ?? 0)}`}>{x.delta == null ? '—' : `${signed(x.delta)} (${pct(x.deltaPct ?? 0)})`}</td>
                       <td className={`text-right font-mono ${tone(x.since?.d ?? 0)}`}>{x.since ? `${signed(x.since.d)} (${pct(x.since.p)})` : '—'}</td>
                       <td className="text-right">{x.count}</td>
-                      <td className="text-right"><button className="text-[11px] text-sky-400 hover:underline" onClick={() => setSelectedRaw(x.account.id)}>Détail</button></td>
+                      <td className="text-right"><button className="text-[11px] text-primary hover:underline" onClick={() => setSelectedRaw(x.account.id)}>Détail</button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -481,7 +481,7 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
                     <tbody>
                       {allocation.map((h, i) => (
                         <tr key={h.id || i} className="border-b border-border/40">
-                          <td className="py-2.5"><span className="inline-block h-2 w-2 rounded-full mr-2" style={{ background: PALETTE[i % PALETTE.length] }} />{h.name}{h.isNew && <span className="ml-2 text-[9px] px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400">nouveau</span>}</td>
+                          <td className="py-2.5"><span className="inline-block h-2 w-2 rounded-full mr-2" style={{ background: PALETTE[i % PALETTE.length] }} />{h.name}{h.isNew && <span className="ml-2 text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">nouveau</span>}</td>
                           <td className="text-right font-mono text-muted-foreground">{h.quantity != null ? Number(h.quantity).toLocaleString('fr-FR', { maximumFractionDigits: 6 }) : '—'}</td>
                           <td className="text-right font-mono text-muted-foreground">{h.unitPrice != null ? eur(Number(h.unitPrice)) : '—'}</td>
                           <td className="text-right font-mono">{eur(Number(h.value))}</td>
@@ -530,7 +530,7 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
                         <td className="text-right text-muted-foreground">{s.holdings.length || '—'}</td>
                         <td className="text-right whitespace-nowrap" onClick={e => e.stopPropagation()}>
                           <button className="p-1.5 text-muted-foreground hover:text-foreground" title="Modifier" onClick={() => openEdit(s)}><Pencil className="h-3.5 w-3.5" /></button>
-                          <button className="p-1.5 text-muted-foreground hover:text-rose-400" title="Supprimer" onClick={() => remove(s)}><Trash2 className="h-3.5 w-3.5" /></button>
+                          <button className="p-1.5 text-muted-foreground hover:text-loss" title="Supprimer" onClick={() => remove(s)}><Trash2 className="h-3.5 w-3.5" /></button>
                         </td>
                       </tr>
                       {isOpen && (
@@ -555,11 +555,11 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
                   );
                 })}
                 {selected !== 'all' && initial && (
-                  <tr className="border-b border-border/40 bg-amber-500/5">
+                  <tr className="border-b border-border/40 bg-drawdown/5">
                     <td />
                     <td className="py-2.5 font-medium">{fmtDate(initial.date)}</td>
                     <td className="text-right font-mono">{eur(initial.capital)}</td>
-                    <td colSpan={3 + (showSince ? 1 : 0)} className="pl-4 text-amber-400">Capital initial (dépôt)</td>
+                    <td colSpan={3 + (showSince ? 1 : 0)} className="pl-4 text-drawdown">Capital initial (dépôt)</td>
                     <td className="text-right"><button className="p-1.5 text-muted-foreground hover:text-foreground" title="Modifier" onClick={openInitial}><Pencil className="h-3.5 w-3.5" /></button></td>
                   </tr>
                 )}
@@ -580,7 +580,7 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
               <div><Label>Date du dépôt</Label><Input type="date" value={initialForm.date} onChange={e => setInitialForm(f => ({ ...f, date: e.target.value }))} /></div>
             </div>
             <div className="flex items-center justify-between gap-2">
-              {initial ? <Button variant="outline" className="text-rose-400" onClick={clearInitial}>Supprimer</Button> : <span />}
+              {initial ? <Button variant="outline" className="text-loss" onClick={clearInitial}>Supprimer</Button> : <span />}
               <div className="flex gap-2"><Button variant="outline" onClick={() => setInitialOpen(false)}>Annuler</Button><Button onClick={saveInitial}>Enregistrer</Button></div>
             </div>
           </div>
@@ -628,7 +628,7 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
                         <Input inputMode="decimal" placeholder="Quantité" value={h.quantity} onChange={e => patchHolding(i, { quantity: e.target.value })} />
                         <Input inputMode="decimal" placeholder="Prix" value={h.unitPrice} onChange={e => patchHolding(i, { unitPrice: e.target.value })} />
                         <Input inputMode="decimal" placeholder="Valeur" value={h.value} onChange={e => patchHolding(i, { value: e.target.value })} />
-                        <button type="button" className="p-1 text-muted-foreground hover:text-rose-400 justify-self-end" onClick={() => patchDraft({ holdings: draft.holdings.filter((_, k) => k !== i) })}><X className="h-4 w-4" /></button>
+                        <button type="button" className="p-1 text-muted-foreground hover:text-loss justify-self-end" onClick={() => patchDraft({ holdings: draft.holdings.filter((_, k) => k !== i) })}><X className="h-4 w-4" /></button>
                       </div>
                     ))}
                   </div>

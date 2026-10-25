@@ -12,21 +12,22 @@ import {
 /* ── Graphiques My Finance : même style que la partie trading ───────────
    (grille discrète, axes monospace sans traits, tooltip sombre, dégradés + glow) */
 
-export const PROFIT = 'hsl(142, 71%, 45%)';
-export const LOSS = 'hsl(0, 84%, 60%)';
-export const ACCENT = 'hsl(var(--foreground))';
-export const BLUE = 'hsl(200, 85%, 55%)';
+export const PROFIT = 'hsl(var(--chart-profit))';
+export const LOSS = 'hsl(var(--chart-loss))';
+export const ACCENT = 'hsl(var(--primary))';
+export const BLUE = 'hsl(var(--primary))';
 export const AMBER = 'hsl(38, 92%, 50%)';
+/** Palette catégories : douce, lisible en clair comme en sombre. */
 export const PALETTE = [
-  'hsl(200, 85%, 55%)', 'hsl(142, 71%, 45%)', 'hsl(270, 70%, 55%)', 'hsl(25, 95%, 53%)',
-  'hsl(0, 84%, 60%)', 'hsl(180, 70%, 45%)', 'hsl(48, 95%, 55%)', 'hsl(215, 15%, 60%)',
+  'hsl(244, 76%, 62%)', 'hsl(160, 60%, 42%)', 'hsl(38, 92%, 52%)', 'hsl(350, 80%, 60%)',
+  'hsl(199, 89%, 52%)', 'hsl(275, 70%, 62%)', 'hsl(180, 60%, 40%)', 'hsl(220, 12%, 58%)',
 ];
 
 export const fmtEur = (n: number) => `${n < 0 ? '-' : ''}${Math.abs(n).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
 export const tickEur = (v: number) => `${Math.round(v).toLocaleString('fr-FR')} €`;
 
-const legendStyle = { fontSize: '11px', color: 'hsl(215, 15%, 55%)' };
-const darkRing = 'hsl(240, 12%, 9%)';
+const legendStyle = { fontSize: '12px', color: 'hsl(var(--muted-foreground))' };
+const darkRing = 'hsl(var(--card))';
 
 /** Domaine + graduations "rondes" comme dans les graphiques trading. */
 function domainFor(values: number[], includeZero: boolean, pad = 0.15) {
@@ -42,14 +43,13 @@ function domainFor(values: number[], includeZero: boolean, pad = 0.15) {
 
 const tooltipCommon = { contentStyle: glassTooltip, labelStyle: tooltipLabelStyle, itemStyle: tooltipItemStyle };
 const xAxisProps = { tick: axisTick, tickLine: false, axisLine: false } as const;
-const yAxisProps = { tick: axisTick, tickLine: false, axisLine: false, width: 70, tickFormatter: tickEur } as const;
+const yAxisProps = { tick: axisTick, tickLine: false, axisLine: false, width: 64, tickFormatter: tickEur } as const;
 
 function areaStops(id: string, color: string) {
   return (
     <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stopColor={color} stopOpacity={0.4} />
-      <stop offset="55%" stopColor={color} stopOpacity={0.16} />
-      <stop offset="100%" stopColor={color} stopOpacity={0.02} />
+      <stop offset="0%" stopColor={color} stopOpacity={0.22} />
+      <stop offset="100%" stopColor={color} stopOpacity={0} />
     </linearGradient>
   );
 }
@@ -80,7 +80,7 @@ export function FlowAreaChart({ data, lastIndex }: { data: { day: string; net: n
         <XAxis dataKey="day" {...xAxisProps} interval="preserveStartEnd" minTickGap={14} />
         <YAxis domain={domain} ticks={ticks} {...yAxisProps} />
         <Tooltip cursor={lineCursor} {...tooltipCommon} labelFormatter={(l: any) => `Jour ${l}`} formatter={(v: number) => [fmtEur(v), 'Net cumulé']} />
-        <Area type="monotone" dataKey="net" stroke={color} fill={`url(#flow-${uid})`} strokeWidth={2} filter={`url(#glow-${uid})`}
+        <Area type="monotone" dataKey="net" stroke={color} fill={`url(#flow-${uid})`} strokeWidth={2.5}
           dot={makePulseDot(lastIndex, color)} activeDot={{ r: 4, fill: color, stroke: color, strokeWidth: 2 }} connectNulls={false} />
         {lastPoint?.net != null && (
           <ReferenceDot x={lastPoint.day} y={lastPoint.net} r={0} label={{ value: tickEur(lastPoint.net), position: 'top', ...valueLabelStyle } as any} />
@@ -102,11 +102,11 @@ export function YearFlowBars({ data }: { data: { month: string; income: number; 
           <Glow id={`glow-${uid}`} strength={0.7} />
           <linearGradient id={`inc-${uid}`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={PROFIT} stopOpacity={1} />
-            <stop offset="100%" stopColor={PROFIT} stopOpacity={0.4} />
+            <stop offset="100%" stopColor={PROFIT} stopOpacity={0.7} />
           </linearGradient>
           <linearGradient id={`exp-${uid}`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={LOSS} stopOpacity={1} />
-            <stop offset="100%" stopColor={LOSS} stopOpacity={0.4} />
+            <stop offset="100%" stopColor={LOSS} stopOpacity={0.7} />
           </linearGradient>
         </defs>
         <CartesianGrid {...gridProps} />
@@ -115,8 +115,8 @@ export function YearFlowBars({ data }: { data: { month: string; income: number; 
         <YAxis domain={domain} ticks={ticks} {...yAxisProps} />
         <Tooltip cursor={barCursor} {...tooltipCommon} formatter={(v: number, name: string) => [fmtEur(v), name]} />
         <Legend wrapperStyle={legendStyle} iconType="circle" iconSize={8} />
-        <Bar dataKey="income" name="Revenus" fill={`url(#inc-${uid})`} stroke={PROFIT} strokeWidth={1} radius={[3, 3, 0, 0]} barSize={10} filter={`url(#glow-${uid})`} />
-        <Bar dataKey="expenses" name="Dépenses" fill={`url(#exp-${uid})`} stroke={LOSS} strokeWidth={1} radius={[3, 3, 0, 0]} barSize={10} filter={`url(#glow-${uid})`} />
+        <Bar dataKey="income" name="Revenus" fill={`url(#inc-${uid})`} radius={[6, 6, 0, 0]} barSize={12} />
+        <Bar dataKey="expenses" name="Dépenses" fill={`url(#exp-${uid})`} radius={[6, 6, 0, 0]} barSize={12} />
       </ComposedChart>
     </ResponsiveContainer>
   );
@@ -141,7 +141,7 @@ export function CashflowChart({ data }: { data: { month: string; cashflow: numbe
         <XAxis dataKey="month" {...xAxisProps} />
         <YAxis domain={domain} ticks={ticks} {...yAxisProps} />
         <Tooltip cursor={lineCursor} {...tooltipCommon} formatter={(v: number) => [fmtEur(v), 'Cash-flow']} />
-        <Area type="monotone" dataKey="cashflow" stroke={color} fill={`url(#cf-${uid})`} strokeWidth={2} filter={`url(#glow-${uid})`}
+        <Area type="monotone" dataKey="cashflow" stroke={color} fill={`url(#cf-${uid})`} strokeWidth={2.5}
           dot={makeTurningPointDots(data, 'cashflow', color)} activeDot={{ r: 4, fill: color, stroke: color, strokeWidth: 2 }} />
         {lastPoint && (
           <ReferenceDot x={lastPoint.month} y={lastPoint.cashflow} r={0} label={{ value: tickEur(lastPoint.cashflow), position: 'top', ...valueLabelStyle } as any} />
@@ -162,13 +162,13 @@ export function Donut({ data, centerLabel, colors = PALETTE }: { data: { name: s
     <ResponsiveContainer width="100%" height="100%">
       <PieChart>
         <defs><Glow id={`glow-${uid}`} strength={4} /></defs>
-        <Pie data={filtered} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius="62%" outerRadius="92%" strokeWidth={0} paddingAngle={filtered.length > 1 ? 4 : 0} cornerRadius={8}>
-          {filtered.map((d, i) => <Cell key={i} fill={colors[d._i % colors.length]} filter={`url(#glow-${uid})`} />)}
+        <Pie data={filtered} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius="72%" outerRadius="96%" strokeWidth={0} paddingAngle={filtered.length > 1 ? 3 : 0} cornerRadius={6}>
+          {filtered.map((d, i) => <Cell key={i} fill={colors[d._i % colors.length]} />)}
         </Pie>
-        <text x="50%" y="47%" textAnchor="middle" dominantBaseline="central" style={{ fontSize: 17, fontWeight: 800, fill: 'hsl(var(--foreground))', fontFamily: 'inherit' }}>
+        <text x="50%" y="47%" textAnchor="middle" dominantBaseline="central" style={{ fontSize: 18, fontWeight: 700, fill: 'hsl(var(--foreground))', fontFamily: 'inherit' }}>
           {tickEur(total)}
         </text>
-        <text x="50%" y="58%" textAnchor="middle" dominantBaseline="central" style={{ fontSize: 9, fontWeight: 600, fill: 'hsla(215,15%,55%,0.8)', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+        <text x="50%" y="58%" textAnchor="middle" dominantBaseline="central" style={{ fontSize: 12, fontWeight: 500, fill: 'hsl(var(--muted-foreground))', fontFamily: 'inherit' }}>
           {centerLabel}
         </text>
         <Tooltip cursor={false} contentStyle={glassTooltip} itemStyle={tooltipItemStyle}
@@ -194,7 +194,7 @@ export function AccountBars({ data }: { data: { name: string; balance: number }[
         <defs>
           <Glow id={`glow-${uid}`} strength={0.7} />
           <linearGradient id={`pos-${uid}`} x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor={BLUE} stopOpacity={0.45} />
+            <stop offset="0%" stopColor={BLUE} stopOpacity={0.55} />
             <stop offset="100%" stopColor={BLUE} stopOpacity={1} />
           </linearGradient>
           <linearGradient id={`neg-${uid}`} x1="0" y1="0" x2="1" y2="0">
@@ -207,10 +207,10 @@ export function AccountBars({ data }: { data: { name: string; balance: number }[
         <XAxis type="number" domain={domain} ticks={ticks} {...xAxisProps} tickFormatter={tickEur} />
         <YAxis dataKey="name" type="category" tick={catAxisTick} tickLine={false} axisLine={false} width={100} />
         <Tooltip cursor={barCursor} {...tooltipCommon} formatter={(v: number) => [fmtEur(v), 'Solde']} />
-        <Bar dataKey="balance" radius={[0, 3, 3, 0]} barSize={16}>
+        <Bar dataKey="balance" radius={[0, 8, 8, 0]} barSize={14}>
           <LabelList dataKey="balance" position="right" formatter={(v: number) => tickEur(v)} style={valueLabelStyle} />
           {sorted.map((e, i) => (
-            <Cell key={i} fill={e.balance >= 0 ? `url(#pos-${uid})` : `url(#neg-${uid})`} stroke={e.balance >= 0 ? BLUE : LOSS} strokeWidth={1} filter={`url(#glow-${uid})`} />
+            <Cell key={i} fill={e.balance >= 0 ? `url(#pos-${uid})` : `url(#neg-${uid})`} />
           ))}
         </Bar>
       </ComposedChart>
@@ -247,7 +247,7 @@ export function ValueAreaChart({ data, initialCapital }: {
         <YAxis domain={domain} ticks={ticks} {...yAxisProps} />
         <Tooltip cursor={lineCursor} {...tooltipCommon} formatter={(v: number, name: string) => [fmtEur(v), name]} />
         {hasDeposits && <Legend wrapperStyle={legendStyle} iconType="circle" iconSize={8} />}
-        <Area type="monotone" dataKey="value" name="Valeur" stroke={color} fill={`url(#val-${uid})`} strokeWidth={2} filter={`url(#glow-${uid})`}
+        <Area type="monotone" dataKey="value" name="Valeur" stroke={color} fill={`url(#val-${uid})`} strokeWidth={2.5}
           dot={makeTurningPointDots(data, 'value', color)} activeDot={{ r: 4, fill: color, stroke: color, strokeWidth: 2 }} />
         {hasDeposits && (
           <Line type="monotone" dataKey="deposited" name="Capital versé" {...medianLineStyle(BLUE)} strokeOpacity={1} strokeWidth={1.5}
