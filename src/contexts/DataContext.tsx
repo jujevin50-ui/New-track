@@ -159,39 +159,30 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // All mutations read from dataRef.current so sequential calls see each other's writes
-  const tableRows = (cur: AppData, table: TableKey): any[] =>
-    Array.isArray((cur as any)[table]) ? ((cur as any)[table] as any[]) : [];
-
   const saveTable = useCallback(async (table: TableKey, rows: any[]) => {
     await persist({ ...dataRef.current, [table]: rows });
   }, [persist]);
 
   const addRow = useCallback(async (table: TableKey, row: any) => {
     const cur = dataRef.current;
-    await persist({ ...cur, [table]: [...tableRows(cur, table), row] });
+    await persist({ ...cur, [table]: [...(cur[table] as any[]), row] });
   }, [persist]);
 
   const updateRow = useCallback(async (table: TableKey, id: string, updates: any) => {
     const cur = dataRef.current;
-    await persist({
-      ...cur,
-      [table]: tableRows(cur, table).map(r => (r.id === id ? { ...r, ...updates } : r)),
-    });
+    await persist({ ...cur, [table]: (cur[table] as any[]).map(r => r.id === id ? { ...r, ...updates } : r) });
   }, [persist]);
 
   const deleteRow = useCallback(async (table: TableKey, id: string) => {
     const cur = dataRef.current;
-    await persist({
-      ...cur,
-      [table]: tableRows(cur, table).filter(r => r.id !== id),
-    });
+    await persist({ ...cur, [table]: (cur[table] as any[]).filter(r => r.id !== id) });
   }, [persist]);
 
   const upsertRow = useCallback(async (table: TableKey, row: any, keyField = 'date') => {
     const cur = dataRef.current;
-    const rows = tableRows(cur, table);
+    const rows = cur[table] as any[];
     const idx = rows.findIndex(r => r[keyField] === row[keyField]);
-    const newRows = idx >= 0 ? rows.map((r, i) => (i === idx ? row : r)) : [...rows, row];
+    const newRows = idx >= 0 ? rows.map((r, i) => i === idx ? row : r) : [...rows, row];
     await persist({ ...cur, [table]: newRows });
   }, [persist]);
 
