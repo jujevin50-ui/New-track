@@ -41,7 +41,7 @@ export function AppLayout({ children, accounts, activeAccountId, onSelectAccount
       {/* Barre du haut : logo | menu centré | colonne vide symétrique → le menu ne peut plus chevaucher les filtres */}
       <header className={HEADER_BAR}>
         <div className={HEADER_GRID}>
-          <LogoSwitch className="pointer-events-auto h-[56px] w-[56px] shrink-0" />
+          <LogoSwitch className="pointer-events-auto shrink-0" />
           <div className="flex justify-center min-w-0"><TopNav /></div>
           <div aria-hidden />
         </div>

@@ -80,6 +80,8 @@ export interface AppData {
   financeSubscriptions: any[];
   financeTransfers: any[];
   financeStatements: any[];
+  habits: any[];
+  habitCompletions: any[];
 }
 
 export const DEFAULT_DATA: AppData = {
@@ -104,6 +106,8 @@ export const DEFAULT_DATA: AppData = {
   financeSubscriptions: [],
   financeTransfers: [],
   financeStatements: [],
+  habits: [],
+  habitCompletions: [],
 };
 
 /** Garantit que chaque table est bien un tableau (évite les crashs si le fichier contient null / un type inattendu). */

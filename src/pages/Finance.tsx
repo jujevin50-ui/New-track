@@ -187,7 +187,7 @@ export default function Finance() {
       {/* Barre du haut : logo | menu CENTRÉ | colonne symétrique (aucun élément ne peut se superposer au menu) */}
       <header className={HEADER_BAR}>
         <div className={HEADER_GRID}>
-          <LogoSwitch className="pointer-events-auto h-[56px] w-[56px] shrink-0" />
+          <LogoSwitch className="pointer-events-auto shrink-0" />
           <div className="flex justify-center min-w-0">
             <nav className={NAV_PILL} aria-label="Navigation My Finance">
               <div className="flex items-center gap-1 overflow-x-auto no-scrollbar min-w-0">
