@@ -1,12 +1,9 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, Landmark, Target } from 'lucide-react';
+import { BarChart3, Landmark, Target, CheckSquare } from 'lucide-react';
 
 interface LogoSwitchProps {
-  /** Position fixe en haut à gauche (legacy, peu utilisé) */
   floating?: boolean;
-  /** Classes supplémentaires */
   className?: string;
-  /** Taille du logo en px — conservé pour compatibilité, non utilisé */
   size?: number;
 }
 
@@ -16,7 +13,7 @@ const TABS = [
   {
     id: 'trading',
     path: '/',
-    match: (p: string) => p !== '/finance' && p !== '/habits',
+    match: (p: string) => !['/finance', '/habits', '/tasks'].includes(p),
     label: 'Track Record',
     Icon: BarChart3,
   },
@@ -34,11 +31,17 @@ const TABS = [
     label: 'Habitudes',
     Icon: Target,
   },
+  {
+    id: 'tasks',
+    path: '/tasks',
+    match: (p: string) => p === '/tasks',
+    label: 'Tâches',
+    Icon: CheckSquare,
+  },
 ] as const;
 
 /**
- * Sélecteur d'onglets principaux : Track Record · My Finance · Habitudes.
- * Chaque onglet est représenté par une icône.
+ * Sélecteur d'onglets : Track Record · My Finance · Habitudes · Tâches.
  */
 export function LogoSwitch({ floating = false, className = '' }: LogoSwitchProps) {
   const navigate = useNavigate();

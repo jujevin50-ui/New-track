@@ -35,6 +35,7 @@ const Reports = lazyWithReload(() => import("./pages/Reports"));
 const DailyReport = lazyWithReload(() => import("./pages/DailyReport"));
 const Finance = lazyWithReload(() => import("./pages/Finance"));
 const Habits = lazyWithReload(() => import("./pages/Habits"));
+const Tasks = lazyWithReload(() => import("./pages/Tasks"));
 const AiAssistant = lazyWithReload(() => import("./pages/AiAssistant"));
 import NotFound from "./pages/NotFound";
 
@@ -120,6 +121,16 @@ const AppContent = () => {
       <ErrorBoundary resetKey={location.pathname}>
         <Suspense fallback={<PageLoader />}>
           <Habits />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
+  if (location.pathname === '/tasks') {
+    return (
+      <ErrorBoundary resetKey={location.pathname}>
+        <Suspense fallback={<PageLoader />}>
+          <Tasks />
         </Suspense>
       </ErrorBoundary>
     );
