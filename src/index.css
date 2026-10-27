@@ -5,36 +5,36 @@
 @tailwind utilities;
 
 @layer base {
-  /* ── DA « Finary » : fond gris très clair, cartes blanches, bordures fines,
-        encre bleu nuit, un seul accent indigo, vert/rouge pour les variations. ── */
+  /* ── DA « Gris Design » : fond gris neutre, cartes claires, bordures subtiles,
+        encre charcoal, accent slate, vert/rouge pour les variations. ── */
   :root {
-    --background: 220 20% 97%;
-    --foreground: 226 32% 11%;
+    --background: 220 14% 96%;
+    --foreground: 220 16% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 226 32% 11%;
+    --card-foreground: 220 16% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 226 32% 11%;
+    --popover-foreground: 220 16% 12%;
 
-    --primary: 244 76% 58%;
+    --primary: 220 9% 46%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 16% 94%;
-    --secondary-foreground: 226 24% 20%;
+    --secondary: 220 12% 93%;
+    --secondary-foreground: 220 14% 22%;
 
-    --muted: 220 16% 94%;
-    --muted-foreground: 222 10% 45%;
+    --muted: 220 12% 93%;
+    --muted-foreground: 220 9% 46%;
 
-    --accent: 244 80% 96%;
-    --accent-foreground: 244 70% 48%;
+    --accent: 220 14% 94%;
+    --accent-foreground: 220 12% 28%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 14% 90%;
-    --input: 220 14% 88%;
-    --ring: 244 76% 58%;
+    --border: 220 12% 88%;
+    --input: 220 12% 86%;
+    --ring: 220 9% 46%;
 
     --radius: 0.75rem;
 
@@ -43,103 +43,103 @@
     --profit-foreground: 0 0% 100%;
     --loss: 357 74% 51%;
     --loss-foreground: 0 0% 100%;
-    --balance: 244 76% 58%;
+    --balance: 220 9% 46%;
     --drawdown: 32 92% 46%;
-    --neutral: 222 10% 45%;
+    --neutral: 220 9% 46%;
 
     /* Semantic soft backgrounds (pastilles de variation) */
-    --success-soft: 152 54% 93%;
-    --warning-soft: 42 95% 91%;
-    --danger-soft: 357 90% 95%;
+    --success-soft: 152 40% 94%;
+    --warning-soft: 42 80% 93%;
+    --danger-soft: 357 70% 95%;
 
     /* Chart colors */
     --chart-profit: 154 62% 38%;
     --chart-loss: 357 74% 54%;
-    --chart-balance: 244 76% 58%;
+    --chart-balance: 220 9% 46%;
     --chart-drawdown: 32 92% 50%;
 
     /* Ombres : très discrètes, la structure vient des bordures */
-    --shadow-card: 0 1px 2px hsl(226 32% 11% / 0.04);
-    --shadow-sm: 0 1px 2px hsl(226 32% 11% / 0.05);
-    --shadow-pop: 0 8px 30px -8px hsl(226 32% 11% / 0.14);
+    --shadow-card: 0 1px 2px hsl(220 16% 12% / 0.04);
+    --shadow-sm: 0 1px 2px hsl(220 16% 12% / 0.05);
+    --shadow-pop: 0 8px 30px -8px hsl(220 16% 12% / 0.12);
     --shadow-glow-profit: none;
     --shadow-glow-loss: none;
     --shadow-glow-primary: none;
 
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 226 32% 11%;
-    --sidebar-primary: 244 76% 58%;
+    --sidebar-foreground: 220 16% 12%;
+    --sidebar-primary: 220 9% 46%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 16% 94%;
-    --sidebar-accent-foreground: 226 32% 11%;
-    --sidebar-border: 220 14% 90%;
-    --sidebar-ring: 244 76% 58%;
+    --sidebar-accent: 220 12% 93%;
+    --sidebar-accent-foreground: 220 16% 12%;
+    --sidebar-border: 220 12% 88%;
+    --sidebar-ring: 220 9% 46%;
 
     --font-heading: 'Inter', system-ui, sans-serif;
     --font-mono: 'Inter', system-ui, sans-serif;
   }
 
   .dark {
-    --background: 228 24% 7%;
-    --foreground: 220 20% 95%;
+    --background: 220 14% 8%;
+    --foreground: 220 10% 94%;
 
-    --card: 228 22% 10%;
-    --card-foreground: 220 20% 95%;
+    --card: 220 12% 11%;
+    --card-foreground: 220 10% 94%;
 
-    --popover: 228 22% 11%;
-    --popover-foreground: 220 20% 95%;
+    --popover: 220 12% 12%;
+    --popover-foreground: 220 10% 94%;
 
-    --primary: 248 90% 70%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 220 10% 70%;
+    --primary-foreground: 220 14% 10%;
 
-    --secondary: 228 18% 15%;
-    --secondary-foreground: 220 16% 84%;
+    --secondary: 220 10% 16%;
+    --secondary-foreground: 220 10% 84%;
 
-    --muted: 228 18% 14%;
-    --muted-foreground: 222 10% 62%;
+    --muted: 220 10% 15%;
+    --muted-foreground: 220 8% 58%;
 
-    --accent: 248 40% 20%;
-    --accent-foreground: 248 90% 82%;
+    --accent: 220 10% 18%;
+    --accent-foreground: 220 10% 88%;
 
     --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 228 16% 18%;
-    --input: 228 16% 20%;
-    --ring: 248 90% 70%;
+    --border: 220 10% 18%;
+    --input: 220 10% 20%;
+    --ring: 220 10% 70%;
 
-    --profit: 152 60% 48%;
+    --profit: 152 55% 48%;
     --profit-foreground: 0 0% 100%;
-    --loss: 357 84% 64%;
+    --loss: 357 80% 62%;
     --loss-foreground: 0 0% 100%;
-    --balance: 248 90% 70%;
+    --balance: 220 10% 70%;
     --drawdown: 32 92% 55%;
-    --neutral: 222 10% 62%;
+    --neutral: 220 8% 58%;
 
-    --success-soft: 152 40% 14%;
-    --warning-soft: 42 50% 14%;
-    --danger-soft: 357 45% 16%;
+    --success-soft: 152 30% 14%;
+    --warning-soft: 42 40% 14%;
+    --danger-soft: 357 40% 15%;
 
-    --chart-profit: 152 60% 48%;
-    --chart-loss: 357 84% 64%;
-    --chart-balance: 248 90% 70%;
+    --chart-profit: 152 55% 48%;
+    --chart-loss: 357 80% 62%;
+    --chart-balance: 220 10% 70%;
     --chart-drawdown: 32 92% 55%;
 
     --shadow-card: none;
     --shadow-sm: none;
-    --shadow-pop: 0 12px 40px -8px hsl(0 0% 0% / 0.6);
+    --shadow-pop: 0 12px 40px -8px hsl(0 0% 0% / 0.55);
     --shadow-glow-profit: none;
     --shadow-glow-loss: none;
     --shadow-glow-primary: none;
 
-    --sidebar-background: 228 22% 9%;
-    --sidebar-foreground: 220 16% 78%;
-    --sidebar-primary: 248 90% 70%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 228 18% 14%;
-    --sidebar-accent-foreground: 220 20% 95%;
-    --sidebar-border: 228 16% 16%;
-    --sidebar-ring: 248 90% 70%;
+    --sidebar-background: 220 12% 10%;
+    --sidebar-foreground: 220 10% 78%;
+    --sidebar-primary: 220 10% 70%;
+    --sidebar-primary-foreground: 220 14% 10%;
+    --sidebar-accent: 220 10% 15%;
+    --sidebar-accent-foreground: 220 10% 94%;
+    --sidebar-border: 220 10% 16%;
+    --sidebar-ring: 220 10% 70%;
   }
 }
 
@@ -211,7 +211,7 @@
     font-weight: 500;
     color: hsl(var(--muted-foreground));
   }
-  /* Surface Finary : carte blanche, bordure fine, ombre quasi invisible */
+  /* Surface Gris Design : carte claire, bordure fine, ombre quasi invisible */
   .surface {
     background: hsl(var(--card));
     border: 1px solid hsl(var(--border));

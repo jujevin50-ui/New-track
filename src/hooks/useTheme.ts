@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
 const THEME_KEY = 'trading-journal-theme';
-/** v2 : la nouvelle DA (type Finary) démarre en mode clair ; le choix sombre reste mémorisé ensuite. */
+/** v3 : thème gris design par défaut ; le choix sombre reste mémorisé ensuite. */
 const MODE_KEY = 'trading-journal-mode-v2';
 
 export type ThemeMode = 'dark' | 'light';
@@ -12,9 +12,12 @@ export interface ThemeConfig {
   primaryLight: number;
 }
 
-const DEFAULT_THEME: ThemeConfig = { primaryHue: 244, primarySat: 76, primaryLight: 58 };
-/** Ancien accent par défaut : s'il est encore enregistré, on passe au nouvel indigo. */
-const isOldDefault = (c: ThemeConfig) => c.primaryHue === 246 && c.primarySat === 90 && c.primaryLight === 63;
+/** Gris design : accent neutre élégant (slate) */
+const DEFAULT_THEME: ThemeConfig = { primaryHue: 220, primarySat: 9, primaryLight: 46 };
+/** Ancien accent par défaut : s'il est encore enregistré, on passe au gris. */
+const isOldDefault = (c: ThemeConfig) =>
+  (c.primaryHue === 246 && c.primarySat === 90 && c.primaryLight === 63) ||
+  (c.primaryHue === 244 && c.primarySat === 76 && c.primaryLight === 58);
 const readTheme = (): ThemeConfig => {
   try {
     const saved = localStorage.getItem(THEME_KEY);
@@ -24,8 +27,10 @@ const readTheme = (): ThemeConfig => {
 };
 
 const COLOR_PRESETS = [
+  { name: 'Gris', hue: 220, sat: 9, light: 46 },
+  { name: 'Slate', hue: 215, sat: 16, light: 47 },
+  { name: 'Charcoal', hue: 0, sat: 0, light: 32 },
   { name: 'Blanc', hue: 0, sat: 0, light: 95 },
-  { name: 'Gris', hue: 0, sat: 0, light: 60 },
   { name: 'Violet', hue: 270, sat: 70, light: 55 },
   { name: 'Bleu', hue: 220, sat: 80, light: 55 },
   { name: 'Cyan', hue: 190, sat: 80, light: 50 },
@@ -64,7 +69,7 @@ function applyMode(mode: ThemeMode) {
 }
 
 /** Applique le thème (couleur + mode) dès le démarrage de l'app, sur TOUTES les pages.
- *  Clair par défaut (DA Finary) ; le mode sombre reste disponible dans les réglages. */
+ *  Gris design par défaut ; le mode sombre reste disponible dans les réglages. */
 export function initTheme() {
   applyTheme(readTheme());
   let mode: ThemeMode = 'light';
