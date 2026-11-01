@@ -49,8 +49,8 @@ export function AppLayout({ children, accounts, activeAccountId, onSelectAccount
 
       {/* Filtres de comptes : descendus sous le menu, alignés à droite */}
       {accounts.length > 0 && (
-        <div className="relative z-40 px-3 md:px-5 pt-0.5 max-w-[1800px] w-full mx-auto flex justify-end">
-          <div className="flex items-center gap-1 h-9 px-1.5 rounded-full bg-card border border-border shadow-[var(--shadow-card)]">
+        <div className="relative z-40 px-3 md:px-5 pt-3 pb-1 max-w-[1800px] w-full mx-auto flex justify-end">
+          <div className="flex items-center gap-1 h-9 px-1.5 rounded-full bg-card/95 backdrop-blur-md border border-border shadow-[var(--shadow-card)]">
             <div className="hidden md:flex items-center gap-0.5">
               {FILTERS.filter(f => f.key === 'all' || accounts.some(a => a.status === f.key)).map(f => (
                 <button key={f.key} onClick={() => { setStatusFilter(f.key); setDropdownOpen(true); }}
@@ -89,7 +89,7 @@ export function AppLayout({ children, accounts, activeAccountId, onSelectAccount
       )}
 
       <div className="flex-1 flex flex-col min-w-0">
-        <main key={location.pathname} className="flex-1 overflow-auto px-4 md:px-6 pb-4 md:pb-6 pt-4 animate-page-in">{children}</main>
+        <main key={location.pathname} className="flex-1 overflow-auto px-4 md:px-6 pb-4 md:pb-6 pt-3 md:pt-4 animate-page-in">{children}</main>
       </div>
     </div>
   );

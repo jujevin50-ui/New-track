@@ -162,7 +162,7 @@ function TradeCountSlider({ limits, value, onChange }: { limits: readonly TradeL
 
 function ChartCard({ title, children, className, action }: { title: string; children: React.ReactNode; className?: string; action?: React.ReactNode }) {
   return (
-    <div className={`flex flex-col rounded-2xl border border-border/60 bg-card p-5 ${className ?? ''}`}>
+    <div className={`flex flex-col rounded-2xl border border-border/60 bg-card/95 backdrop-blur-md p-5 shadow-[var(--shadow-card)] ${className ?? ''}`}>
       <div className="flex items-center justify-between mb-4 shrink-0">
         <span className="text-[15px] font-semibold text-foreground">{title}</span>
         {action}
@@ -174,7 +174,7 @@ function ChartCard({ title, children, className, action }: { title: string; chil
 
 function Panel({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-2xl border border-border/60 bg-card p-5 ${className ?? ''}`}>
+    <div className={`rounded-2xl border border-border/60 bg-card/95 backdrop-blur-md p-5 shadow-[var(--shadow-card)] ${className ?? ''}`}>
       {children}
     </div>
   );
@@ -191,7 +191,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 /** Reference-style KPI card: label + trend badge top row, big number, muted subtitle. */
 function KpiCard({ label, value, prefix, badge, badgeUp, sub }: { label: string; value: string; prefix?: string; badge?: string; badgeUp?: boolean; sub?: string }) {
   return (
-    <div className="rounded-2xl border border-border/60 bg-card p-5">
+    <div className="rounded-2xl border border-border/60 bg-card/95 backdrop-blur-md p-5 shadow-[var(--shadow-card)]">
       <div className="flex items-center justify-between mb-3">
         <span className="text-[13px] font-medium text-muted-foreground">{label}</span>
         {badge && (
@@ -596,14 +596,14 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
     <div className="w-full space-y-5 pb-10">
 
       {/* ── Account chips ── */}
-      <div className="rounded-xl border border-border/60 bg-card/40 p-3">
+      <div className="rounded-xl border border-border/60 bg-card/95 backdrop-blur-md p-3">
         <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
           {accountCards.map(a => {
             const isActive = a.id === activeAccount.id;
             const dot = CAT_DOT[a.category] || 'bg-muted-foreground';
             return (
               <div key={a.id} className={`shrink-0 flex items-center gap-3 px-3.5 py-2 rounded-xl border transition-all cursor-default
-                ${isActive ? 'border-primary/40 bg-primary/5 shadow-[0_0_0_1px_hsl(var(--primary)/0.15)]' : 'border-border/50 bg-card hover:border-border'}`}>
+                ${isActive ? 'border-primary/40 bg-primary/5 shadow-[0_0_0_1px_hsl(var(--primary)/0.15)]' : 'border-border/50 bg-card/95 hover:border-border'}`}>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
                     <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${dot}`} />
@@ -655,7 +655,7 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
       </div>
 
       {/* ── View toggle: Account (principal) vs Global ── */}
-      <div className="flex items-center gap-1 p-1 rounded-xl border border-border/60 bg-card w-fit">
+      <div className="flex items-center gap-1 p-1 rounded-xl border border-border/60 bg-card/95 backdrop-blur-md w-fit">
         {(['account', 'global'] as const).map(v => (
           <button key={v} onClick={() => setDashView(v)}
             className={`px-5 py-1.5 text-[12px] font-semibold rounded-lg transition-colors ${view === v ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>

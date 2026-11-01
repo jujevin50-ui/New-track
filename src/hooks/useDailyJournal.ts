@@ -20,7 +20,7 @@ export interface DailyJournal {
 export const useDailyJournal = () => {
   const { data, upsertRow, saveTable } = useData();
 
-  const journals: DailyJournal[] = (data.dailyJournals as any[]).map(j => ({
+  const journals: DailyJournal[] = (Array.isArray(data?.dailyJournals) ? data.dailyJournals as any[] : []).map(j => ({
     date: j.date,
     strategyRespected: j.strategyRespected,
     productive: j.productive === true,
@@ -43,7 +43,7 @@ export const useDailyJournal = () => {
   }, [upsertRow]);
 
   const deleteJournal = useCallback(async (date: string) => {
-    await saveTable('dailyJournals', (data.dailyJournals as any[]).filter(j => j.date !== date));
+    await saveTable('dailyJournals', (Array.isArray(data?.dailyJournals) ? data.dailyJournals as any[] : []).filter(j => j.date !== date));
   }, [saveTable, data.dailyJournals]);
 
   return { journals, getJournal, saveJournal, deleteJournal };

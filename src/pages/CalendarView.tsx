@@ -142,6 +142,8 @@ const CalendarView = ({ activeAccount, accounts }: CalendarViewProps) => {
       if (v.pnl > bestDay.pnl)   bestDay  = { date: d, pnl: v.pnl, pct: v.pct };
       if (v.pnl < worstDay.pnl)  worstDay = { date: d, pnl: v.pnl, pct: v.pct };
     });
+    if (!bestDay.date) bestDay = { date: '', pnl: 0, pct: 0 };
+    if (!worstDay.date) worstDay = { date: '', pnl: 0, pct: 0 };
     return {
       totalPnl, totalPct, winDays, lossDays, totalTrades, bestDay, worstDay,
       avgWin: wCnt ? tWin / wCnt : 0, avgLoss: lCnt ? tLoss / lCnt : 0,
@@ -270,11 +272,16 @@ const CalendarView = ({ activeAccount, accounts }: CalendarViewProps) => {
     );
   };
 
-  if (!activeAccount) return (
-    <div className="flex items-center justify-center h-[60vh]">
-      <p className="text-muted-foreground text-sm">No account selected.</p>
-    </div>
-  );
+  if (!activeAccount) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] gap-2 px-4 text-center">
+        <p className="text-sm font-medium text-foreground">Aucun compte sélectionné</p>
+        <p className="text-xs text-muted-foreground max-w-sm">
+          Crée ou sélectionne un compte en haut à droite pour afficher le calendrier de trading.
+        </p>
+      </div>
+    );
+  }
 
   const hiddenWidgets = configs.filter(c => !c.visible);
 
@@ -311,7 +318,7 @@ const CalendarView = ({ activeAccount, accounts }: CalendarViewProps) => {
 
       {/* ═══════════════════════ MONTHLY ═══════════════════════ */}
       <div className="space-y-4">
-        <div className="relative rounded-2xl border border-border bg-card overflow-hidden">
+        <div className="relative rounded-2xl border border-border bg-card/95 backdrop-blur-md overflow-hidden shadow-[var(--shadow-card)]">
 
             {/* Ambient glows */}
             <div className="absolute inset-x-0 top-0 h-48 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--primary)/0.12),transparent_60%)] pointer-events-none" />

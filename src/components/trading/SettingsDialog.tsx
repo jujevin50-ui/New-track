@@ -85,7 +85,7 @@ function NavOrderList({
               isDragging
                 ? 'opacity-40 border-border bg-secondary/30'
                 : isDropTarget
-                ? 'border-primary bg-primary/8'
+                ? 'border-primary bg-primary/10'
                 : isSep
                 ? 'border-border/40 bg-secondary/20'
                 : item.visible
