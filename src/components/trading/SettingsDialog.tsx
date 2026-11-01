@@ -321,7 +321,7 @@ export function SettingsDialog({
                   </div>
                   <input
                     type="range"
-                    min={20}
+                    min={10}
                     max={85}
                     value={Math.round(waveCfg.veil * 100)}
                     onChange={e => setVeil(Number(e.target.value) / 100)}

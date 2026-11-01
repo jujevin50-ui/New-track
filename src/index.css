@@ -84,29 +84,29 @@
     --background: 0 0% 0%;
     --foreground: 0 0% 96%;
 
-    --card: 0 0% 5%;
+    --card: 0 0% 9%;
     --card-foreground: 0 0% 96%;
 
-    --popover: 0 0% 6%;
+    --popover: 0 0% 10%;
     --popover-foreground: 0 0% 96%;
 
-    --primary: 0 0% 88%;
+    --primary: 0 0% 92%;
     --primary-foreground: 0 0% 4%;
 
-    --secondary: 0 0% 10%;
-    --secondary-foreground: 0 0% 90%;
+    --secondary: 0 0% 16%;
+    --secondary-foreground: 0 0% 92%;
 
-    --muted: 0 0% 9%;
-    --muted-foreground: 0 0% 58%;
+    --muted: 0 0% 14%;
+    --muted-foreground: 0 0% 68%;
 
-    --accent: 0 0% 12%;
-    --accent-foreground: 0 0% 92%;
+    --accent: 0 0% 18%;
+    --accent-foreground: 0 0% 96%;
 
     --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 14%;
-    --input: 0 0% 14%;
+    --border: 0 0% 22%;
+    --input: 0 0% 18%;
     --ring: 0 0% 70%;
 
     --profit: 152 55% 48%;
@@ -275,13 +275,22 @@
     @apply text-xs text-muted-foreground max-w-md leading-relaxed;
   }
 
+  /* Les fonds semi-transparents laissaient passer les vagues et masquaient le contenu */
+  .bg-card\/95,
+  .bg-card\/90,
+  .bg-card\/80,
+  .bg-card\/40,
+  .bg-background\/40,
+  .bg-background\/30,
+  .bg-background\/20 {
+    background-color: hsl(var(--card)) !important;
+  }
+
   /* KPI / metric card */
   .metric-card {
     border-radius: 1rem;
     border: 1px solid hsl(var(--border));
-    background: hsl(var(--card) / 0.92);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: hsl(var(--card));
     padding: 1rem;
     box-shadow: var(--shadow-card);
     transition: box-shadow 0.28s cubic-bezier(0.16,1,0.3,1), transform 0.28s cubic-bezier(0.16,1,0.3,1);

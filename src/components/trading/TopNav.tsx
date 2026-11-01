@@ -39,7 +39,7 @@ export function TopNav() {
   return (
     <>
       <nav className={NAV_PILL} aria-label="Navigation principale">
-        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar min-w-0">
+        <div className="flex flex-wrap items-center justify-center gap-1 min-w-0">
           {navEntries.map(entry => (
             <NavLink
               key={entry.id}

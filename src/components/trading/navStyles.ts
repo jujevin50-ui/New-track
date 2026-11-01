@@ -4,7 +4,7 @@
 export const NAV_HEIGHT = 40;
 
 export const NAV_PILL =
-  'pointer-events-auto flex items-center gap-0.5 h-[40px] px-1.5 rounded-full bg-card/95 border border-border/80 shadow-[var(--shadow-card)] backdrop-blur-sm max-w-full min-w-0';
+  'pointer-events-auto flex flex-wrap items-center justify-center gap-0.5 min-h-[40px] h-auto py-1 px-1.5 rounded-2xl bg-card border border-border shadow-[var(--shadow-card)] max-w-full';
 
 export const navItemClass = (active: boolean) =>
   `flex items-center justify-center whitespace-nowrap px-2.5 2xl:px-4 h-8 rounded-full text-[12px] 2xl:text-[13px] font-medium transition-all duration-200 ${
@@ -14,6 +14,6 @@ export const navItemClass = (active: boolean) =>
   }`;
 
 /** Barre d'en-tête : sélecteur de modules à gauche, menu CENTRÉ, colonne symétrique à droite. */
-export const HEADER_BAR = 'sticky top-0 z-50 bg-background/50 backdrop-blur-xl border-b border-border/30';
+export const HEADER_BAR = 'sticky top-0 z-50 bg-card border-b border-border';
 export const HEADER_GRID =
-  'grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 md:px-5 py-2 max-w-[1800px] mx-auto';
+  'grid grid-cols-1 md:grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 md:px-5 py-2 max-w-[1800px] mx-auto';

@@ -183,14 +183,14 @@ export default function Finance() {
   const expenseTotal = categoryData.reduce((s, c) => s + c.value, 0);
 
   return (
-    <div className="min-h-screen text-foreground">
+    <div className="min-h-screen text-foreground relative z-10">
       {/* Barre du haut : logo | menu CENTRÉ | colonne symétrique (aucun élément ne peut se superposer au menu) */}
       <header className={HEADER_BAR}>
         <div className={HEADER_GRID}>
           <LogoSwitch className="pointer-events-auto shrink-0" />
           <div className="flex justify-center min-w-0">
             <nav className={NAV_PILL} aria-label="Navigation My Finance">
-              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar min-w-0">
+              <div className="flex flex-wrap items-center justify-center gap-1 min-w-0">
                 {TABS.map(([value, label]) => (
                   <button key={value} onClick={() => setTab(value)} aria-current={tab === value ? 'page' : undefined} className={navItemClass(tab === value)}>{label}</button>
                 ))}
@@ -201,24 +201,29 @@ export default function Finance() {
         </div>
       </header>
 
-      {/* Barre d'outils descendue sous le menu : période à gauche, actions à droite */}
-      <div className="max-w-[1500px] mx-auto px-4 md:px-6 pt-1 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3 min-h-10">
-          {tab === 'overview' && <>
-            <div className="inline-flex items-center gap-1">
-              <button onClick={prev} aria-label="Période précédente" className="h-9 w-9 inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"><ChevronLeft className="h-4 w-4" /></button>
-              <h1 className="text-lg font-semibold capitalize min-w-[150px] text-center">{overviewMode === 'month' ? monthLabel : cursor.getFullYear()}</h1>
-              <button onClick={next} aria-label="Période suivante" className="h-9 w-9 inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"><ChevronRight className="h-4 w-4" /></button>
-            </div>
-            <Segmented<'month' | 'year'> value={overviewMode} onChange={setOverviewMode} options={[['month', 'Mois'], ['year', 'Année']]} />
-          </>}
-          {tab === 'accounts' && (
-            <Segmented<'list' | 'statements'> value={accountsView} onChange={(v) => { if (v === 'statements') setStatementsAccountId(undefined); setAccountsView(v); }} options={[['list', 'Mes comptes'], ['statements', 'Relevés & évolution']]} />
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" className="h-10 rounded-full gap-1.5 px-4" onClick={() => setTab('accounts')}><Landmark className="h-4 w-4" />{accounts.length} {accounts.length > 1 ? 'comptes' : 'compte'}</Button>
-          <Button size="sm" className="h-10 rounded-full gap-1.5 px-4" onClick={openNewTx}><Plus className="h-4 w-4" />Transaction</Button>
+      {/* Barre d'outils : période à gauche (Mois / Année), actions à droite — fond carte pour rester lisible sur le noir */}
+      <div className="relative z-40 border-b border-border bg-card">
+        <div className="max-w-[1500px] mx-auto px-4 md:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3 min-h-10">
+            {tab === 'overview' && <>
+              <div className="inline-flex items-center gap-0.5 rounded-full border border-border bg-secondary px-0.5">
+                <button onClick={prev} aria-label="Période précédente" className="h-9 w-9 inline-flex items-center justify-center rounded-full text-foreground hover:bg-accent transition-colors"><ChevronLeft className="h-4 w-4" /></button>
+                <h1 className="text-base font-semibold capitalize min-w-[140px] text-center text-foreground">{overviewMode === 'month' ? monthLabel : cursor.getFullYear()}</h1>
+                <button onClick={next} aria-label="Période suivante" className="h-9 w-9 inline-flex items-center justify-center rounded-full text-foreground hover:bg-accent transition-colors"><ChevronRight className="h-4 w-4" /></button>
+              </div>
+              <Segmented<'month' | 'year'> value={overviewMode} onChange={setOverviewMode} options={[['month', 'Mois'], ['year', 'Année']]} />
+            </>}
+            {tab === 'accounts' && (
+              <Segmented<'list' | 'statements'> value={accountsView} onChange={(v) => { if (v === 'statements') setStatementsAccountId(undefined); setAccountsView(v); }} options={[['list', 'Mes comptes'], ['statements', 'Relevés & évolution']]} />
+            )}
+            {tab !== 'overview' && tab !== 'accounts' && (
+              <p className="text-sm text-muted-foreground">{TABS.find(([id]) => id === tab)?.[1]}</p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" className="h-10 rounded-full gap-1.5 px-4 bg-card" onClick={() => setTab('accounts')}><Landmark className="h-4 w-4" />{accounts.length} {accounts.length > 1 ? 'comptes' : 'compte'}</Button>
+            <Button size="sm" className="h-10 rounded-full gap-1.5 px-4" onClick={openNewTx}><Plus className="h-4 w-4" />Transaction</Button>
+          </div>
         </div>
       </div>
 
@@ -355,7 +360,7 @@ function TxRow({ t, accountName, onEdit, onDelete }: { t: FinanceTransaction; ac
       </div>
       <span className={`font-mono text-[13px] font-semibold shrink-0 ${income ? 'text-profit' : 'text-foreground'}`}>{income ? '+' : '-'}{eur(t.amount)}</span>
       {(onEdit || onDelete) && (
-        <div className="flex items-center gap-0.5 shrink-0 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+        <div className="flex items-center gap-0.5 shrink-0 md:opacity-100">
           {onEdit && <button onClick={() => onEdit(t)} className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors" aria-label="Modifier"><Pencil className="h-3.5 w-3.5" /></button>}
           {onDelete && <button onClick={() => onDelete(t)} className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-loss hover:bg-loss-soft transition-colors" aria-label="Supprimer"><X className="h-3.5 w-3.5" /></button>}
         </div>

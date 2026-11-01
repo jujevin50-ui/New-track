@@ -29,7 +29,7 @@ export const WAVE_PRESETS: { name: string; waveColor: string; amplitude: number;
 /** Voile équilibré : lisible partout (trading + invest) */
 const DEFAULT: WaveBgConfig = {
   waveColor: '#fb923c',
-  veil: 0.45,
+  veil: 0.72,
   amplitude: 3.2,
   swell: 40,
   enabled: true,
