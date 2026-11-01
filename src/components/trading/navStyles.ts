@@ -7,10 +7,10 @@ export const NAV_PILL =
   'pointer-events-auto flex items-center gap-0.5 h-[40px] px-1.5 rounded-full bg-card/95 border border-border/80 shadow-[var(--shadow-card)] backdrop-blur-sm max-w-full min-w-0';
 
 export const navItemClass = (active: boolean) =>
-  `flex items-center justify-center whitespace-nowrap px-2.5 2xl:px-4 h-8 rounded-full text-[12px] 2xl:text-[13px] font-medium transition-colors duration-150 ${
+  `flex items-center justify-center whitespace-nowrap px-2.5 2xl:px-4 h-8 rounded-full text-[12px] 2xl:text-[13px] font-medium transition-all duration-200 ${
     active
-      ? 'bg-accent text-accent-foreground font-semibold'
-      : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+      ? 'rb-active-pill bg-accent text-accent-foreground font-semibold'
+      : 'rb-glow-hover text-muted-foreground hover:text-foreground hover:bg-secondary'
   }`;
 
 /** Barre d'en-tête : sélecteur de modules à gauche, menu CENTRÉ, colonne symétrique à droite. */

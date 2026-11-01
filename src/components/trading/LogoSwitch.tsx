@@ -61,7 +61,7 @@ export function LogoSwitch({ floating = false, className = '' }: LogoSwitchProps
             onClick={() => {
               if (!active) navigate(path);
             }}
-            className={`h-8 w-8 inline-flex items-center justify-center rounded-full transition-all duration-150 ${
+            className={`rb-glow-hover h-8 w-8 inline-flex items-center justify-center rounded-full transition-all duration-200 ${
               active
                 ? 'bg-primary text-primary-foreground shadow-sm scale-105'
                 : 'text-muted-foreground hover:text-foreground hover:bg-secondary active:scale-95'

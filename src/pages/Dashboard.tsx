@@ -11,6 +11,7 @@ import ProfitPerTradeChart from '@/components/trading/ProfitPerTradeChart';
 import DrawdownChart from '@/components/trading/DrawdownChart';
 import PairPerformanceChart from '@/components/trading/PairPerformanceChart';
 import ProfitByMonthChart from '@/components/trading/ProfitByMonthChart';
+import { ChartCarousel } from '@/components/trading/ChartCarousel';
 import { useRiskTable } from '@/hooks/useRiskTable';
 import { useAccounts } from '@/hooks/useAccounts';
 import { TrendingUp, TrendingDown } from 'lucide-react';
@@ -162,7 +163,7 @@ function TradeCountSlider({ limits, value, onChange }: { limits: readonly TradeL
 
 function ChartCard({ title, children, className, action }: { title: string; children: React.ReactNode; className?: string; action?: React.ReactNode }) {
   return (
-    <div className={`flex flex-col rounded-2xl border border-border/60 bg-card/95 backdrop-blur-md p-5 shadow-[var(--shadow-card)] ${className ?? ''}`}>
+    <div className={`flex flex-col rb-lift rounded-2xl border border-border/60 bg-card/95 backdrop-blur-md p-5 shadow-[var(--shadow-card)] ${className ?? ''}`}>
       <div className="flex items-center justify-between mb-4 shrink-0">
         <span className="text-[15px] font-semibold text-foreground">{title}</span>
         {action}
@@ -174,7 +175,7 @@ function ChartCard({ title, children, className, action }: { title: string; chil
 
 function Panel({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-2xl border border-border/60 bg-card/95 backdrop-blur-md p-5 shadow-[var(--shadow-card)] ${className ?? ''}`}>
+    <div className={`rb-lift rounded-2xl border border-border/60 bg-card/95 backdrop-blur-md p-5 shadow-[var(--shadow-card)] ${className ?? ''}`}>
       {children}
     </div>
   );
@@ -669,7 +670,7 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
       {/* ══════════════════════════════════════════
           SECTION 1 — KPI cards (4 separate cards, reference layout)
       ══════════════════════════════════════════ */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
         <KpiCard
           label="Balance"
           prefix="$"
@@ -777,41 +778,42 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
       {/* ══════════════════════════════════════════
           SECTION 4 — Account equity curves ($ + %) grouped on one row
       ══════════════════════════════════════════ */}
-      <SectionLabel>Performance</SectionLabel>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ChartCard title="Equity Curve ($)">
-          <div className="h-[340px]">
-            <EquityCurveChart data={chartData.equityCurve} medianLineVisible accentColor={ACCENT.balance} />
-          </div>
-        </ChartCard>
-        <ChartCard title="Performance (%)">
-          <div className="h-[340px]">
-            <EquityCurvePercentChart data={chartData.equityCurvePercent} medianLineVisible accentColor={ACCENT.teal} />
-          </div>
-        </ChartCard>
-      </div>
-
-      {/* ══════════════════════════════════════════
-          Account charts — 2 per row
-      ══════════════════════════════════════════ */}
-      <SectionLabel>Trade Analysis</SectionLabel>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ChartCard title="Profit Per Trade">
-          <div className="h-[300px]"><ProfitPerTradeChart trades={trades} accounts={accounts} medianLineVisible /></div>
-        </ChartCard>
-        <ChartCard title="Drawdown">
-          <div className="h-[300px]"><DrawdownChart data={chartData.drawdownData} medianLineVisible accentColor={ACCENT.rose} /></div>
-        </ChartCard>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ChartCard title="Pair Performance">
-          <div className="h-[300px]"><PairPerformanceChart data={pairPerformancePercent} medianLineVisible accentColor={ACCENT.balance} /></div>
-        </ChartCard>
-        <ChartCard title="Profit by Month">
-          <div className="h-[300px]"><ProfitByMonthChart data={chartData.profitByMonth} medianLineVisible usePercent /></div>
-        </ChartCard>
-      </div>
+      <SectionLabel>Performance & Analysis</SectionLabel>
+      <ChartCarousel
+        height={380}
+        slides={[
+          {
+            id: 'equity-usd',
+            title: 'Equity Curve ($)',
+            content: <EquityCurveChart data={chartData.equityCurve} medianLineVisible accentColor={ACCENT.balance} />,
+          },
+          {
+            id: 'equity-pct',
+            title: 'Performance (%)',
+            content: <EquityCurvePercentChart data={chartData.equityCurvePercent} medianLineVisible accentColor={ACCENT.teal} />,
+          },
+          {
+            id: 'profit-trade',
+            title: 'Profit Per Trade',
+            content: <ProfitPerTradeChart trades={trades} accounts={accounts} medianLineVisible />,
+          },
+          {
+            id: 'drawdown',
+            title: 'Drawdown',
+            content: <DrawdownChart data={chartData.drawdownData} medianLineVisible accentColor={ACCENT.rose} />,
+          },
+          {
+            id: 'pair',
+            title: 'Pair Performance',
+            content: <PairPerformanceChart data={pairPerformancePercent} medianLineVisible accentColor={ACCENT.balance} />,
+          },
+          {
+            id: 'month',
+            title: 'Profit by Month',
+            content: <ProfitByMonthChart data={chartData.profitByMonth} medianLineVisible usePercent />,
+          },
+        ]}
+      />
       </>
       )}
 
@@ -821,7 +823,7 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
           GLOBAL VIEW — metrics only (no % charts)
       ══════════════════════════════════════════ */}
       <SectionLabel>Global Overview</SectionLabel>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 stagger-children">
         {[
           { label: 'Sum of Account %', value: `${sumAccountPct >= 0 ? '+' : ''}${sumAccountPct.toFixed(2)}%`,                              cls: sumAccountPct >= 0 ? 'text-profit' : 'text-loss' },
           { label: 'Win Rate',      value: `${globalSummary.winRate.toFixed(1)}%`,                                                          cls: globalSummary.winRate >= 50 ? 'text-profit' : 'text-loss' },

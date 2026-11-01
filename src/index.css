@@ -233,7 +233,10 @@
     border: 1px solid hsl(var(--border));
     border-radius: calc(var(--radius) + 0.35rem);
     box-shadow: var(--shadow-card);
-    transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+    transition: box-shadow 0.28s cubic-bezier(0.16,1,0.3,1), border-color 0.2s ease, transform 0.28s cubic-bezier(0.16,1,0.3,1);
+  }
+  .surface:hover {
+    box-shadow: var(--shadow-pop);
   }
   .surface-interactive:hover {
     box-shadow: var(--shadow-pop);
@@ -281,10 +284,11 @@
     -webkit-backdrop-filter: blur(10px);
     padding: 1rem;
     box-shadow: var(--shadow-card);
-    transition: box-shadow 0.2s ease;
+    transition: box-shadow 0.28s cubic-bezier(0.16,1,0.3,1), transform 0.28s cubic-bezier(0.16,1,0.3,1);
   }
   .metric-card:hover {
     box-shadow: var(--shadow-pop);
+    transform: translateY(-2px);
   }
 }
 
@@ -386,11 +390,118 @@
   animation: shimmer 4s linear infinite;
 }
 
+
+/* ── React Bits–inspired micro-interactions ───────────────────── */
+@keyframes rbSlideLeft {
+  from { opacity: 0; transform: translateX(18px); filter: blur(2px); }
+  to   { opacity: 1; transform: translateX(0); filter: blur(0); }
+}
+@keyframes rbSlideRight {
+  from { opacity: 0; transform: translateX(-18px); filter: blur(2px); }
+  to   { opacity: 1; transform: translateX(0); filter: blur(0); }
+}
+@keyframes rbBlurIn {
+  from { opacity: 0; filter: blur(8px); transform: scale(0.98); }
+  to   { opacity: 1; filter: blur(0); transform: scale(1); }
+}
+@keyframes rbFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+@keyframes rbBorderSpin {
+  to { --rb-angle: 360deg; }
+}
+@keyframes rbPulseSoft {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 0.9; }
+}
+
+.animate-rb-slide-left  { animation: rbSlideLeft  0.38s cubic-bezier(0.16,1,0.3,1) both; }
+.animate-rb-slide-right { animation: rbSlideRight 0.38s cubic-bezier(0.16,1,0.3,1) both; }
+.animate-rb-blur-in     { animation: rbBlurIn     0.45s cubic-bezier(0.16,1,0.3,1) both; }
+.animate-rb-float       { animation: rbFloat 4s ease-in-out infinite; }
+
+/* Stagger children entrance (React Bits style reveal) */
+.stagger-children > * {
+  animation: fadeInUp 0.42s cubic-bezier(0.16,1,0.3,1) both;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0.02s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.06s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.10s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.14s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.18s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.22s; }
+.stagger-children > *:nth-child(7) { animation-delay: 0.26s; }
+.stagger-children > *:nth-child(8) { animation-delay: 0.30s; }
+
+/* Lift on hover — soft 3D */
+.rb-lift {
+  transition: transform 0.28s cubic-bezier(0.16,1,0.3,1), box-shadow 0.28s ease, border-color 0.2s ease;
+}
+.rb-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-pop);
+}
+
+/* Spotlight border (rotating gradient edge) */
+.rb-border {
+  position: relative;
+  isolation: isolate;
+}
+.rb-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(from var(--rb-angle, 0deg), transparent 40%, hsl(var(--primary) / 0.7), transparent 60%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: rbBorderSpin 4s linear infinite;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.rb-border:hover::before { opacity: 1; }
+
+/* Soft glow under interactive pills */
+.rb-glow-hover {
+  transition: box-shadow 0.25s ease, transform 0.25s cubic-bezier(0.16,1,0.3,1), background-color 0.2s ease;
+}
+.rb-glow-hover:hover {
+  box-shadow: 0 0 0 1px hsl(var(--primary) / 0.25), 0 8px 24px -10px hsl(var(--primary) / 0.35);
+  transform: translateY(-1px);
+}
+
+/* Nav active pill indicator pulse */
+.rb-active-pill {
+  position: relative;
+}
+.rb-active-pill::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow: 0 0 0 1px hsl(var(--primary) / 0.35), 0 0 18px -4px hsl(var(--primary) / 0.45);
+  pointer-events: none;
+  animation: rbPulseSoft 2.4s ease-in-out infinite;
+}
+
+@property --rb-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-page-in, .animate-fade-in-up, .animate-fade-in, .animate-scale-in,
   .animate-glow-pulse, .animate-shimmer, .animate-slide-right, .animate-number-in,
   .animate-pop-in, .animate-bar-grow, .animate-gradient-x, .animate-ring-pulse,
-  .animate-flicker, .animate-welcome-slide, .animate-letter-in, .shine::before {
+  .animate-flicker, .animate-welcome-slide, .animate-letter-in, .shine::before,
+  .animate-rb-slide-left, .animate-rb-slide-right, .animate-rb-blur-in, .animate-rb-float,
+  .stagger-children > *, .rb-border::before {
     animation: none !important;
   }
 }

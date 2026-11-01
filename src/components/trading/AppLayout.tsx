@@ -89,7 +89,7 @@ export function AppLayout({ children, accounts, activeAccountId, onSelectAccount
       )}
 
       <div className="flex-1 flex flex-col min-w-0">
-        <main key={location.pathname} className="flex-1 overflow-auto px-4 md:px-6 pb-4 md:pb-6 pt-3 md:pt-4 animate-page-in">{children}</main>
+        <main key={location.pathname} className="flex-1 overflow-auto px-4 md:px-6 pb-4 md:pb-6 pt-3 md:pt-4 animate-rb-blur-in">{children}</main>
       </div>
     </div>
   );
