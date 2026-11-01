@@ -34,6 +34,7 @@ if (typeof window !== 'undefined') { const i = new Image(); i.src = '/logo-large
 const preload = (target: string) => {
   try {
     if (target === '/finance') return import('@/pages/Finance');
+    if (target === '/tasks') return import('@/pages/Tasks');
     if (target === '/') return import('@/pages/Dashboard');
   } catch { /* ignore */ }
   return Promise.resolve();

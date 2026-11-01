@@ -39,11 +39,11 @@ const emptyTx: FinanceTransaction = { id: '', date: todayStr(), description: '',
 
 export default function Finance() {
   const { data, addRow, updateRow, deleteRow } = useData();
-  const accounts = ((data as any).financeAccounts || []) as FinanceAccount[];
-  const transactions = ((data as any).financeTransactions || []) as FinanceTransaction[];
-  const subscriptions = ((data as any).financeSubscriptions || []) as FinanceSubscription[];
-  const transfers = ((data as any).financeTransfers || []) as FinanceTransfer[];
-  const statements = ((data as any).financeStatements || []) as FinanceStatement[];
+  const accounts = (Array.isArray((data as any)?.financeAccounts) ? (data as any).financeAccounts : []) as FinanceAccount[];
+  const transactions = (Array.isArray((data as any)?.financeTransactions) ? (data as any).financeTransactions : []) as FinanceTransaction[];
+  const subscriptions = (Array.isArray((data as any)?.financeSubscriptions) ? (data as any).financeSubscriptions : []) as FinanceSubscription[];
+  const transfers = (Array.isArray((data as any)?.financeTransfers) ? (data as any).financeTransfers : []) as FinanceTransfer[];
+  const statements = (Array.isArray((data as any)?.financeStatements) ? (data as any).financeStatements : []) as FinanceStatement[];
   const [accountsView, setAccountsView] = useState<'list' | 'statements'>('list');
   const [statementsAccountId, setStatementsAccountId] = useState<string | undefined>(undefined);
   const [tab, setTab] = useState<Tab>('overview');
@@ -183,7 +183,7 @@ export default function Finance() {
   const expenseTotal = categoryData.reduce((s, c) => s + c.value, 0);
 
   return (
-    <div className="min-h-screen text-foreground relative z-10">
+    <div className="min-h-screen bg-background text-foreground relative z-10 isolate">
       {/* Barre du haut : logo | menu CENTRÉ | colonne symétrique (aucun élément ne peut se superposer au menu) */}
       <header className={HEADER_BAR}>
         <div className={HEADER_GRID}>

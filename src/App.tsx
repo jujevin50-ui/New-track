@@ -82,16 +82,23 @@ const AppContent = () => {
   const navigate = useNavigate();
   const [routeRestored, setRouteRestored] = useState(false);
 
-  const allTrades: Trade[] = useMemo(() => (data.trades as any[]).map(t => ({
-    id: t.id, tradeNumber: t.tradeNumber, date: t.date, endDate: t.endDate, pair: t.pair, type: t.type,
-    result: Number(t.result), commission: Number(t.commission), swap: Number(t.swap), exitType: t.exitType,
-    setupQuality: t.setupQuality, strategyRespected: t.strategyRespected, screenshots: t.screenshots || [], notes: t.notes || "", accountId: t.accountId,
-  })), [data.trades]);
+  const allTrades: Trade[] = useMemo(() => {
+    const raw = Array.isArray(data?.trades) ? (data.trades as any[]) : [];
+    return raw.map(t => ({
+      id: t.id, tradeNumber: t.tradeNumber, date: t.date, endDate: t.endDate, pair: t.pair, type: t.type,
+      result: Number(t.result), commission: Number(t.commission), swap: Number(t.swap), exitType: t.exitType,
+      setupQuality: t.setupQuality, strategyRespected: t.strategyRespected, screenshots: t.screenshots || [], notes: t.notes || "", accountId: t.accountId,
+    }));
+  }, [data?.trades]);
 
   useEffect(() => {
     if (!routeRestored && status === "connected") {
       const last = localStorage.getItem("app-last-route");
-      if (last && last !== location.pathname) navigate(last, { replace: true });
+      // Ne restaure que des routes connues (évite de bloquer /finance /tasks)
+      const allowed = ["/", "/calendar", "/trades", "/reports", "/daily-report", "/ai-assistant", "/accounts", "/finance", "/tasks"];
+      if (last && last !== location.pathname && allowed.includes(last)) {
+        navigate(last, { replace: true });
+      }
       setRouteRestored(true);
     }
   }, [status]);
@@ -106,46 +113,42 @@ const AppContent = () => {
     initialBalance: accounts.reduce((s, a) => s + a.initialBalance, 0), payoutIntervalDays: 0, dailyDrawdownPct: 0, maxDrawdownPct: 0, riskPct: 1,
   } : null) : activeAccount;
 
-  if (location.pathname === '/finance') {
+  // Modules hors AppLayout trading — fond opaque + z-index pour rester au-dessus du fond animé
+  if (location.pathname === "/finance" || location.pathname === "/tasks") {
+    const Module = location.pathname === "/finance" ? Finance : Tasks;
     return (
-      <ErrorBoundary resetKey={location.pathname}>
-        <Suspense fallback={<PageLoader />}>
-          <Finance />
-        </Suspense>
-      </ErrorBoundary>
-    );
-  }
-
-  if (location.pathname === '/tasks') {
-    return (
-      <ErrorBoundary resetKey={location.pathname}>
-        <Suspense fallback={<PageLoader />}>
-          <Tasks />
-        </Suspense>
-      </ErrorBoundary>
+      <div className="relative z-10 min-h-screen bg-background text-foreground">
+        <ErrorBoundary resetKey={location.pathname}>
+          <Suspense fallback={<PageLoader />}>
+            <Module />
+          </Suspense>
+        </ErrorBoundary>
+      </div>
     );
   }
 
   return (
     <>
       {showSplash && <WelcomeSplash name={userName} onDone={() => setShowSplash(false)} />}
-      <AppLayout accounts={accounts} activeAccountId={activeAccountId} onSelectAccount={setActiveAccountId}>
-        <ErrorBoundary resetKey={location.pathname}>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              <Route path="/" element={<Dashboard activeAccount={displayAccount} accounts={accounts} />} />
-              <Route path="/calendar" element={<CalendarView activeAccount={displayAccount} accounts={accounts} />} />
-              <Route path="/trades" element={<Trades activeAccount={displayAccount} accounts={accounts} onAddAccount={addAccount} onUpdateAccount={updateAccount} />} />
-              <Route path="/reports" element={<Reports activeAccount={displayAccount} accounts={accounts} />} />
-              <Route path="/weekly-report" element={<Navigate to="/reports" replace />} />
-              <Route path="/daily-report" element={<DailyReport activeAccount={displayAccount} accounts={accounts} />} />
-              <Route path="/ai-assistant" element={<AiAssistant activeAccount={displayAccount} accounts={accounts} />} />
-              <Route path="/accounts" element={<Accounts accounts={accounts} activeAccountId={activeAccountId} onSelectAccount={setActiveAccountId} onAdd={addAccount} onUpdate={updateAccount} onDelete={deleteAccount} categories={categories} allTrades={allTrades} />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </ErrorBoundary>
-      </AppLayout>
+      <div className="relative z-10">
+        <AppLayout accounts={accounts} activeAccountId={activeAccountId} onSelectAccount={setActiveAccountId}>
+          <ErrorBoundary resetKey={location.pathname}>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/" element={<Dashboard activeAccount={displayAccount} accounts={accounts} />} />
+                <Route path="/calendar" element={<CalendarView activeAccount={displayAccount} accounts={accounts} />} />
+                <Route path="/trades" element={<Trades activeAccount={displayAccount} accounts={accounts} onAddAccount={addAccount} onUpdateAccount={updateAccount} />} />
+                <Route path="/reports" element={<Reports activeAccount={displayAccount} accounts={accounts} />} />
+                <Route path="/weekly-report" element={<Navigate to="/reports" replace />} />
+                <Route path="/daily-report" element={<DailyReport activeAccount={displayAccount} accounts={accounts} />} />
+                <Route path="/ai-assistant" element={<AiAssistant activeAccount={displayAccount} accounts={accounts} />} />
+                <Route path="/accounts" element={<Accounts accounts={accounts} activeAccountId={activeAccountId} onSelectAccount={setActiveAccountId} onAdd={addAccount} onUpdate={updateAccount} onDelete={deleteAccount} categories={categories} allTrades={allTrades} />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </ErrorBoundary>
+        </AppLayout>
+      </div>
     </>
   );
 };
