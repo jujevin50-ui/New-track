@@ -167,18 +167,59 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
     const total = last.holdings.reduce((s, h) => s + Number(h.value || 0), 0) || 1;
     return last.holdings
       .map(h => {
-        const before = prev?.holdings.find(p => norm(p.name) === norm(h.name));
+        const key = norm(h.name);
+        const before = prev?.holdings.find(p => norm(p.name) === key);
         const valueDelta = before ? Number(h.value) - Number(before.value) : null;
-        const priceDelta = before && before.unitPrice && h.unitPrice ? ((Number(h.unitPrice) - Number(before.unitPrice)) / Number(before.unitPrice)) * 100 : null;
-        return { ...h, share: (Number(h.value) / total) * 100, valueDelta, priceDelta, isNew: !!prev && !before };
+        const priceDelta = before && before.unitPrice != null && h.unitPrice != null && Number(before.unitPrice) !== 0
+          ? ((Number(h.unitPrice) - Number(before.unitPrice)) / Number(before.unitPrice)) * 100
+          : null;
+
+        // Performance globale depuis la 1re apparition de l'actif
+        const history = list
+          .map(s => {
+            const found = s.holdings.find(x => norm(x.name) === key);
+            if (!found) return null;
+            const value = Number(found.value);
+            if (!Number.isFinite(value)) return null;
+            const unitPrice = found.unitPrice != null ? Number(found.unitPrice) : null;
+            return { date: s.date, value, unitPrice: unitPrice != null && Number.isFinite(unitPrice) ? unitPrice : null };
+          })
+          .filter((x): x is { date: string; value: number; unitPrice: number | null } => x != null);
+
+        const first = history[0];
+        const globalDelta = first != null ? Number(h.value) - first.value : null;
+        const globalPct = first != null && first.value !== 0
+          ? ((Number(h.value) - first.value) / first.value) * 100
+          : null;
+        const firstPrice = history.find(x => x.unitPrice != null && x.unitPrice > 0)?.unitPrice ?? null;
+        const lastPrice = h.unitPrice != null ? Number(h.unitPrice) : null;
+        const globalPricePct = firstPrice != null && lastPrice != null && Number.isFinite(lastPrice) && firstPrice !== 0
+          ? ((lastPrice - firstPrice) / firstPrice) * 100
+          : null;
+        const sinceDate = first?.date ?? null;
+
+        return {
+          ...h,
+          share: (Number(h.value) / total) * 100,
+          valueDelta,
+          priceDelta,
+          isNew: !!prev && !before,
+          globalDelta,
+          globalPct,
+          globalPricePct,
+          sinceDate,
+        };
       })
       .sort((a, b) => Number(b.value) - Number(a.value));
-  }, [last, prev]);
+  }, [last, prev, list]);
 
   const assetEvolution = useMemo(() => {
     const names = new Map<string, string>();
-    list.forEach(s => s.holdings.forEach(h => { if (h.name.trim() && !names.has(norm(h.name))) names.set(norm(h.name), h.name.trim()); }));
+    list.forEach(s => s.holdings.forEach(h => {
+      if (h.name.trim() && !names.has(norm(h.name))) names.set(norm(h.name), h.name.trim());
+    }));
     const keys = [...names.entries()];
+
     const rows = list.map(s => {
       const row: Record<string, any> = { label: fmtShort(s.date) };
       keys.forEach(([k, display]) => {
@@ -187,7 +228,30 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
       });
       return row;
     });
-    return { names: keys.map(([, d]) => d), rows };
+
+    // Base 0 % = première valeur connue > 0 pour chaque actif
+    const bases = new Map<string, number>();
+    keys.forEach(([k, display]) => {
+      for (const s of list) {
+        const h = s.holdings.find(x => norm(x.name) === k);
+        if (h && Number(h.value) > 0) {
+          bases.set(display, Number(h.value));
+          break;
+        }
+      }
+    });
+
+    const rowsPct = list.map(s => {
+      const row: Record<string, any> = { label: fmtShort(s.date) };
+      keys.forEach(([k, display]) => {
+        const h = s.holdings.find(x => norm(x.name) === k);
+        const base = bases.get(display);
+        row[display] = h && base ? ((Number(h.value) - base) / base) * 100 : null;
+      });
+      return row;
+    });
+
+    return { names: keys.map(([, d]) => d), rows, rowsPct };
   }, [list]);
 
   /* ── Vue « Tous les comptes » ── */

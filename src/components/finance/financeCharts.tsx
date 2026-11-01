@@ -270,10 +270,12 @@ export function MultiLineChart({ rows, series, unit = 'eur' }: {
 }) {
   const uid = useId();
   const isPct = unit === 'pct';
+  const safeRows = rows || [];
   const { domain, ticks } = useMemo(
-    () => domainFor(rows.flatMap(r => series.map(s => (typeof r[s.key] === 'number' ? r[s.key] : NaN))), isPct, 0.1),
-    [rows, series, isPct],
+    () => domainFor(safeRows.flatMap(r => series.map(s => (typeof r[s.key] === 'number' ? r[s.key] : NaN))), isPct, 0.1),
+    [safeRows, series, isPct],
   );
+  if (!safeRows.length || !series.length) return <Empty text="Pas assez de données" />;
   const yFmt = isPct
     ? (v: number) => `${v > 0 ? '+' : ''}${Math.round(v)} %`
     : tickEur;
@@ -283,7 +285,7 @@ export function MultiLineChart({ rows, series, unit = 'eur' }: {
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <ComposedChart data={rows} margin={chartMargin}>
+      <ComposedChart data={safeRows} margin={chartMargin}>
         <defs><Glow id={`glow-${uid}`} /></defs>
         <CartesianGrid {...gridProps} />
         {isPct && <ReferenceLine y={0} {...zeroLine} />}
