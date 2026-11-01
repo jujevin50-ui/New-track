@@ -32,7 +32,7 @@ const DEFAULT: WaveBgConfig = {
   veil: 0.72,
   amplitude: 3.2,
   swell: 40,
-  enabled: true,
+  enabled: false,
 };
 
 function read(): WaveBgConfig {
@@ -84,7 +84,7 @@ export function useWaveBackground() {
       waveColor: p.waveColor,
       amplitude: p.amplitude,
       swell: p.swell,
-      enabled: true,
+      enabled: false,
     }));
   }, []);
 

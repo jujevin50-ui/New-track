@@ -113,14 +113,24 @@ const AppContent = () => {
     initialBalance: accounts.reduce((s, a) => s + a.initialBalance, 0), payoutIntervalDays: 0, dailyDrawdownPct: 0, maxDrawdownPct: 0, riskPct: 1,
   } : null) : activeAccount;
 
-  // Modules hors AppLayout trading — fond opaque + z-index pour rester au-dessus du fond animé
-  if (location.pathname === "/finance" || location.pathname === "/tasks") {
-    const Module = location.pathname === "/finance" ? Finance : Tasks;
+  if (location.pathname === "/finance") {
     return (
       <div className="relative z-10 min-h-screen bg-background text-foreground">
-        <ErrorBoundary resetKey={location.pathname}>
+        <ErrorBoundary resetKey="finance">
           <Suspense fallback={<PageLoader />}>
-            <Module />
+            <Finance />
+          </Suspense>
+        </ErrorBoundary>
+      </div>
+    );
+  }
+
+  if (location.pathname === "/tasks") {
+    return (
+      <div className="relative z-10 min-h-screen bg-background text-foreground">
+        <ErrorBoundary resetKey="tasks">
+          <Suspense fallback={<PageLoader />}>
+            <Tasks />
           </Suspense>
         </ErrorBoundary>
       </div>

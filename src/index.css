@@ -81,10 +81,10 @@
 
   .dark {
     /* Noir profond — plus de gris */
-    --background: 0 0% 0%;
+    --background: 0 0% 6%;
     --foreground: 0 0% 96%;
 
-    --card: 0 0% 9%;
+    --card: 0 0% 10%;
     --card-foreground: 0 0% 96%;
 
     --popover: 0 0% 10%;
@@ -149,9 +149,13 @@
     @apply border-border;
   }
 
+  html, body {
+    min-height: 100%;
+    background-color: hsl(var(--background));
+  }
+
   body {
-    @apply text-foreground antialiased;
-    background-color: transparent;
+    @apply bg-background text-foreground antialiased;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     font-feature-settings: 'cv11', 'ss01', 'tnum';
     letter-spacing: -0.013em;
@@ -159,16 +163,11 @@
     line-height: 1.55;
   }
 
-  /* Fond de secours si WebGL indisponible */
-  html, body {
-    background-color: transparent !important;
-    min-height: 100%;
-  }
-
   #root {
     position: relative;
     z-index: 1;
     min-height: 100vh;
+    background-color: hsl(var(--background));
   }
 
   h1 { font-size: 24px; font-weight: 650; letter-spacing: -0.03em; }
