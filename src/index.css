@@ -149,15 +149,18 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply text-foreground antialiased;
+    background-color: transparent;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     font-feature-settings: 'cv11', 'ss01', 'tnum';
     letter-spacing: -0.013em;
     font-size: 14px;
     line-height: 1.55;
-    /* Micro texture pour éviter le fond « flat commodity » */
-    background-image: radial-gradient(ellipse 120% 80% at 50% -20%, hsl(var(--primary) / 0.03), transparent 55%);
-    background-attachment: fixed;
+  }
+
+  /* Fond de secours si WebGL indisponible */
+  html {
+    background-color: hsl(var(--background));
   }
 
   h1 { font-size: 24px; font-weight: 650; letter-spacing: -0.03em; }
