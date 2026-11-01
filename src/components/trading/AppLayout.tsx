@@ -49,22 +49,22 @@ export function AppLayout({ children, accounts, activeAccountId, onSelectAccount
 
       {/* Filtres de comptes : descendus sous le menu, alignés à droite */}
       {accounts.length > 0 && (
-        <div className="relative z-40 px-4 md:px-6 pt-1 max-w-[1800px] w-full mx-auto flex justify-end">
-          <div className="flex items-center gap-1.5 h-12 px-2 rounded-full bg-card border border-border shadow-[var(--shadow-card)]">
-            <div className="hidden md:flex items-center gap-1">
+        <div className="relative z-40 px-3 md:px-5 pt-0.5 max-w-[1800px] w-full mx-auto flex justify-end">
+          <div className="flex items-center gap-1 h-9 px-1.5 rounded-full bg-card border border-border shadow-[var(--shadow-card)]">
+            <div className="hidden md:flex items-center gap-0.5">
               {FILTERS.filter(f => f.key === 'all' || accounts.some(a => a.status === f.key)).map(f => (
                 <button key={f.key} onClick={() => { setStatusFilter(f.key); setDropdownOpen(true); }}
-                  className={`h-8 px-3 text-xs font-medium rounded-full transition-colors flex items-center gap-1.5 ${statusFilter === f.key ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}>
+                  className={`h-7 px-2.5 text-[11px] font-medium rounded-full transition-colors flex items-center gap-1.5 ${statusFilter === f.key ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}>
                   {f.key !== 'all' && <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[f.key]}`} />}{f.label}
                 </button>
               ))}
             </div>
             <div className="relative" ref={wrapperRef}>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
                 <Input value={search} onChange={e => { setSearch(e.target.value); setDropdownOpen(true); }} onFocus={() => setDropdownOpen(true)}
                   placeholder={activeAccount ? activeAccount.name : 'All accounts'}
-                  className="h-9 w-[150px] 2xl:w-[220px] pl-9 text-xs bg-secondary border-transparent rounded-full" />
+                  className="h-7 w-[140px] 2xl:w-[200px] pl-8 text-[11px] bg-secondary border-transparent rounded-full" />
               </div>
               {dropdownOpen && (
                 <div className="absolute top-full mt-2 right-0 w-[300px] max-h-[320px] overflow-auto rounded-2xl border border-border bg-popover shadow-[var(--shadow-pop)] z-50 p-1">

@@ -52,14 +52,14 @@ export function TopNav() {
           ))}
         </div>
 
-        <div className="w-px h-5 bg-border mx-1 shrink-0" />
+        <div className="w-px h-4 bg-border mx-0.5 shrink-0" />
 
         <div className="flex items-center gap-0.5 shrink-0">
-          <button onClick={() => setSettingsOpen(true)} className="h-10 w-10 inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors" aria-label="Settings">
-            <Settings className="h-4 w-4" />
+          <button onClick={() => setSettingsOpen(true)} className="h-8 w-8 inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors" aria-label="Settings">
+            <Settings className="h-3.5 w-3.5" />
           </button>
-          <button onClick={disconnect} className="h-10 w-10 inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-loss hover:bg-loss-soft transition-colors" aria-label="Changer de fichier">
-            <LogOut className="h-4 w-4" />
+          <button onClick={disconnect} className="h-8 w-8 inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-loss hover:bg-loss-soft transition-colors" aria-label="Changer de fichier">
+            <LogOut className="h-3.5 w-3.5" />
           </button>
         </div>
       </nav>
