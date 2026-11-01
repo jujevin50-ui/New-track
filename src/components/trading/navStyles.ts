@@ -14,6 +14,6 @@ export const navItemClass = (active: boolean) =>
   }`;
 
 /** Barre d'en-tête : sélecteur de modules à gauche, menu CENTRÉ, colonne symétrique à droite. */
-export const HEADER_BAR = 'sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/40';
+export const HEADER_BAR = 'sticky top-0 z-50 bg-background/50 backdrop-blur-xl border-b border-border/30';
 export const HEADER_GRID =
   'grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 md:px-5 py-1.5 max-w-[1800px] mx-auto';

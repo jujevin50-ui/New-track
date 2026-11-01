@@ -37,7 +37,7 @@ export function AppLayout({ children, accounts, activeAccountId, onSelectAccount
   const handleSelect = (id: string) => { onSelectAccount(id); setSearch(''); setDropdownOpen(false); };
 
   return (
-    <div className="min-h-screen flex flex-col w-full">
+    <div className="min-h-screen flex flex-col w-full relative z-10">
       {/* Barre du haut : logo | menu centré | colonne vide symétrique → le menu ne peut plus chevaucher les filtres */}
       <header className={HEADER_BAR}>
         <div className={HEADER_GRID}>
