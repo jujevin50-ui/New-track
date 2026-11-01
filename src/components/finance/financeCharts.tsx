@@ -262,24 +262,34 @@ export function ValueAreaChart({ data, initialCapital }: {
 }
 
 /* ───────────── Courbes multiples (comptes / actifs) ───────────── */
-export function MultiLineChart({ rows, series }: {
+export function MultiLineChart({ rows, series, unit = 'eur' }: {
   rows: Record<string, any>[];
   series: { key: string; color: string; strong?: boolean }[];
+  /** 'eur' (défaut) ou 'pct' pour un axe / tooltips en pourcentage */
+  unit?: 'eur' | 'pct';
 }) {
   const uid = useId();
+  const isPct = unit === 'pct';
   const { domain, ticks } = useMemo(
-    () => domainFor(rows.flatMap(r => series.map(s => (typeof r[s.key] === 'number' ? r[s.key] : NaN))), false, 0.1),
-    [rows, series],
+    () => domainFor(rows.flatMap(r => series.map(s => (typeof r[s.key] === 'number' ? r[s.key] : NaN))), isPct, 0.1),
+    [rows, series, isPct],
   );
+  const yFmt = isPct
+    ? (v: number) => `${v > 0 ? '+' : ''}${Math.round(v)} %`
+    : tickEur;
+  const tipFmt = isPct
+    ? (v: number, name: string) => [`${v > 0 ? '+' : ''}${Number(v).toFixed(2)} %`, name]
+    : (v: number, name: string) => [fmtEur(v), name];
 
   return (
     <ResponsiveContainer width="100%" height="100%">
       <ComposedChart data={rows} margin={chartMargin}>
         <defs><Glow id={`glow-${uid}`} /></defs>
         <CartesianGrid {...gridProps} />
+        {isPct && <ReferenceLine y={0} {...zeroLine} />}
         <XAxis dataKey="label" {...xAxisProps} />
-        <YAxis domain={domain} ticks={ticks} {...yAxisProps} />
-        <Tooltip cursor={lineCursor} {...tooltipCommon} formatter={(v: number, name: string) => [fmtEur(v), name]} />
+        <YAxis domain={domain} ticks={ticks} {...yAxisProps} tickFormatter={yFmt} width={isPct ? 56 : 64} />
+        <Tooltip cursor={lineCursor} {...tooltipCommon} formatter={tipFmt as any} />
         <Legend wrapperStyle={legendStyle} iconType="circle" iconSize={8} />
         {series.map(s => (
           <Line key={s.key} type="monotone" dataKey={s.key} stroke={s.color} strokeWidth={s.strong ? 2.5 : 1.75}

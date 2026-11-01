@@ -474,20 +474,49 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
                   <Donut data={allocation.map(h => ({ name: h.name, value: Number(h.value) }))} centerLabel="Total" />
                 </div>
               </Box>
-              <Box title="Actifs au dernier relevé" subtitle={prev ? `Variation comparée au relevé du ${fmtDate(prev.date)}` : 'Ajoute un autre relevé pour voir les variations par actif'}>
+              <Box title="Actifs & performances" subtitle={prev ? `Dernier relevé · Δ vs ${fmtDate(prev.date)} · perf. globale depuis la 1re apparition` : 'Dernier relevé · ajoute un autre relevé pour les variations'}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
-                    <thead><tr className="text-muted-foreground border-b border-border"><th className="text-left py-2.5">Actif</th><th className="text-right">Quantité</th><th className="text-right">Prix</th><th className="text-right">Valeur</th><th className="text-right">%</th><th className="text-right">Δ valeur</th><th className="text-right">Δ prix</th></tr></thead>
+                    <thead>
+                      <tr className="text-muted-foreground border-b border-border">
+                        <th className="text-left py-2.5">Actif</th>
+                        <th className="text-right">Valeur</th>
+                        <th className="text-right">Poids</th>
+                        <th className="text-right">Δ relevé</th>
+                        <th className="text-right">Perf. globale</th>
+                        <th className="text-right">Perf. prix</th>
+                      </tr>
+                    </thead>
                     <tbody>
                       {allocation.map((h, i) => (
                         <tr key={h.id || i} className="border-b border-border/40">
-                          <td className="py-2.5"><span className="inline-block h-2 w-2 rounded-full mr-2" style={{ background: PALETTE[i % PALETTE.length] }} />{h.name}{h.isNew && <span className="ml-2 text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">nouveau</span>}</td>
-                          <td className="text-right font-mono text-muted-foreground">{h.quantity != null ? Number(h.quantity).toLocaleString('fr-FR', { maximumFractionDigits: 6 }) : '—'}</td>
-                          <td className="text-right font-mono text-muted-foreground">{h.unitPrice != null ? eur(Number(h.unitPrice)) : '—'}</td>
+                          <td className="py-2.5">
+                            <span className="inline-block h-2 w-2 rounded-full mr-2" style={{ background: PALETTE[i % PALETTE.length] }} />
+                            {h.name}
+                            {h.isNew && <span className="ml-2 text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">nouveau</span>}
+                            {h.sinceDate && <span className="block text-[10px] text-muted-foreground ml-4">depuis {fmtDate(h.sinceDate)}</span>}
+                          </td>
                           <td className="text-right font-mono">{eur(Number(h.value))}</td>
                           <td className="text-right text-muted-foreground">{h.share.toFixed(1)} %</td>
-                          <td className={`text-right font-mono ${tone(h.valueDelta ?? 0)}`}>{h.valueDelta == null ? '—' : signed(h.valueDelta)}</td>
-                          <td className={`text-right font-mono ${tone(h.priceDelta ?? 0)}`}>{h.priceDelta == null ? '—' : pct(h.priceDelta)}</td>
+                          <td className={`text-right font-mono ${tone(h.valueDelta ?? 0)}`}>
+                            {h.valueDelta == null ? '—' : (
+                              <>
+                                <span className="block">{signed(h.valueDelta)}</span>
+                                {h.priceDelta != null && <span className="block text-[10px] opacity-80">{pct(h.priceDelta)}</span>}
+                              </>
+                            )}
+                          </td>
+                          <td className={`text-right font-mono ${tone(h.globalPct ?? 0)}`}>
+                            {h.globalPct == null ? '—' : (
+                              <>
+                                <span className="block font-semibold">{pct(h.globalPct)}</span>
+                                {h.globalDelta != null && <span className="block text-[10px] opacity-80">{signed(h.globalDelta)}</span>}
+                              </>
+                            )}
+                          </td>
+                          <td className={`text-right font-mono ${tone(h.globalPricePct ?? 0)}`}>
+                            {h.globalPricePct == null ? '—' : pct(h.globalPricePct)}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -498,9 +527,13 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
           )}
 
           {assetEvolution.names.length > 0 && list.length > 1 && (
-            <Box title="Évolution par actif" subtitle="Valeur de chaque actif à chaque relevé">
-              <div className="h-[300px]">
-                <MultiLineChart rows={assetEvolution.rows} series={assetEvolution.names.map((n, i) => ({ key: n, color: PALETTE[i % PALETTE.length] }))} />
+            <Box title="Évolution des actifs en %" subtitle="Performance de chaque actif depuis sa 1re apparition (base 0 %)">
+              <div className="h-[320px]">
+                <MultiLineChart
+                  unit="pct"
+                  rows={assetEvolution.rowsPct}
+                  series={assetEvolution.names.map((n, i) => ({ key: n, color: PALETTE[i % PALETTE.length] }))}
+                />
               </div>
             </Box>
           )}
