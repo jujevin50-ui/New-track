@@ -8,72 +8,72 @@
   /* ── DA « Gris Design » : fond gris neutre, cartes claires, bordures subtiles,
         encre charcoal, accent slate, vert/rouge pour les variations. ── */
   :root {
-    --background: 220 14% 96%;
-    --foreground: 220 16% 12%;
+    /* Premium light: fond légèrement teinté, cartes pure white, accent intentionnel */
+    --background: 220 16% 97%;
+    --foreground: 222 22% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 16% 12%;
+    --card-foreground: 222 22% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 16% 12%;
+    --popover-foreground: 222 22% 10%;
 
-    --primary: 220 9% 46%;
+    /* Accent slate-indigo : plus intentionnel qu'un gris pure commodity */
+    --primary: 222 28% 32%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 12% 93%;
-    --secondary-foreground: 220 14% 22%;
+    --secondary: 220 14% 94%;
+    --secondary-foreground: 222 18% 20%;
 
-    --muted: 220 12% 93%;
-    --muted-foreground: 220 9% 46%;
+    --muted: 220 14% 94%;
+    --muted-foreground: 220 10% 42%;
 
-    --accent: 220 14% 94%;
-    --accent-foreground: 220 12% 28%;
+    --accent: 220 18% 95%;
+    --accent-foreground: 222 22% 18%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 12% 88%;
-    --input: 220 12% 86%;
-    --ring: 220 9% 46%;
+    --border: 220 14% 90%;
+    --input: 220 14% 88%;
+    --ring: 222 28% 32%;
 
-    --radius: 0.75rem;
+    --radius: 0.875rem;
 
-    /* Trading semantic colors */
-    --profit: 154 62% 33%;
+    /* Trading semantic colors — un cran plus saturés pour le ressenti premium */
+    --profit: 152 58% 32%;
     --profit-foreground: 0 0% 100%;
-    --loss: 357 74% 51%;
+    --loss: 357 72% 48%;
     --loss-foreground: 0 0% 100%;
-    --balance: 220 9% 46%;
-    --drawdown: 32 92% 46%;
-    --neutral: 220 9% 46%;
+    --balance: 222 14% 40%;
+    --drawdown: 32 90% 44%;
+    --neutral: 220 10% 42%;
 
-    /* Semantic soft backgrounds (pastilles de variation) */
-    --success-soft: 152 40% 94%;
-    --warning-soft: 42 80% 93%;
-    --danger-soft: 357 70% 95%;
+    --success-soft: 152 42% 95%;
+    --warning-soft: 42 78% 94%;
+    --danger-soft: 357 68% 96%;
 
-    /* Chart colors */
-    --chart-profit: 154 62% 38%;
-    --chart-loss: 357 74% 54%;
-    --chart-balance: 220 9% 46%;
-    --chart-drawdown: 32 92% 50%;
+    --chart-profit: 152 55% 36%;
+    --chart-loss: 357 72% 52%;
+    --chart-balance: 222 14% 40%;
+    --chart-drawdown: 32 90% 48%;
 
-    /* Ombres : très discrètes, la structure vient des bordures */
-    --shadow-card: 0 1px 2px hsl(220 16% 12% / 0.04);
-    --shadow-sm: 0 1px 2px hsl(220 16% 12% / 0.05);
-    --shadow-pop: 0 8px 30px -8px hsl(220 16% 12% / 0.12);
-    --shadow-glow-profit: none;
-    --shadow-glow-loss: none;
-    --shadow-glow-primary: none;
+    /* Ombres stratifiées : profondeur soft type Linear / Notion */
+    --shadow-card: 0 1px 2px hsl(222 22% 10% / 0.04), 0 4px 16px -4px hsl(222 22% 10% / 0.06);
+    --shadow-sm: 0 1px 2px hsl(222 22% 10% / 0.05);
+    --shadow-pop: 0 12px 40px -12px hsl(222 22% 10% / 0.16), 0 4px 12px -4px hsl(222 22% 10% / 0.06);
+    --shadow-glow-profit: 0 0 24px -4px hsl(152 58% 32% / 0.25);
+    --shadow-glow-loss: 0 0 24px -4px hsl(357 72% 48% / 0.2);
+    --shadow-glow-primary: 0 0 20px -4px hsl(222 28% 32% / 0.18);
 
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 220 16% 12%;
-    --sidebar-primary: 220 9% 46%;
+    --sidebar-foreground: 222 22% 10%;
+    --sidebar-primary: 222 28% 32%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 12% 93%;
-    --sidebar-accent-foreground: 220 16% 12%;
-    --sidebar-border: 220 12% 88%;
-    --sidebar-ring: 220 9% 46%;
+    --sidebar-accent: 220 14% 94%;
+    --sidebar-accent-foreground: 222 22% 10%;
+    --sidebar-border: 220 14% 90%;
+    --sidebar-ring: 222 28% 32%;
 
     --font-heading: 'Inter', system-ui, sans-serif;
     --font-mono: 'Inter', system-ui, sans-serif;
@@ -125,12 +125,12 @@
     --chart-balance: 220 10% 70%;
     --chart-drawdown: 32 92% 55%;
 
-    --shadow-card: none;
-    --shadow-sm: none;
-    --shadow-pop: 0 12px 40px -8px hsl(0 0% 0% / 0.55);
-    --shadow-glow-profit: none;
-    --shadow-glow-loss: none;
-    --shadow-glow-primary: none;
+    --shadow-card: 0 1px 0 hsl(0 0% 100% / 0.04), 0 4px 20px -6px hsl(0 0% 0% / 0.45);
+    --shadow-sm: 0 1px 0 hsl(0 0% 100% / 0.03);
+    --shadow-pop: 0 16px 48px -12px hsl(0 0% 0% / 0.6), 0 4px 12px -4px hsl(0 0% 0% / 0.3);
+    --shadow-glow-profit: 0 0 28px -4px hsl(152 55% 48% / 0.3);
+    --shadow-glow-loss: 0 0 28px -4px hsl(357 80% 62% / 0.25);
+    --shadow-glow-primary: 0 0 24px -4px hsl(220 10% 70% / 0.2);
 
     --sidebar-background: 220 12% 10%;
     --sidebar-foreground: 220 10% 78%;
@@ -152,14 +152,17 @@
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     font-feature-settings: 'cv11', 'ss01', 'tnum';
-    letter-spacing: -0.011em;
+    letter-spacing: -0.013em;
     font-size: 14px;
     line-height: 1.55;
+    /* Micro texture pour éviter le fond « flat commodity » */
+    background-image: radial-gradient(ellipse 120% 80% at 50% -20%, hsl(var(--primary) / 0.03), transparent 55%);
+    background-attachment: fixed;
   }
 
-  h1 { font-size: 24px; font-weight: 600; letter-spacing: -0.025em; }
-  h2 { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; }
-  h3 { font-size: 15px; font-weight: 600; letter-spacing: -0.015em; }
+  h1 { font-size: 24px; font-weight: 650; letter-spacing: -0.03em; }
+  h2 { font-size: 17px; font-weight: 600; letter-spacing: -0.022em; }
+  h3 { font-size: 14px; font-weight: 600; letter-spacing: -0.016em; }
 
   /* Les montants gardent la même largeur de chiffres (alignement des colonnes) */
   .font-mono { font-variant-numeric: tabular-nums; letter-spacing: -0.015em; }
@@ -211,15 +214,50 @@
     font-weight: 500;
     color: hsl(var(--muted-foreground));
   }
-  /* Surface Gris Design : carte claire, bordure fine, ombre quasi invisible */
+  /* Surface premium : profondeur soft, bordure fine, hover discret */
   .surface {
     background: hsl(var(--card));
     border: 1px solid hsl(var(--border));
-    border-radius: 1.25rem;
+    border-radius: calc(var(--radius) + 0.35rem);
     box-shadow: var(--shadow-card);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  }
+  .surface-interactive:hover {
+    box-shadow: var(--shadow-pop);
+    border-color: hsl(var(--border) / 0.9);
   }
   .bg-profit-soft { background-color: hsl(var(--success-soft)); }
   .bg-loss-soft { background-color: hsl(var(--danger-soft)); }
+
+  /* Conteneur page : rythme vertical cohérent */
+  .page-shell {
+    @apply w-full max-w-[1800px] mx-auto px-3 md:px-5 pb-8;
+  }
+  .page-stack {
+    @apply flex flex-col gap-4;
+  }
+
+  /* Empty state premium (service recovery / unglamorous gaps) */
+  .empty-state {
+    @apply flex flex-col items-center justify-center text-center gap-3 py-12 px-6;
+  }
+  .empty-state-icon {
+    @apply h-12 w-12 rounded-2xl bg-primary/8 border border-primary/15 flex items-center justify-center text-primary;
+  }
+  .empty-state-title {
+    @apply text-sm font-semibold tracking-tight;
+  }
+  .empty-state-desc {
+    @apply text-xs text-muted-foreground max-w-md leading-relaxed;
+  }
+
+  /* KPI / metric card */
+  .metric-card {
+    @apply rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-card)] transition-shadow duration-200;
+  }
+  .metric-card:hover {
+    box-shadow: var(--shadow-pop);
+  }
 }
 
 

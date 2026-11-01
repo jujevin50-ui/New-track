@@ -392,9 +392,9 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
       {accounts.length > 0 && !safeStatements.length && (
         <Box>
           <div className="py-10 flex flex-col items-center text-center gap-3">
-            <div className="h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center"><ClipboardList className="h-6 w-6 text-primary" /></div>
-            <p className="text-sm font-semibold">Aucun relevé pour l’instant</p>
-            <p className="text-xs text-muted-foreground max-w-md">Chaque mois, ajoute un relevé de ton assurance-vie ou de tes placements : la valeur totale, ou le détail par actif (quantité × prix). Tu verras ensuite l’évolution et la répartition.</p>
+            <div className="empty-state-icon"><ClipboardList className="h-5 w-5" /></div>
+            <p className="empty-state-title">Aucun relevé pour l’instant</p>
+            <p className="empty-state-desc">Chaque mois, ajoute un relevé de ton assurance-vie ou de tes placements : la valeur totale, ou le détail par actif (quantité × prix). Tu verras ensuite l’évolution et la répartition.</p>
             <Button size="sm" onClick={openNew}><Plus className="h-4 w-4 mr-1" />Ajouter mon premier relevé</Button>
           </div>
         </Box>
@@ -702,21 +702,33 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
 /* ───────────── Petits composants ───────────── */
 function Box({ title, subtitle, children }: { title?: string; subtitle?: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-      {title && <div className="mb-3"><h2 className="text-sm font-semibold">{title}</h2>{subtitle && <p className="text-[10px] text-muted-foreground mt-0.5">{subtitle}</p>}</div>}
+    <section className="surface p-4 md:p-5">
+      {title && (
+        <div className="mb-3.5">
+          <h2 className="text-[13px] font-semibold tracking-tight">{title}</h2>
+          {subtitle && <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{subtitle}</p>}
+        </div>
+      )}
       {children}
     </section>
   );
 }
 function Metric({ title, value, sub, toneClass, icon }: { title: string; value: string; sub?: string; toneClass?: string; icon?: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
-      <div className="flex items-center justify-between"><span className="text-[11px] text-muted-foreground">{title}</span>{icon && <span className={toneClass}>{icon}</span>}</div>
-      <p className={`font-mono text-lg font-bold mt-3 ${toneClass || ''}`}>{value}</p>
-      {sub && <p className="text-[10px] text-muted-foreground mt-1">{sub}</p>}
+    <div className="metric-card">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] font-medium text-muted-foreground tracking-tight">{title}</span>
+        {icon && <span className={`${toneClass || ''} opacity-80`}>{icon}</span>}
+      </div>
+      <p className={`font-mono text-[17px] font-semibold mt-2.5 tracking-tight ${toneClass || ''}`}>{value}</p>
+      {sub && <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">{sub}</p>}
     </div>
   );
 }
 function Empty({ text }: { text: string }) {
-  return <div className="min-h-[120px] flex items-center justify-center text-xs text-muted-foreground text-center">{text}</div>;
+  return (
+    <div className="empty-state min-h-[140px]">
+      <p className="empty-state-desc">{text}</p>
+    </div>
+  );
 }
