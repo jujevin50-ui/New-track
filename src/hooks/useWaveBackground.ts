@@ -29,7 +29,7 @@ export const WAVE_PRESETS: { name: string; waveColor: string; amplitude: number;
 /** Voile équilibré : lisible partout (trading + invest) */
 const DEFAULT: WaveBgConfig = {
   waveColor: '#fb923c',
-  veil: 0.62,
+  veil: 0.45,
   amplitude: 3.2,
   swell: 40,
   enabled: true,
@@ -61,7 +61,7 @@ export function useWaveBackground() {
   }, []);
 
   const setVeil = useCallback((veil: number) => {
-    setConfig(c => ({ ...c, veil: Math.min(0.9, Math.max(0.2, veil)) }));
+    setConfig(c => ({ ...c, veil: Math.min(0.85, Math.max(0.1, veil)) }));
   }, []);
 
   const setAmplitude = useCallback((amplitude: number) => {
