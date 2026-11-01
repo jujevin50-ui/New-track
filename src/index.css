@@ -226,7 +226,9 @@
   }
   /* Surface premium : profondeur soft, bordure fine, hover discret */
   .surface {
-    background: hsl(var(--card));
+    background: hsl(var(--card) / 0.92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border: 1px solid hsl(var(--border));
     border-radius: calc(var(--radius) + 0.35rem);
     box-shadow: var(--shadow-card);
@@ -271,7 +273,14 @@
 
   /* KPI / metric card */
   .metric-card {
-    @apply rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-card)] transition-shadow duration-200;
+    border-radius: 1rem;
+    border: 1px solid hsl(var(--border));
+    background: hsl(var(--card) / 0.92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 1rem;
+    box-shadow: var(--shadow-card);
+    transition: box-shadow 0.2s ease;
   }
   .metric-card:hover {
     box-shadow: var(--shadow-pop);

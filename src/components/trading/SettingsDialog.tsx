@@ -6,6 +6,7 @@ import { NavItem } from '@/hooks/useNavConfig';
 import { ThemeMode } from '@/hooks/useTheme';
 import { useEventColors } from '@/hooks/useEventColors';
 import { PRESET_COLORS } from '@/hooks/useDashboardConfig';
+import { useWaveBackground } from '@/hooks/useWaveBackground';
 
 interface Preset { name: string; hue: number; sat: number; light: number; }
 
@@ -149,6 +150,15 @@ export function SettingsDialog({
   navItems, onToggleNav, onReorderNav, onAddSeparator, onRemoveSeparator,
   mode, onToggleMode, userName, onSetUserName, onOpenCsvImport, onOpenNotionImport,
 }: SettingsDialogProps) {
+  const {
+    config: waveCfg,
+    presets: wavePresets,
+    setWaveColor,
+    setVeil,
+    setEnabled,
+    applyPreset,
+  } = useWaveBackground();
+
   const [nameInput, setNameInput] = useState(userName);
   const { colors: evtColors, setEventColor } = useEventColors();
 
@@ -240,6 +250,90 @@ export function SettingsDialog({
               <p className="text-xs font-medium">Active Color</p>
               <p className="text-[10px] text-muted-foreground font-mono">hsl({theme.primaryHue}, {theme.primarySat}%, {theme.primaryLight}%)</p>
             </div>
+          </div>
+
+
+          {/* Fond animé (Gradient Waves) */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-muted-foreground font-medium">Fond animé</p>
+              <button
+                type="button"
+                onClick={() => setEnabled(!waveCfg.enabled)}
+                className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${
+                  waveCfg.enabled
+                    ? 'bg-primary/15 text-primary border-primary/30'
+                    : 'bg-secondary/50 text-muted-foreground border-border'
+                }`}
+              >
+                {waveCfg.enabled ? 'Activé' : 'Désactivé'}
+              </button>
+            </div>
+
+            {waveCfg.enabled && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-4 gap-2">
+                  {wavePresets.map(p => {
+                    const active = p.waveColor.toLowerCase() === waveCfg.waveColor.toLowerCase();
+                    return (
+                      <button
+                        key={p.name}
+                        type="button"
+                        onClick={() => applyPreset(p.name)}
+                        className="flex flex-col items-center gap-1.5"
+                        title={p.name}
+                      >
+                        <div
+                          className={`h-9 w-9 rounded-full transition-all ${
+                            active
+                              ? 'ring-2 ring-foreground ring-offset-2 ring-offset-card scale-110'
+                              : 'hover:scale-105'
+                          }`}
+                          style={{ backgroundColor: p.waveColor }}
+                        />
+                        <span className={`text-[9px] ${active ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                          {p.name}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-[11px] text-muted-foreground">Couleur libre</p>
+                    <span className="text-[10px] font-mono text-muted-foreground">{waveCfg.waveColor}</span>
+                  </div>
+                  <input
+                    type="color"
+                    value={waveCfg.waveColor}
+                    onChange={e => setWaveColor(e.target.value)}
+                    className="w-full h-9 rounded-lg border border-border cursor-pointer bg-transparent"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-[11px] text-muted-foreground">Transparence du voile</p>
+                    <span className="text-[10px] font-mono text-muted-foreground">
+                      {Math.round(waveCfg.veil * 100)}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={20}
+                    max={85}
+                    value={Math.round(waveCfg.veil * 100)}
+                    onChange={e => setVeil(Number(e.target.value) / 100)}
+                    className="w-full h-2 rounded-full appearance-none cursor-pointer bg-secondary"
+                  />
+                  <div className="flex justify-between text-[9px] text-muted-foreground mt-1">
+                    <span>Vagues visibles</span>
+                    <span>Lecture prioritaire</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* CSV Import */}

@@ -1,20 +1,27 @@
 import GradientWaves from '@/components/GradientWaves';
+import { useWaveBackground } from '@/hooks/useWaveBackground';
 
 /**
- * Fond animé type React Bits « Gradient Waves » (preset Dune).
- * fixed + z-0 : visible sous le contenu (ne pas utiliser -z-10, sinon
- * le background de html/body le masque).
+ * Fond animé React Bits « Gradient Waves ».
+ * Couleurs / intensité pilotés par useWaveBackground (réglages).
+ * Voile unique et équilibré pour trading + invest.
  */
 export function AppBackground() {
+  const { config } = useWaveBackground();
+
+  if (!config.enabled) return null;
+
+  const veil = config.veil;
+
   return (
     <div
       aria-hidden
       className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
     >
       <GradientWaves
-        waveColor="#fb923c"
-        amplitude={3.2}
-        swell={40}
+        waveColor={config.waveColor}
+        amplitude={config.amplitude}
+        swell={config.swell}
         lightAngle={60}
         speed={0.2}
         quality="medium"
@@ -23,12 +30,11 @@ export function AppBackground() {
         className="h-full w-full"
         style={{ width: '100%', height: '100%', minHeight: '100vh' }}
       />
-      {/* Voile très léger uniquement pour ne pas brûler le texte */}
+      {/* Voile uniforme — même opacité partout pour une lecture stable */}
       <div
         className="absolute inset-0"
         style={{
-          background:
-            'linear-gradient(180deg, hsl(var(--background) / 0.25) 0%, hsl(var(--background) / 0.35) 50%, hsl(var(--background) / 0.45) 100%)',
+          background: `hsl(var(--background) / ${veil})`,
         }}
       />
     </div>
