@@ -2,7 +2,7 @@ import { Component, useMemo, type ReactNode } from 'react';
 import GradientWaves from '@/components/GradientWaves';
 import { useWaveBackground } from '@/hooks/useWaveBackground';
 
-/** Catch WebGL / render errors so the rest of the app still works. */
+/** Catch WebGL errors so the app keeps working. */
 class BgErrorBoundary extends Component<{ children: ReactNode }, { ok: boolean }> {
   state = { ok: true };
   static getDerivedStateFromError() {
@@ -43,10 +43,13 @@ function WavesInner() {
     };
   }, [config.waveColor]);
 
+  // Voile: assez fort pour lire le contenu, assez faible pour voir la couleur
+  const veilOpacity = Math.min(0.78, Math.max(0.35, config.veil));
+
   return (
     <div
       aria-hidden
-      className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
+      className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
       style={{ backgroundColor: colors.background }}
     >
       <GradientWaves
@@ -57,8 +60,8 @@ function WavesInner() {
         amplitude={config.amplitude}
         swell={config.swell}
         lightAngle={60}
-        speed={0.2}
-        quality="low"
+        speed={0.18}
+        quality="medium"
         mouseInteraction={false}
         swellOnClick={false}
         className="h-full w-full"
@@ -66,15 +69,16 @@ function WavesInner() {
       />
       <div
         className="absolute inset-0"
-        style={{
-          background: `hsl(var(--background) / ${Math.min(0.85, Math.max(0.45, config.veil))})`,
-        }}
+        style={{ background: `hsl(var(--background) / ${veilOpacity})` }}
       />
     </div>
   );
 }
 
-/** Fond animé optionnel — désactivé par défaut (réglages → Fond animé). */
+/**
+ * Fond animé global (Track Record, Finance, Tasks).
+ * Désactivable dans Paramètres → Fond animé.
+ */
 export function AppBackground() {
   const { config } = useWaveBackground();
   if (!config.enabled) return null;

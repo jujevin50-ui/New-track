@@ -183,7 +183,7 @@ export default function Finance() {
   const expenseTotal = categoryData.reduce((s, c) => s + c.value, 0);
 
   return (
-    <div className="min-h-screen bg-background text-foreground relative z-10 isolate">
+    <div className="min-h-screen text-foreground relative z-10">
       {/* Barre du haut : logo | menu CENTRÉ | colonne symétrique (aucun élément ne peut se superposer au menu) */}
       <header className={HEADER_BAR}>
         <div className={HEADER_GRID}>

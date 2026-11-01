@@ -312,7 +312,7 @@ export default function Tasks() {
   const listColor = (id: string) => lists.find(l => l.id === id)?.color || '#94a3b8';
 
   return (
-    <div className="min-h-screen flex flex-col w-full relative z-10 isolate bg-background text-foreground">
+    <div className="min-h-screen flex flex-col w-full relative z-10 text-foreground">
       <header className={HEADER_BAR}>
         <div className={HEADER_GRID}>
           <LogoSwitch className="pointer-events-auto shrink-0" />

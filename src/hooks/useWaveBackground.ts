@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 
-const KEY = 'trading-journal-wave-bg';
+const KEY = 'trading-journal-wave-bg-v4';
 
 export interface WaveBgConfig {
   /** Couleur principale des vagues (hex) */
@@ -26,22 +26,22 @@ export const WAVE_PRESETS: { name: string; waveColor: string; amplitude: number;
   { name: 'Forest', waveColor: '#22c55e', amplitude: 2.0, swell: 28 },
 ];
 
-/** Voile équilibré : lisible partout (trading + invest) */
+/** Voile équilibré : lisible sur Trading, Finance et Tasks */
 const DEFAULT: WaveBgConfig = {
   waveColor: '#fb923c',
-  veil: 0.72,
+  veil: 0.58,
   amplitude: 3.2,
   swell: 40,
-  enabled: false,
+  enabled: true,
 };
 
 function read(): WaveBgConfig {
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return DEFAULT;
+    if (!raw) return { ...DEFAULT };
     return { ...DEFAULT, ...JSON.parse(raw) };
   } catch {
-    return DEFAULT;
+    return { ...DEFAULT };
   }
 }
 
@@ -50,7 +50,6 @@ export function useWaveBackground() {
 
   useEffect(() => {
     localStorage.setItem(KEY, JSON.stringify(config));
-    // CSS vars for any consumer
     const root = document.documentElement;
     root.style.setProperty('--wave-veil', String(config.veil));
     root.style.setProperty('--wave-color', config.waveColor);
@@ -84,7 +83,7 @@ export function useWaveBackground() {
       waveColor: p.waveColor,
       amplitude: p.amplitude,
       swell: p.swell,
-      enabled: false,
+      enabled: true,
     }));
   }, []);
 

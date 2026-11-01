@@ -115,7 +115,7 @@ const AppContent = () => {
 
   if (location.pathname === "/finance") {
     return (
-      <div className="relative z-10 min-h-screen bg-background text-foreground">
+      <div className="relative z-10 min-h-screen text-foreground">
         <ErrorBoundary resetKey="finance">
           <Suspense fallback={<PageLoader />}>
             <Finance />
@@ -127,7 +127,7 @@ const AppContent = () => {
 
   if (location.pathname === "/tasks") {
     return (
-      <div className="relative z-10 min-h-screen bg-background text-foreground">
+      <div className="relative z-10 min-h-screen text-foreground">
         <ErrorBoundary resetKey="tasks">
           <Suspense fallback={<PageLoader />}>
             <Tasks />
