@@ -202,7 +202,7 @@ export default function Finance() {
       </header>
 
       {/* Barre d'outils : période à gauche (Mois / Année), actions à droite — fond carte pour rester lisible sur le noir */}
-      <div className="relative z-40 border-b border-border bg-card">
+      <div className="relative z-40">
         <div className="max-w-[1500px] mx-auto px-4 md:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3 min-h-10">
             {tab === 'overview' && <>
