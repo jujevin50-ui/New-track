@@ -594,7 +594,7 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
   }
 
   return (
-    <div className="w-full space-y-5 pb-10">
+    <div className="w-full max-w-[1600px] mx-auto space-y-5 pb-10">
 
       {/* ── Account chips ── */}
       <div className="rounded-xl border border-border/60 bg-card/95 backdrop-blur-md p-3">

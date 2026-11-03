@@ -17,4 +17,4 @@ export const navItemClass = (active: boolean) =>
 /** Plus de fond ni de trait de séparation : les pilules flottent sur le fond de l'app. */
 export const HEADER_BAR = 'sticky top-0 z-50 pointer-events-none';
 export const HEADER_GRID =
-  'grid grid-cols-1 md:grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 md:px-5 py-2 max-w-[1800px] mx-auto';
+  'app-header-grid grid items-center gap-3 px-3 md:px-5 py-3 max-w-[1800px] mx-auto';
