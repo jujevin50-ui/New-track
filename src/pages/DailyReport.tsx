@@ -131,9 +131,7 @@ const DailyReport = ({ activeAccount }: DailyReportProps) => {
     <div className="w-full max-w-5xl mx-auto space-y-4 animate-page-in">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">Journal</p>
           <h1 className="text-2xl font-bold tracking-tight">Bilan journalier</h1>
-          <p className="text-sm text-muted-foreground mt-1">Suivi quotidien de ta stratégie, de ta discipline et de ton résultat.</p>
         </div>
         <CalendarDays className="h-5 w-5 text-muted-foreground" />
       </div>

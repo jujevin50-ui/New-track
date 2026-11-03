@@ -725,13 +725,19 @@ html [role="alertdialog"].bg-card {
 .module-tab-label > span::before { content: ''; display: inline-block; width: 7px; }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  html .bg-card, html .surface, html .metric-card, .rb-liquid {
+  html .bg-card, html .surface, html .metric-card, html [role="dialog"].trade-editor, .rb-liquid {
     background-color: hsl(var(--card));
   }
 }
 
+
+/* Le formulaire conserve un fond lisible au-dessus des graphiques et des vagues. */
+html [role="dialog"].trade-editor {
+  background-color: hsl(var(--card) / 0.96);
+}
+
 @media (prefers-reduced-transparency: reduce) {
-  html .bg-card, html .surface, html .metric-card, .rb-liquid {
+  html .bg-card, html .surface, html .metric-card, html [role="dialog"].trade-editor, .rb-liquid {
     background-color: hsl(var(--card));
     background-image: none;
     -webkit-backdrop-filter: none;

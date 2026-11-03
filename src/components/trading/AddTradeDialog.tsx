@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useId, useRef } from 'react';
 import { Trade, TradeFormData, PAIRS, EXIT_TYPES, ExitType, SetupQuality } from '@/types/trade';
 import { Account } from '@/types/account';
 import { useAiSettings } from '@/hooks/useAiSettings';
@@ -9,16 +9,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Star, Clipboard, X, Image as ImageIcon, Check, ChevronsUpDown, Sparkles, Loader2 } from 'lucide-react';
+import { Star, Clipboard, X, ImagePlus, Check, ChevronsUpDown, Sparkles, Loader2, ArrowUpRight, ArrowDownRight, ChevronDown } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Switch } from '@/components/ui/switch';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 
-const PairCombobox = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => {
+const PairCombobox = ({ id, value, onChange }: { id: string; value: string; onChange: (v: string) => void }) => {
   const [open, setOpen] = useState(false);
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" role="combobox" className="w-full justify-between bg-secondary border-border font-mono text-sm font-normal">
+        <Button id={id} type="button" variant="outline" role="combobox" aria-expanded={open} className="h-11 w-full justify-between rounded-xl bg-secondary/50 border-border/60 font-mono text-sm font-medium">
           {value || 'Choisir...'}<ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -48,11 +49,10 @@ const PairCombobox = ({ value, onChange }: { value: string; onChange: (v: string
 interface AddTradeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: TradeFormData) => void;
+  onSubmit: (data: TradeFormData) => void | Promise<void>;
   editTrade?: Trade | null;
   accounts: Account[];
   activeAccountId: string | null;
-  asPanel?: boolean;
 }
 
 type AiTrade = Partial<TradeFormData> & { pair?: string; type?: 'Buy' | 'Sell' };
@@ -126,9 +126,16 @@ const normalizeAiTrade = (raw: AiTrade, accountId: string): TradeFormData => {
   };
 };
 
-const AddTradeDialog = ({ open, onOpenChange, onSubmit, editTrade, accounts, activeAccountId, asPanel }: AddTradeDialogProps) => {
+const AddTradeDialog = ({ open, onOpenChange, onSubmit, editTrade, accounts, activeAccountId }: AddTradeDialogProps) => {
   const { apiKey } = useAiSettings();
-  const [form, setForm] = useState<TradeFormData>(makeDefaultForm(activeAccountId || ''));
+  const fieldId = useId();
+  const imageInput = useRef<HTMLInputElement>(null);
+  const defaultAccountId = accounts.find(a => a.id === activeAccountId)?.id || accounts[0]?.id || '';
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [imageError, setImageError] = useState('');
+  const [feesOpen, setFeesOpen] = useState(false);
+  const [form, setForm] = useState<TradeFormData>(makeDefaultForm(defaultAccountId));
   const [resultText, setResultText] = useState('');
   const [commissionText, setCommissionText] = useState('');
   const [swapText, setSwapText] = useState('');
@@ -143,24 +150,32 @@ const AddTradeDialog = ({ open, onOpenChange, onSubmit, editTrade, accounts, act
   const fmtNum = (n: number) => n === 0 ? '' : String(n);
 
   useEffect(() => {
+    if (!open) return;
+    setFormError('');
+    setImageError('');
     if (editTrade) {
       const { id, tradeNumber, ...rest } = editTrade;
       const screenshots = rest.screenshots?.length ? rest.screenshots : rest.screenshot ? [rest.screenshot] : [];
-      setForm({ ...rest, screenshots });
-      setResultText(fmtNum(rest.result));
-      setCommissionText(fmtNum(rest.commission));
+      setForm({ ...rest, commission: Math.abs(rest.commission || 0), screenshot: undefined, screenshots });
+      setResultText(String(rest.result));
+      setFeesOpen(Boolean(rest.commission || rest.swap));
+      setCommissionText(fmtNum(Math.abs(rest.commission || 0)));
       setSwapText(fmtNum(rest.swap));
       setRiskText(fmtNum(rest.riskPercent || 0));
     } else {
-      setForm(makeDefaultForm(activeAccountId || ''));
+      setForm(makeDefaultForm(defaultAccountId));
+      setFeesOpen(false);
       setResultText('');
       setCommissionText('');
       setSwapText('');
       setRiskText('');
     }
-  }, [editTrade, open, activeAccountId]);
+  }, [editTrade, open, defaultAccountId]);
 
-  const set = (field: keyof TradeFormData, value: any) => setForm(prev => ({ ...prev, [field]: value }));
+  const set = <K extends keyof TradeFormData>(field: K, value: TradeFormData[K]) => {
+    setFormError('');
+    setForm(prev => ({ ...prev, [field]: value }));
+  };
 
   const decimalHandler = (
     field: 'result' | 'commission' | 'swap' | 'riskPercent',
@@ -212,7 +227,13 @@ const AddTradeDialog = ({ open, onOpenChange, onSubmit, editTrade, accounts, act
   }, []);
 
   const net = form.result - Math.abs(form.commission || 0) + (form.swap || 0);
-  const balance = accounts.find(a => a.id === form.accountId)?.initialBalance || 0;
+  const selectedAccount = accounts.find(a => a.id === form.accountId);
+  const balance = selectedAccount?.initialBalance || 0;
+  const currency = selectedAccount?.currency || 'USD';
+  const money = (value: number) => new Intl.NumberFormat('fr-FR', {
+    style: 'currency', currency: /^[A-Z]{3}$/.test(currency) ? currency : 'USD',
+    minimumFractionDigits: 2, maximumFractionDigits: 2,
+  }).format(Object.is(value, -0) ? 0 : value);
   const rValue = form.riskPercent && form.riskPercent > 0 && balance > 0
     ? net / (balance * (form.riskPercent / 100))
     : null;
@@ -269,7 +290,7 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
       const rows = Array.isArray(parsed) ? parsed : parsed.trades;
       if (!Array.isArray(rows)) throw new Error('Format de réponse IA invalide.');
 
-      const trades = rows.map((row: AiTrade) => normalizeAiTrade(row, activeAccountId || ''));
+      const trades = rows.map((row: AiTrade) => normalizeAiTrade(row, form.accountId));
       if (!trades.length) throw new Error('Aucun trade détecté.');
       setAiTrades(trades);
     } catch (error) {
@@ -279,10 +300,18 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
     }
   };
 
-  const importAiTrades = () => {
-    aiTrades.forEach(trade => onSubmit(trade));
-    setAiOpen(false);
-    resetAi();
+  const importAiTrades = async () => {
+    setAiLoading(true);
+    try {
+      for (const trade of aiTrades) await onSubmit(trade);
+      setAiOpen(false);
+      resetAi();
+      onOpenChange(false);
+    } catch (error) {
+      setAiError(error instanceof Error ? error.message : 'Impossible d’importer les trades.');
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const aiDialog = (
@@ -295,17 +324,13 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="rounded-lg border border-border bg-secondary/40 p-4 text-xs text-muted-foreground">
-            <b>Ctrl + V</b> pour coller chaque screenshot. Toutes les images sont analysées ensemble dans une seule requête Gemini.
-          </div>
-
           <div
             tabIndex={0}
             className="flex min-h-28 flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border bg-secondary/40 px-6 py-5 text-center outline-none hover:bg-secondary/70 focus:border-primary/60"
           >
             <Clipboard className="h-6 w-6 text-muted-foreground" />
             <div className="text-sm font-medium">Colle tes screenshots ici</div>
-            <div className="text-xs text-muted-foreground">Fais une capture → Ctrl + C → Ctrl + V. Répète pour chaque trade.</div>
+            <kbd className="text-xs text-muted-foreground">Ctrl + V</kbd>
             <span className="text-xs font-medium text-primary">{aiFiles.length} capture(s) prête(s)</span>
           </div>
 
@@ -369,61 +394,158 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
     </Dialog>
   );
 
-  const formBody = (
-    <form onSubmit={e => { e.preventDefault(); onSubmit(form); onOpenChange(false); }} className="flex gap-6 h-full" onPaste={handlePasteEvent}>
-      <div className="w-[340px] shrink-0 space-y-3">
-        <div className="grid grid-cols-2 gap-3">
-          <div><Label className="text-xs text-muted-foreground">Start Date</Label><Input type="date" value={form.date} onChange={e => set('date', e.target.value)} className="font-mono text-sm bg-secondary border-border" /></div>
-          <div><Label className="text-xs text-muted-foreground">End Date</Label><Input type="date" value={form.endDate || ''} onChange={e => set('endDate', e.target.value)} className="font-mono text-sm bg-secondary border-border" /></div>
-        </div>
+  const addFiles = async (files: FileList | null) => {
+    if (!files?.length) return;
+    setImageError('');
+    const images = Array.from(files).filter(file => file.type.startsWith('image/'));
+    if (images.length !== files.length) setImageError('Choisissez des fichiers image.');
+    try {
+      const urls = await Promise.all(images.map(fileToDataUrl));
+      setForm(prev => ({ ...prev, screenshots: [...(prev.screenshots || []), ...urls] }));
+    } catch {
+      setImageError('Impossible de lire cette image.');
+    }
+  };
 
-        <div className="grid grid-cols-2 gap-3">
-          <div><Label className="text-xs text-muted-foreground">Pair</Label><PairCombobox value={form.pair} onChange={v => set('pair', v)} /></div>
-          <div><Label className="text-xs text-muted-foreground">Account</Label><Select value={form.accountId} onValueChange={v => set('accountId', v)}><SelectTrigger className="bg-secondary border-border"><SelectValue /></SelectTrigger><SelectContent>{accounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div>
-        </div>
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (saving) return;
+    if (!selectedAccount) { setFormError('Sélectionnez un compte.'); return; }
+    if (form.endDate && form.endDate < form.date) { setFormError('La clôture doit suivre la date d’ouverture.'); return; }
+    if ((form.riskPercent || 0) > 100) { setFormError('Le risque ne peut pas dépasser 100 %.'); return; }
+    if (![form.result, form.commission, form.swap, form.riskPercent || 0].every(Number.isFinite)) {
+      setFormError('Vérifiez les montants saisis.'); return;
+    }
+    setFormError('');
+    setSaving(true);
+    try {
+      await onSubmit(form);
+      onOpenChange(false);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'Impossible d’enregistrer le trade.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
-        <div><Label className="text-xs text-muted-foreground">Direction</Label><div className="flex gap-2 mt-1.5">{(['Buy','Sell'] as const).map(v => <button key={v} type="button" onClick={() => set('type',v)} className={`flex-1 px-4 py-1.5 rounded-md border text-xs font-medium ${form.type===v ? v==='Buy'?'bg-profit/15 border-profit/50 text-profit':'bg-loss/15 border-loss/50 text-loss':'bg-secondary border-border text-muted-foreground'}`}>{v==='Buy'?'↑ Long':'↓ Short'}</button>)}</div></div>
+  const inputClass = 'h-11 rounded-xl bg-secondary/50 border-border/60 font-mono text-sm';
+  const screenshots = form.screenshots || [];
+  const signedDecimal = '-?[0-9]+([.,][0-9]+)?';
+  const decimal = '[0-9]+([.,][0-9]+)?';
 
-        <div className="grid grid-cols-3 gap-3">
-          <div><Label className="text-xs text-muted-foreground">Profit ($)</Label><Input type="text" inputMode="decimal" value={resultText} onChange={decimalHandler('result',setResultText,true)} className="font-mono text-sm bg-secondary border-border" /></div>
-          <div><Label className="text-xs text-muted-foreground">Comm.</Label><Input type="text" inputMode="decimal" value={commissionText} onChange={decimalHandler('commission',setCommissionText,false)} className="font-mono text-sm bg-secondary border-border" /></div>
-          <div><Label className="text-xs text-muted-foreground">Swap</Label><Input type="text" inputMode="decimal" value={swapText} onChange={decimalHandler('swap',setSwapText,true)} className="font-mono text-sm bg-secondary border-border" /></div>
-        </div>
+  return (
+    <>
+      <Dialog open={open} onOpenChange={value => { if (!saving) onOpenChange(value); }}>
+        <DialogContent aria-describedby={undefined} className="trade-editor flex max-h-[92dvh] w-[calc(100%-1.5rem)] max-w-[960px] flex-col gap-0 overflow-hidden rounded-3xl border-border/60 bg-card p-0 sm:rounded-3xl">
+          <DialogHeader className="flex-row items-center justify-between space-y-0 border-b border-border/60 px-5 py-5 pr-12 sm:px-7 sm:pr-14 text-left">
+            <DialogTitle className="text-xl tracking-tight">{editTrade ? 'Modifier le trade' : 'Nouveau trade'}</DialogTitle>
+            {!editTrade && <Button type="button" variant="ghost" size="sm" className="h-8 gap-1.5 rounded-full text-muted-foreground" onClick={() => setAiOpen(true)}><Sparkles className="h-3.5 w-3.5" />Import IA</Button>}
+          </DialogHeader>
+          <form onSubmit={handleSubmit} onPaste={handlePasteEvent} className="flex min-h-0 flex-1 flex-col">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+              <fieldset disabled={saving} className="grid min-w-0 gap-6 p-5 sm:p-7 md:grid-cols-[minmax(0,1fr)_230px] md:gap-8">
+                <div className="min-w-0 space-y-6">
+                  <section aria-labelledby={`${fieldId}-position`} className="space-y-4">
+                    <h3 id={`${fieldId}-position`} className="text-sm font-semibold">Position</h3>
+                    <div className="space-y-2">
+                      <Label htmlFor={`${fieldId}-account`}>Compte</Label>
+                      <Select value={form.accountId} onValueChange={v => set('accountId', v)}>
+                        <SelectTrigger id={`${fieldId}-account`} className={inputClass}><SelectValue placeholder="Choisir un compte" /></SelectTrigger>
+                        <SelectContent>{accounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2">
+                      <div className="space-y-2"><Label htmlFor={`${fieldId}-pair`}>Paire</Label><PairCombobox id={`${fieldId}-pair`} value={form.pair} onChange={v => set('pair', v)} /></div>
+                      <div className="space-y-2">
+                        <Label id={`${fieldId}-direction`}>Direction</Label>
+                        <div role="group" aria-labelledby={`${fieldId}-direction`} className="grid h-11 grid-cols-2 gap-1 rounded-xl bg-secondary/60 p-1">
+                          {(['Buy', 'Sell'] as const).map(type => (
+                            <button key={type} type="button" aria-pressed={form.type === type} onClick={() => set('type', type)} className={`inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium transition-colors ${form.type === type ? type === 'Buy' ? 'bg-profit/15 text-profit shadow-sm' : 'bg-loss/15 text-loss shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+                              {type === 'Buy' ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}{type === 'Buy' ? 'Long' : 'Short'}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2">
+                      <div className="space-y-2"><Label htmlFor={`${fieldId}-date`}>Ouverture</Label><Input id={`${fieldId}-date`} type="date" required value={form.date} onChange={e => set('date', e.target.value)} className={`${inputClass} block min-w-0 w-full`} /></div>
+                      <div className="space-y-2"><Label htmlFor={`${fieldId}-end`}>Clôture</Label><Input id={`${fieldId}-end`} type="date" min={form.date} value={form.endDate || ''} onChange={e => set('endDate', e.target.value)} className={`${inputClass} block min-w-0 w-full`} /></div>
+                    </div>
+                  </section>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div><Label className="text-xs text-muted-foreground">Risque (%)</Label><Input type="text" inputMode="decimal" value={riskText} onChange={decimalHandler('riskPercent',setRiskText,false)} placeholder="ex: 1" className="font-mono text-sm bg-secondary border-border" /></div>
-          <div className="bg-card rounded-md border border-border p-3 flex justify-between items-center"><span className="text-xs text-muted-foreground">R</span><span className={`font-mono font-bold ${rValue===null?'text-muted-foreground':rValue>=0?'text-profit':'text-loss'}`}>{rValue===null?'—':`${rValue>=0?'+':''}${rValue.toFixed(2)}R`}</span></div>
-        </div>
+                  <section aria-labelledby={`${fieldId}-result-section`} className="space-y-4 border-t border-border/60 pt-5">
+                    <h3 id={`${fieldId}-result-section`} className="text-sm font-semibold">Résultat</h3>
+                    <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,0.7fr)] gap-4">
+                      <div className="space-y-2"><Label htmlFor={`${fieldId}-result`}>P&amp;L brut ({currency})</Label><Input id={`${fieldId}-result`} type="text" inputMode="decimal" pattern={signedDecimal} required placeholder="0,00" value={resultText} onChange={decimalHandler('result', setResultText, true)} className={`${inputClass} h-12 text-lg font-semibold`} /></div>
+                      <div className="space-y-2"><Label htmlFor={`${fieldId}-risk`}>Risque (%)</Label><Input id={`${fieldId}-risk`} type="text" inputMode="decimal" pattern={decimal} placeholder="0" value={riskText} onChange={decimalHandler('riskPercent', setRiskText, false)} className={`${inputClass} h-12`} /></div>
+                    </div>
+                    <details open={feesOpen} onToggle={e => setFeesOpen(e.currentTarget.open)} className="group rounded-xl border border-border/60 px-3.5">
+                      <summary className="flex cursor-pointer list-none items-center justify-between py-3 text-sm text-muted-foreground [&::-webkit-details-marker]:hidden"><span>Commission &amp; swap</span><ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" /></summary>
+                      <div className="grid grid-cols-2 gap-3 pb-4">
+                        <div className="space-y-2"><Label htmlFor={`${fieldId}-commission`}>Commission ({currency})</Label><Input id={`${fieldId}-commission`} type="text" inputMode="decimal" pattern={decimal} value={commissionText} placeholder="0,00" onChange={decimalHandler('commission', setCommissionText, false)} className={inputClass} /></div>
+                        <div className="space-y-2"><Label htmlFor={`${fieldId}-swap`}>Swap ({currency})</Label><Input id={`${fieldId}-swap`} type="text" inputMode="decimal" pattern={signedDecimal} value={swapText} placeholder="0,00" onChange={decimalHandler('swap', setSwapText, true)} className={inputClass} /></div>
+                      </div>
+                    </details>
+                    <div className="space-y-2">
+                      <Label id={`${fieldId}-exit`}>Sortie</Label>
+                      <div role="group" aria-labelledby={`${fieldId}-exit`} className="flex flex-wrap gap-1.5">
+                        {EXIT_TYPES.map(exit => <button key={exit} type="button" aria-pressed={form.exitType === exit} onClick={() => set('exitType', exit)} className={`h-9 rounded-lg border px-3 text-xs font-medium transition-colors ${form.exitType === exit ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border/60 text-muted-foreground hover:bg-secondary'}`}>{exit === 'Manual' ? 'Manuelle' : exit === 'Trail' ? 'Trailing' : exit}</button>)}
+                      </div>
+                    </div>
+                  </section>
 
-        <div><Label className="text-xs text-muted-foreground">Trade Exit</Label><Select value={form.exitType} onValueChange={v=>set('exitType',v as ExitType)}><SelectTrigger className="bg-secondary border-border"><SelectValue /></SelectTrigger><SelectContent>{EXIT_TYPES.map(t=><SelectItem key={t} value={t}>{t==='Manual'?'Manual Close':t}</SelectItem>)}</SelectContent></Select></div>
-        <div><Label className="text-xs text-muted-foreground">Setup Quality</Label><div className="flex gap-1 mt-1.5">{([1,2,3] as SetupQuality[]).map(q=><button key={q} type="button" onClick={()=>set('setupQuality',q)} className={`flex items-center gap-0.5 px-3 py-1.5 rounded-md border text-xs ${form.setupQuality===q?'bg-primary/20 border-primary/50 text-primary':'bg-secondary border-border text-muted-foreground'}`}>{Array.from({length:q}).map((_,i)=><Star key={i} className="h-3 w-3 fill-current"/>)}</button>)}</div></div>
-        <div><Label className="text-xs text-muted-foreground">Strategy Respected</Label><div className="flex gap-2 mt-1.5">{[true,false].map(v=><button key={String(v)} type="button" onClick={()=>set('strategyRespected',v)} className={`px-4 py-1.5 rounded-md border text-xs ${form.strategyRespected===v?v?'bg-profit/15 border-profit/50 text-profit':'bg-loss/15 border-loss/50 text-loss':'bg-secondary border-border text-muted-foreground'}`}>{v?'Yes':'No'}</button>)}</div></div>
-        <div className="bg-card rounded-md border border-border p-3 flex justify-between items-center"><span className="text-xs text-muted-foreground">Net Result</span><span className={`font-mono font-bold ${net>=0?'text-profit':'text-loss'}`}>{net>=0?'+':''}${net.toFixed(2)}</span></div>
-      </div>
+                  <section aria-labelledby={`${fieldId}-journal`} className="space-y-4 border-t border-border/60 pt-5">
+                    <h3 id={`${fieldId}-journal`} className="text-sm font-semibold">Journal</h3>
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                      <div className="space-y-2">
+                        <Label id={`${fieldId}-quality`}>Qualité du setup</Label>
+                        <div role="group" aria-labelledby={`${fieldId}-quality`} className="flex gap-1.5">
+                          {([1, 2, 3] as SetupQuality[]).map(quality => <button key={quality} type="button" aria-label={`${quality} étoile${quality > 1 ? 's' : ''}`} aria-pressed={form.setupQuality === quality} onClick={() => set('setupQuality', quality)} className={`flex h-9 items-center gap-0.5 rounded-lg border px-2.5 transition-colors ${form.setupQuality === quality ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border/60 text-muted-foreground hover:bg-secondary'}`}>{Array.from({ length: quality }, (_, i) => <Star key={i} className="h-3 w-3 fill-current" />)}</button>)}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3"><Label htmlFor={`${fieldId}-strategy`}>Plan respecté</Label><Switch id={`${fieldId}-strategy`} checked={form.strategyRespected} onCheckedChange={v => set('strategyRespected', v)} /></div>
+                    </div>
+                    <div className="space-y-2"><Label htmlFor={`${fieldId}-notes`}>Notes</Label><Textarea id={`${fieldId}-notes`} value={form.notes || ''} onChange={e => set('notes', e.target.value)} className="min-h-24 resize-y rounded-xl border-border/60 bg-secondary/50 text-sm" /></div>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <Label>Captures{screenshots.length > 0 ? ` · ${screenshots.length}` : ''}</Label>
+                        <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5 rounded-lg" onClick={() => imageInput.current?.click()}><ImagePlus className="h-3.5 w-3.5" />Ajouter</Button>
+                      </div>
+                      <input ref={imageInput} type="file" accept="image/*" multiple aria-label="Ajouter des captures" className="sr-only" tabIndex={-1} onChange={e => { void addFiles(e.target.files); e.target.value = ''; }} />
+                      {screenshots.length > 0 ? <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{screenshots.map((img, i) => <div key={i} className="group relative overflow-hidden rounded-xl border border-border/60"><img src={img} alt={`Capture ${i + 1}`} className="h-24 w-full object-cover" /><Button type="button" variant="secondary" size="icon" aria-label={`Supprimer la capture ${i + 1}`} className="absolute right-1 top-1 h-7 w-7 rounded-full" onClick={() => removeImage(i)}><X className="h-3.5 w-3.5" /></Button></div>)}</div> : <button type="button" onClick={() => imageInput.current?.click()} className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border px-4 py-5 text-xs text-muted-foreground transition-colors hover:bg-secondary/50"><Clipboard className="h-4 w-4" />Importer ou coller une capture</button>}
+                      {imageError && <p role="alert" className="text-sm text-loss">{imageError}</p>}
+                    </div>
+                  </section>
+                </div>
 
-      <div className="flex-1 flex flex-col gap-3 min-w-0">
-        <div className="flex-1 flex flex-col"><Label className="text-xs text-muted-foreground mb-1">Notes & Description</Label><Textarea value={form.notes||''} onChange={e=>set('notes',e.target.value)} placeholder="Describe the trade..." className="flex-1 bg-secondary border-border text-sm min-h-[200px] resize-none"/></div>
-        <div>
-          <Label className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5"><ImageIcon className="h-3 w-3"/>Images ({(form.screenshots||[]).length})</Label>
-          {(form.screenshots||[]).length>0 && <div className="grid grid-cols-2 gap-2 mb-2">{(form.screenshots||[]).map((img,i)=><div key={i} className="relative rounded-md overflow-hidden border border-border group"><img src={img} alt={`Image ${i+1}`} className="w-full h-24 object-cover"/><Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-5 w-5 bg-background/80 opacity-0 group-hover:opacity-100" onClick={()=>removeImage(i)}><X className="h-3 w-3"/></Button></div>)}</div>}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex-1 flex flex-col items-center justify-center gap-1.5 h-16 rounded-md border border-dashed border-border bg-secondary/50 cursor-pointer" onClick={() => navigator.clipboard.readText().catch(()=>{})} tabIndex={0}><div className="flex items-center gap-2"><Clipboard className="h-3.5 w-3.5 text-muted-foreground"/><span className="text-[11px] text-muted-foreground">Click then Ctrl+V</span></div></div>
-            <Button type="button" variant="outline" onClick={()=>setAiOpen(true)}><Sparkles className="h-4 w-4 mr-2"/>Import IA</Button>
-          </div>
-        </div>
-        <div className="flex gap-2 justify-end pt-2 border-t border-border"><Button type="button" variant="outline" onClick={()=>onOpenChange(false)}>Cancel</Button><Button type="submit">{editTrade?'Update':'Add'}</Button></div>
-      </div>
-    </form>
+                <aside aria-label="Récapitulatif du trade" className="self-start rounded-2xl border border-border/60 bg-secondary/40 p-5 md:sticky md:top-0">
+                  <div className="flex items-center justify-between gap-2"><span className="font-mono text-lg font-semibold">{form.pair}</span><span className={`rounded-full px-2 py-1 text-xs font-medium ${form.type === 'Buy' ? 'bg-profit/10 text-profit' : 'bg-loss/10 text-loss'}`}>{form.type === 'Buy' ? 'Long' : 'Short'}</span></div>
+                  <p className="mt-1 truncate text-xs text-muted-foreground">{selectedAccount?.name || 'Choisir un compte'}</p>
+                  <div className="my-5 border-t border-border/60" />
+                  <div role="status" aria-live="polite" aria-atomic="true">
+                    <p className="text-xs font-medium text-muted-foreground">Résultat net</p>
+                    <p className={`mt-2 break-words font-mono text-2xl font-semibold tracking-tight ${net === 0 ? 'text-foreground' : net > 0 ? 'text-profit' : 'text-loss'}`}>{net > 0 ? '+' : ''}{money(net)}</p>
+                    <dl className="mt-5 space-y-3 text-xs">
+                      <div className="flex justify-between gap-2"><dt className="text-muted-foreground">P&amp;L brut</dt><dd className="font-mono">{money(form.result)}</dd></div>
+                      <div className="flex justify-between gap-2"><dt className="text-muted-foreground">Commission</dt><dd className="font-mono">{money(-Math.abs(form.commission))}</dd></div>
+                      <div className="flex justify-between gap-2"><dt className="text-muted-foreground">Swap</dt><dd className="font-mono">{money(form.swap)}</dd></div>
+                      <div className="flex justify-between gap-2 border-t border-border/60 pt-3"><dt className="text-muted-foreground">R-multiple</dt><dd className="font-mono font-semibold">{rValue === null ? '—' : `${rValue > 0 ? '+' : ''}${rValue.toFixed(2)}R`}</dd></div>
+                    </dl>
+                  </div>
+                </aside>
+              </fieldset>
+            </div>
+            <footer className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-border/60 bg-background/80 px-5 py-4 sm:px-7">
+              {formError && <p role="alert" className="w-full text-sm text-loss">{formError}</p>}
+              <Button type="button" variant="ghost" disabled={saving} className="rounded-xl" onClick={() => onOpenChange(false)}>Annuler</Button>
+              <Button type="submit" disabled={saving || !accounts.length} className="gap-2 rounded-xl px-5">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}{editTrade ? 'Enregistrer' : 'Ajouter le trade'}</Button>
+            </footer>
+          </form>
+        </DialogContent>
+      </Dialog>
+      {aiDialog}
+    </>
   );
-
-  if (asPanel) {
-    return <><div className="h-full flex flex-col overflow-hidden bg-card text-foreground">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0 bg-card"><div><h2 className="text-base font-semibold">{editTrade?'Edit Trade':'New Trade'}</h2>{editTrade&&<p className="text-xs text-muted-foreground mt-0.5">{editTrade.pair} · #{String(editTrade.tradeNumber).padStart(4,'0')}</p>}</div><button onClick={()=>onOpenChange(false)} className="p-1.5 rounded-md hover:bg-secondary"><X className="h-4 w-4 text-muted-foreground"/></button></div>
-      <div className="flex-1 overflow-y-auto px-6 py-5 bg-card">{formBody}</div>
-    </div>{aiDialog}</>;
-  }
-
-  return <><Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="sm:max-w-4xl bg-card border-border max-h-[90vh] overflow-y-auto"><DialogHeader><DialogTitle>{editTrade?'Edit Trade':'Add Trade'}</DialogTitle></DialogHeader>{formBody}</DialogContent></Dialog>{aiDialog}</>;
 };
 
 export default AddTradeDialog;

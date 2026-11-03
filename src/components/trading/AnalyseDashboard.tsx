@@ -194,7 +194,6 @@ const AnalyseDashboard = ({ trades, allTrades, accounts }: Props) => {
               </div>
               <div>
                 <h1 className="text-xl font-bold tracking-tight">{displayName}</h1>
-                <p className="text-[11px] text-muted-foreground">Live analysis dashboard</p>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">

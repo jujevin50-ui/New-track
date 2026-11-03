@@ -7,8 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
-  Check, CheckSquare, Circle, Plus, Trash2, Pencil, Calendar,
-  ListTodo, Inbox, X, ChevronDown, Filter,
+  Check, CheckSquare, Plus, Trash2, Pencil, Calendar,
+  ListTodo, Inbox, X, Filter,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -134,9 +134,6 @@ export default function Tasks() {
 
     return list;
   }, [tasks, activeListId, filter, sortKey]);
-
-  const overdueCount = tasks.filter(t => !t.done && t.dueDate && t.dueDate < today).length;
-  const dueTodayCount = tasks.filter(t => !t.done && t.dueDate === today).length;
 
   /* ── Lists CRUD ── */
 
@@ -329,29 +326,6 @@ export default function Tasks() {
       </header>
 
       <div className="max-w-[1100px] mx-auto px-4 md:px-6 pt-4 w-full flex flex-col gap-4 flex-1 pb-16">
-        {/* Stats strip */}
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-card border border-border">
-            <Circle className="h-3 w-3 text-primary" />
-            {counts.allActive} active{counts.allActive !== 1 ? 's' : ''}
-          </span>
-          {dueTodayCount > 0 && (
-            <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-primary/10 text-primary border border-primary/20">
-              <Calendar className="h-3 w-3" />
-              {dueTodayCount} aujourd'hui
-            </span>
-          )}
-          {overdueCount > 0 && (
-            <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-destructive/10 text-destructive border border-destructive/20">
-              {overdueCount} en retard
-            </span>
-          )}
-          <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-card border border-border text-muted-foreground">
-            <Check className="h-3 w-3" />
-            {counts.allDone} terminée{counts.allDone !== 1 ? 's' : ''}
-          </span>
-        </div>
-
         <div className="grid lg:grid-cols-[220px_minmax(0,1fr)] gap-4 items-start">
           {/* ── Sidebar lists ── */}
           <aside className="rounded-2xl border border-border bg-card p-2 space-y-0.5 lg:sticky lg:top-20">
@@ -384,7 +358,7 @@ export default function Tasks() {
                   <span className="flex-1 text-left truncate">{l.name}</span>
                   <span className="text-xs tabular-nums opacity-70">{counts.byList[l.id]?.active ?? 0}</span>
                 </button>
-                <div className="absolute right-1 top-1/2 -translate-y-1/2 hidden group-hover:flex items-center gap-0.5 bg-card/90 rounded-lg pl-1">
+                <div className="absolute right-1 top-1/2 -translate-y-1/2 hidden group-hover:flex group-focus-within:flex items-center gap-0.5 bg-card/90 rounded-lg pl-1">
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); openEditList(l); }}
@@ -439,9 +413,10 @@ export default function Tasks() {
                     value={quickDue}
                     onChange={e => setQuickDue(e.target.value)}
                     className="h-11 w-full sm:w-[150px] rounded-xl bg-secondary border-transparent text-xs"
-                    title="Échéance"
+                    aria-label="Échéance"
                   />
                   <select
+                    aria-label="Priorité"
                     value={quickPriority}
                     onChange={e => setQuickPriority(e.target.value as Task['priority'])}
                     className="h-11 rounded-xl bg-secondary border-0 text-xs px-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
@@ -483,6 +458,7 @@ export default function Tasks() {
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Filter className="h-3.5 w-3.5" />
                   <select
+                    aria-label="Trier les tâches"
                     value={sortKey}
                     onChange={e => setSortKey(e.target.value as SortKey)}
                     className="h-8 rounded-full bg-secondary border-0 text-xs px-2.5 text-foreground focus:outline-none"
@@ -510,9 +486,6 @@ export default function Tasks() {
                 <div>
                   <p className="font-medium text-sm">
                     {filter === 'done' ? 'Aucune tâche terminée' : 'Rien à faire ici'}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {filter === 'active' ? 'Ajoute une tâche ci-dessus pour commencer.' : 'Change de filtre pour en voir d’autres.'}
                   </p>
                 </div>
               </div>
@@ -569,7 +542,7 @@ export default function Tasks() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
+                      <div className="flex items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity shrink-0">
                         <button
                           type="button"
                           onClick={() => openEditTask(task)}
@@ -656,7 +629,7 @@ export default function Tasks() {
                 onChange={e => setTaskForm(f => ({ ...f, notes: e.target.value }))}
                 rows={3}
                 className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
-                placeholder="Détails optionnels…"
+                aria-label="Notes"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">

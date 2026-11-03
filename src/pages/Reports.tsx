@@ -508,11 +508,7 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
   return (
     <div className="w-full h-full">
       <div className="mb-5">
-        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">Journal</p>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">Reports</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Weekly, monthly and yearly trading reviews in one place.
-        </p>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-4 items-start">
@@ -588,7 +584,6 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
             <div className="h-[60vh] flex flex-col items-center justify-center text-center p-8">
               <FileText className="h-8 w-8 text-muted-foreground/40 mb-3" />
               <p className="text-sm font-medium">Select a report</p>
-              <p className="text-xs text-muted-foreground mt-1">Choose a period from the left.</p>
             </div>
           ) : (
             <>
@@ -601,7 +596,6 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
                     {!selectedSaved && <span className="text-[9px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">Not saved</span>}
                   </div>
                   <h2 className="text-xl font-bold tracking-tight">{selectedEntry?.label || getPeriodLabel(selected.type, selected.key)}</h2>
-                  <p className="text-[11px] text-muted-foreground mt-1">Trades are placed by their end date</p>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   {!isEditing ? (

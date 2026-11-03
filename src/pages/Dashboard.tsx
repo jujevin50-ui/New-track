@@ -587,7 +587,6 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
       <div className="flex items-center justify-center h-[60vh]">
         <div className="text-center space-y-2">
           <p className="text-muted-foreground text-sm">No account selected.</p>
-          <p className="text-xs text-muted-foreground/60">Create an account to get started.</p>
         </div>
       </div>
     );
@@ -635,10 +634,6 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
       {/* ── Filters ── */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: ACCENT.balance }} />
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.14em]">Active Account</span>
-          </div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground leading-none">{activeAccount.name}</h1>
           <div className="flex items-center gap-1 mt-3">
             {CATEGORIES.map(cat => (
@@ -685,20 +680,15 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
           value={`${todayRawPnL >= 0 ? '+' : '-'}${fmt(Math.abs(todayRawPnL))}`}
           badge={`${todayRawPnL >= 0 ? '+' : ''}${(initialBalance > 0 ? (todayRawPnL / initialBalance) * 100 : 0).toFixed(2)}%`}
           badgeUp={todayRawPnL >= 0}
-          sub={`Initial $${fmt(initialBalance)}`}
         />
         <KpiCard
           label="Win Rate"
           value={`${stats.winRate.toFixed(1)}%`}
-          badge={`${consistencyScore.toFixed(0)}% consistency`}
-          badgeUp={consistencyScore >= 50}
           sub={`${stats.wins}W · ${stats.losses}L · ${stats.totalTrades} total`}
         />
         <KpiCard
           label="Profit Factor"
           value={stats.profitFactor === Infinity ? '∞' : stats.profitFactor.toFixed(2)}
-          badge={`${stats.profitFactor - 1 >= 0 ? '+' : ''}${(stats.profitFactor === Infinity ? 0 : stats.profitFactor - 1).toFixed(2)} vs 1.00`}
-          badgeUp={stats.profitFactor >= 1}
           sub={`+$${fmt(stats.avgWin)} / -$${fmt(stats.avgLoss)} avg`}
         />
       </div>
@@ -707,7 +697,7 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
           SECTION 2 — Activity heatmap + Equity performance
       ══════════════════════════════════════════ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ChartCard title="Trading Activity" action={<span className="text-[11px] text-muted-foreground">Daily P&amp;L</span>}>
+        <ChartCard title="Trading Activity">
           <div className="h-[300px] flex flex-col justify-center gap-4">
             <CalendarHeatmap dailyPnL={dailyPnL} />
             <div className="flex items-center gap-1.5 pt-3 border-t border-border/40 text-[10px] text-muted-foreground">
@@ -721,7 +711,7 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
             </div>
           </div>
         </ChartCard>
-        <ChartCard title="Equity Performance" action={<span className="text-[11px] text-muted-foreground">Balance · Average</span>}>
+        <ChartCard title="Equity Performance">
           <div className="h-[300px]">
             <EquityCurveChart data={chartData.equityCurve} medianLineVisible accentColor={ACCENT.balance} />
           </div>

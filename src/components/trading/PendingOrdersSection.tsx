@@ -75,7 +75,7 @@ const PendingOrdersSection = ({
       </div>
 
       {pendingOrders.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground text-xs border border-dashed border-border rounded-lg">No pending orders. Add your Buy/Sell Limits here.</div>
+        <div className="text-center py-8 text-muted-foreground text-xs border border-dashed border-border rounded-lg">No pending orders.</div>
       ) : (
         <div className="grid gap-3 grid-cols-1">
           {pendingOrders.map(order => (

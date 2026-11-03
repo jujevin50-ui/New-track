@@ -276,9 +276,6 @@ const CalendarView = ({ activeAccount, accounts }: CalendarViewProps) => {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] gap-2 px-4 text-center">
         <p className="text-sm font-medium text-foreground">Aucun compte sélectionné</p>
-        <p className="text-xs text-muted-foreground max-w-sm">
-          Crée ou sélectionne un compte en haut à droite pour afficher le calendrier de trading.
-        </p>
       </div>
     );
   }
@@ -295,7 +292,6 @@ const CalendarView = ({ activeAccount, accounts }: CalendarViewProps) => {
           <h1 className="text-xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground via-primary to-foreground animate-gradient-x">
             Calendar
           </h1>
-          <p className="text-xs text-muted-foreground">{activeAccount.name} · Daily P&L</p>
         </div>
       </div>
 

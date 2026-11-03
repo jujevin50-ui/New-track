@@ -152,7 +152,7 @@ const Accounts = ({ accounts, activeAccountId, onSelectAccount, onAdd, onUpdate,
       </div>
 
       {filtered.length === 0 ? (
-        <div className="bg-card border border-border rounded-lg p-12 text-center"><p className="text-muted-foreground">No accounts. Click "New Account" to create your first account.</p></div>
+        <div className="bg-card border border-border rounded-lg p-12 text-center"><p className="text-muted-foreground">No accounts.</p></div>
       ) : (
         <div className="space-y-6">
           {Object.entries(grouped).map(([category, catAccounts]) => (

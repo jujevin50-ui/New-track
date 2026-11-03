@@ -170,9 +170,6 @@ const TradeTable = ({
     return (
       <div className="rounded-xl border border-border bg-card p-12 text-center">
         <p className="text-sm font-medium">No trades yet.</p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Add a trade to start building your journal.
-        </p>
       </div>
     );
   }
@@ -208,9 +205,6 @@ const TradeTable = ({
         <div className="flex items-center justify-between border-b border-border bg-secondary/20 px-4 py-3">
           <div>
             <p className="text-sm font-semibold">Trade history</p>
-            <p className="text-[11px] text-muted-foreground">
-              {trades.length} trades · {wins}W / {losses}L · {winRate.toFixed(0)}% win rate
-            </p>
           </div>
 
           <div className="flex items-center gap-3 text-xs font-medium">

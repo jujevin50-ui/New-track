@@ -44,7 +44,6 @@ export function ChartCarousel({ slides, height = 360, className = '' }: ChartCar
     <div className={`rb-border rounded-2xl border border-border/60 bg-card/95 backdrop-blur-md shadow-[var(--shadow-card)] overflow-hidden ${className}`}>
       <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border/50">
         <div className="min-w-0">
-          <p className="text-[11px] text-muted-foreground font-medium">Graphiques</p>
           <h3
             key={slide.id + '-title'}
             className="text-sm font-semibold tracking-tight truncate animate-rb-blur-in"

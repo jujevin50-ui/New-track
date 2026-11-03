@@ -74,7 +74,6 @@ const Trades = ({ activeAccount, accounts, onAddAccount, onUpdateAccount }: Trad
   const [dialogOpen, setDialogOpen] = useState(false);
   const [payoutOpen, setPayoutOpen] = useState(false);
   const [editTrade, setEditTrade] = useState<Trade | null>(null);
-  const [editPanelOpen, setEditPanelOpen] = useState(false);
   const [view, setView] = useState<'list' | 'table' | 'gallery'>('table');
   const [filteredTrades, setFilteredTrades] = useState<Trade[]>(trades);
 
@@ -82,23 +81,17 @@ const Trades = ({ activeAccount, accounts, onAddAccount, onUpdateAccount }: Trad
     setFilteredTrades(trades);
   }, [trades]);
 
-  const handleSubmit = (formData: TradeFormData) => {
+  const handleSubmit = async (formData: TradeFormData) => {
     if (editTrade) {
-      updateTrade(editTrade.id, formData);
-      setEditTrade(null);
+      await updateTrade(editTrade.id, formData);
     } else {
-      addTrade(formData);
+      await addTrade(formData);
     }
   };
 
   const handleEdit = (trade: Trade) => {
     setEditTrade(trade);
-    setEditPanelOpen(true);
-  };
-
-  const closeEditPanel = () => {
-    setEditPanelOpen(false);
-    setTimeout(() => setEditTrade(null), 300);
+    setDialogOpen(true);
   };
 
   const handleDialogChange = (open: boolean) => {
@@ -147,9 +140,6 @@ const Trades = ({ activeAccount, accounts, onAddAccount, onUpdateAccount }: Trad
       <div className="flex items-center justify-center h-[60vh]">
         <div className="text-center space-y-2">
           <p className="text-muted-foreground">No account selected.</p>
-          <p className="text-xs text-muted-foreground">
-            Create an account in the "Accounts" section to get started.
-          </p>
         </div>
       </div>
     );
@@ -157,15 +147,12 @@ const Trades = ({ activeAccount, accounts, onAddAccount, onUpdateAccount }: Trad
 
   return (
     <div className="w-full max-w-[1800px] mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-lg font-bold tracking-tight">Trades</h1>
-          <p className="text-xs text-muted-foreground">
-            {activeAccount.name} · {filteredTrades.length}/{trades.length} trade{trades.length !== 1 ? 's' : ''}
-          </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center rounded-lg border border-border overflow-hidden bg-card">
             <button
               onClick={() => setView('table')}
@@ -202,9 +189,9 @@ const Trades = ({ activeAccount, accounts, onAddAccount, onUpdateAccount }: Trad
             Payout
           </Button>
 
-          <Button size="sm" onClick={() => setDialogOpen(true)} className="gap-1.5">
+          <Button size="sm" onClick={() => { setEditTrade(null); setDialogOpen(true); }} className="gap-1.5">
             <Plus className="h-4 w-4" />
-            Add Trade
+            Nouveau trade
           </Button>
         </div>
       </div>
@@ -237,6 +224,7 @@ const Trades = ({ activeAccount, accounts, onAddAccount, onUpdateAccount }: Trad
         open={dialogOpen}
         onOpenChange={handleDialogChange}
         onSubmit={handleSubmit}
+        editTrade={editTrade}
         accounts={accounts}
         activeAccountId={activeAccount.id}
       />
@@ -249,29 +237,6 @@ const Trades = ({ activeAccount, accounts, onAddAccount, onUpdateAccount }: Trad
         defaultAccountId={activeAccount.id === 'all' ? undefined : activeAccount.id}
         accountProfits={accountProfits}
       />
-
-      <div
-        className={`fixed inset-0 z-40 bg-black/30 backdrop-blur-[1px] transition-opacity duration-300 ${
-          editPanelOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
-        onClick={closeEditPanel}
-      />
-
-      <div
-        className={`fixed inset-y-0 right-0 z-50 w-1/3 min-w-[480px] bg-card border-l border-border shadow-[-6px_0_40px_hsl(0_0%_0%/0.45)] transition-transform duration-300 ease-out ${
-          editPanelOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}
-      >
-        <AddTradeDialog
-          open={editPanelOpen}
-          onOpenChange={closeEditPanel}
-          onSubmit={handleSubmit}
-          editTrade={editTrade}
-          accounts={accounts}
-          activeAccountId={activeAccount.id}
-          asPanel
-        />
-      </div>
     </div>
   );
 };
