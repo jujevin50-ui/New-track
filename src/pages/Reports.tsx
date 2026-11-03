@@ -18,7 +18,6 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import {
-  Check,
   CalendarDays,
   CalendarRange,
   ChevronLeft,
@@ -456,8 +455,8 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
     : undefined;
 
   return (
-    <div className="w-full max-w-[1480px] mx-auto pb-10">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+    <div className="w-full max-w-[1040px] mx-auto pb-16">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Rapports</h1>
         <div role="group" aria-label="Périodicité des rapports" className="flex items-center gap-1 rounded-2xl border border-border/60 bg-card p-1">
           {(['weekly', 'monthly', 'yearly'] as PeriodType[]).map(type => {
@@ -467,27 +466,20 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
               const first = reportEntries[type][0];
               if (first) selectPeriod(type, first.key);
               else { setSelected(null); setIsEditing(false); }
-            }} className={`inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm transition-colors ${browseType === type ? 'selected-tab font-semibold' : 'text-muted-foreground hover:text-foreground'}`}><Icon className="h-3.5 w-3.5" />{SECTION_META[type].title}</button>;
+            }} className={`inline-flex h-10 items-center gap-2 rounded-xl px-3 sm:px-4 text-sm transition-colors ${browseType === type ? 'selected-tab font-semibold' : 'text-muted-foreground hover:text-foreground'}`}><Icon className="h-3.5 w-3.5" />{SECTION_META[type].title}</button>;
           })}
         </div>
       </div>
-      <div className="grid gap-5 items-start lg:grid-cols-[260px_minmax(0,1fr)]">
-        <aside aria-label="Périodes" className="min-w-0 rounded-2xl border border-border/60 bg-card p-3 lg:sticky lg:top-20">
-          <Button onClick={() => createCurrent(browseType)} className="w-full rounded-xl mb-3" variant="outline">+ Nouveau rapport</Button>
-          <div className="flex gap-2 overflow-x-auto lg:max-h-[70vh] lg:flex-col lg:overflow-y-auto">
-            {reportEntries[browseType].map(entry => {
-              const active = selected?.type === browseType && selected.key === entry.key;
-              return <button key={entry.key} type="button" aria-current={active ? 'true' : undefined} onClick={() => selectPeriod(browseType, entry.key)} className={`min-w-[190px] shrink-0 rounded-xl p-3.5 text-left transition-colors lg:min-w-0 ${active ? 'selected-tab' : 'hover:bg-secondary/60'}`}>
-                <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium">{entry.label}</span>{entry.hasReport && <Check className="h-3.5 w-3.5 shrink-0 text-profit" aria-label="Enregistré" />}</div>
-                <div className="mt-2 flex items-center justify-between gap-3"><span className="text-xs text-muted-foreground">{entry.tradeCount} trades</span><span className={`font-mono text-xs font-semibold ${entry.pnl >= 0 ? 'text-profit' : 'text-loss'}`}>{fmt(entry.pnl)}$</span></div>
-              </button>;
-            })}
-            {!reportEntries[browseType].length && <p className="py-6 text-center text-sm text-muted-foreground">Aucun rapport</p>}
-          </div>
-        </aside>
-
+      <div className="mx-auto mb-6 flex max-w-[900px] flex-wrap items-center justify-between gap-3">
+        <Select value={selected?.type === browseType ? selected.key : ''} onValueChange={key => selectPeriod(browseType, key)}>
+          <SelectTrigger aria-label="Période" className="h-10 w-full sm:w-[280px] rounded-xl bg-card border-border/60"><SelectValue placeholder="Choisir une période" /></SelectTrigger>
+          <SelectContent>{reportEntries[browseType].map(entry => <SelectItem key={entry.key} value={entry.key}>{entry.label}{entry.hasReport ? ' · Enregistré' : ''}</SelectItem>)}</SelectContent>
+        </Select>
+        <Button onClick={() => createCurrent(browseType)} className="rounded-xl" variant="outline">+ Nouveau rapport</Button>
+      </div>
+      <div className="mx-auto max-w-[900px]">
         {/* Right detail */}
-        <section className="report-paper min-w-0 rounded-3xl border border-border/60 shadow-[var(--shadow-card)] overflow-hidden">
+        <section className="report-paper min-w-0 rounded-xl border border-border/60 shadow-[var(--shadow-card)] overflow-hidden">
           {!selected ? (
             <div className="h-[60vh] flex flex-col items-center justify-center text-center p-8">
               <FileText className="h-8 w-8 text-muted-foreground/40 mb-3" />
@@ -495,7 +487,7 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
             </div>
           ) : (
             <>
-              <div className="px-5 py-6 sm:px-7 border-b border-border/50 flex flex-wrap items-start justify-between gap-4">
+              <div className="px-6 pt-8 pb-6 sm:px-12 sm:pt-12 border-b border-border/50 flex flex-wrap items-start justify-between gap-5">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <currentMeta.icon className="h-4 w-4 text-primary" />
@@ -503,14 +495,16 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
                     {selectedSaved && <span className="text-[9px] px-1.5 py-0.5 rounded bg-profit/10 text-profit">Enregistré</span>}
                     {!selectedSaved && <span className="text-[9px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">Brouillon</span>}
                   </div>
-                  <h2 className="text-xl font-bold tracking-tight">{selectedEntry?.label || getPeriodLabel(selected.type, selected.key)}</h2>
+                  <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">{selectedEntry?.label || getPeriodLabel(selected.type, selected.key)}</h2>
+                  <p className="mt-3 text-sm text-muted-foreground">{activeAccount.name}</p>
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex flex-wrap items-center gap-1.5 max-w-full">
                   {!isEditing ? (
                     <>
                       <Button size="sm" onClick={() => setIsEditing(true)} className="gap-1.5 text-xs">
                         <Edit3 className="h-3.5 w-3.5" />Modifier
                       </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDownloadPDF('view')} className="gap-1.5 text-xs"><Eye className="h-3.5 w-3.5" />Voir PDF</Button>
                       <Button variant="outline" size="sm" onClick={() => handleDownloadPDF()} className="gap-1.5 text-xs">
                         <Download className="h-3.5 w-3.5" />Export PDF
                       </Button>
@@ -529,7 +523,7 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
               </div>
 
               {isEditing ? (
-              <div className="p-5 space-y-6">
+              <div className="p-6 sm:p-12 space-y-10">
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                   {[
                     { label: 'P&L', value: `${fmt(stats.pnl)}$`, color: stats.pnl >= 0 ? 'text-profit' : 'text-loss' },
@@ -689,27 +683,25 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
                 </div>
               </div>
               ) : (
-                <div className="p-5 sm:p-7 space-y-7">
-                  <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+                <div className="px-6 py-8 sm:px-12 sm:py-10">
+                  <dl className="grid grid-cols-2 gap-x-6 gap-y-7 border-b border-border/60 pb-8 sm:grid-cols-4">
                     {[
                       { label: 'Résultat net', value: `${fmt(stats.pnl)}$`, color: stats.pnl >= 0 ? 'text-profit' : 'text-loss' },
                       { label: 'Trades', value: String(stats.total), color: 'text-foreground' },
                       { label: 'Win rate', value: `${stats.winRate}%`, color: 'text-foreground' },
                       { label: 'Plan respecté', value: `${stats.strategy}%`, color: 'text-foreground' },
-                    ].map(item => <div key={item.label} className="rounded-2xl border border-border/50 bg-secondary/30 p-4"><p className="text-xs text-muted-foreground">{item.label}</p><p className={`mt-2 font-mono text-2xl font-semibold tracking-tight ${item.color}`}>{item.value}</p></div>)}
+                    ].map(item => <div key={item.label} className="min-w-0"><dt className="text-xs text-muted-foreground">{item.label}</dt><dd className={`mt-2 break-words font-mono text-xl sm:text-2xl font-semibold tracking-tight ${item.color}`}>{item.value}</dd></div>)}
+                  </dl>
+                  <div className="mt-7 flex flex-wrap gap-x-6 gap-y-3 text-xs text-muted-foreground">
+                    <span>Profit factor <strong className="ml-2 font-mono font-medium text-foreground">{stats.profitFactor === Infinity ? '∞' : stats.profitFactor.toFixed(2)}</strong></span>
+                    {formData.emotionGenerale && <span>État d’esprit <strong className="ml-2 font-medium text-foreground">{formData.emotionGenerale}</strong></span>}
+                    <span>Trades émotionnels <strong className="ml-2 font-mono font-medium text-foreground">{formData.tradesEmotionnels}</strong></span>
                   </div>
-                  <div className="flex flex-wrap items-center gap-x-6 gap-y-3 border-b border-border/60 pb-5 text-sm">
-                    <span className="text-muted-foreground">Profit factor <strong className="ml-2 font-mono text-foreground">{stats.profitFactor === Infinity ? '∞' : stats.profitFactor.toFixed(2)}</strong></span>
-                    {formData.emotionGenerale && <span className="rounded-full bg-primary/10 px-3 py-1 text-primary">{formData.emotionGenerale}</span>}
-                    <span className="text-muted-foreground">Trades émotionnels <strong className="ml-2 font-mono text-foreground">{formData.tradesEmotionnels}</strong></span>
-                  </div>
-                  <div className="grid gap-5 xl:grid-cols-[1.2fr_1fr]">
-                    <article className="min-w-0 rounded-2xl border border-border/60 p-5"><h3 className="mb-3 text-base font-semibold">Bilan de la période</h3><p className="report-reading text-sm text-foreground/80">{formData.conclusion || '—'}</p></article>
-                    <article className="min-w-0 rounded-2xl bg-primary/[0.06] p-5"><h3 className="mb-3 text-base font-semibold">Prochain objectif</h3><p className="report-reading text-sm font-medium">{formData.objectifPrincipal || '—'}</p>{formData.objectifsSecondaires && <p className="report-reading mt-4 text-sm text-muted-foreground">{formData.objectifsSecondaires}</p>}</article>
-                  </div>
-                  <div className="grid gap-5 sm:grid-cols-2">
-                    <article className="min-w-0"><h3 className="mb-3 text-sm font-semibold">Psychologie</h3><p className="report-reading text-sm text-muted-foreground">{formData.pointsPsychologiques || '—'}</p></article>
-                    <article className="min-w-0"><h3 className="mb-3 text-sm font-semibold">Plan d’action</h3><p className="report-reading text-sm text-muted-foreground">{formData.solutions || '—'}</p></article>
+                  <div className="my-12 space-y-12 sm:my-14 sm:space-y-14">
+                    <article><h3 className="mb-4 text-lg font-semibold">Bilan de la période</h3><p className="report-reading text-[15px] text-foreground/80">{formData.conclusion || '—'}</p></article>
+                    <article><h3 className="mb-4 text-lg font-semibold">Objectifs</h3><p className="report-reading text-[15px] text-foreground/80">{formData.objectifPrincipal || '—'}</p>{formData.objectifsSecondaires && <p className="report-reading mt-5 text-[15px] text-muted-foreground">{formData.objectifsSecondaires}</p>}</article>
+                    <article><h3 className="mb-4 text-lg font-semibold">Psychologie</h3><p className="report-reading text-[15px] text-foreground/80">{formData.pointsPsychologiques || '—'}</p></article>
+                    <article><h3 className="mb-4 text-lg font-semibold">Plan d’action</h3><p className="report-reading text-[15px] text-foreground/80">{formData.solutions || '—'}</p></article>
                   </div>
                   {selectedTrades.length > 0 && <section className="border-t border-border/60 pt-6"><h3 className="mb-3 text-base font-semibold">Trades de la période</h3><div className="divide-y divide-border/50">{selectedTrades.map(trade => <div key={trade.id} className="py-4"><div className="flex flex-wrap items-center justify-between gap-2"><span className="font-medium">{trade.pair} <span className="ml-2 text-xs text-muted-foreground">{trade.type === 'Buy' ? 'Long' : 'Short'} · {getTradeReportDate(trade)}</span></span><span className={`font-mono text-sm font-semibold ${getNetResult(trade) >= 0 ? 'text-profit' : 'text-loss'}`}>{fmt(getNetResult(trade))}$</span></div>{(formData.tradeNotes[trade.id] ?? trade.notes) && <p className="report-reading mt-2 text-sm text-muted-foreground">{formData.tradeNotes[trade.id] ?? trade.notes}</p>}{getTradeScreenshots(trade).length > 0 && <button onClick={() => setPreviewImgs(getTradeScreenshots(trade))} className="mt-2 inline-flex items-center gap-1.5 text-xs text-primary"><Image className="h-3.5 w-3.5" />Captures</button>}</div>)}</div></section>}
                 </div>

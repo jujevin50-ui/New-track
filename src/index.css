@@ -767,6 +767,6 @@ html [role="dialog"].trade-editor {
   background: hsl(var(--primary) / 0.65);
   pointer-events: none;
 }
-.report-paper { background: hsl(var(--card) / 0.9); }
-.report-reading { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.8; }
+.report-paper { background: hsl(var(--card) / 0.97); }
+.report-reading { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.95; }
 .dashboard-overview > :first-child { background-image: linear-gradient(135deg, hsl(var(--primary) / 0.1), transparent 75%); }
