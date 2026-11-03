@@ -58,7 +58,7 @@ export function LogoSwitch({ floating = false, className = '' }: LogoSwitchProps
             }}
             className={`module-tab ${
               active
-                ? 'bg-primary text-primary-foreground shadow-sm'
+                ? 'selected-tab'
                 : 'text-muted-foreground hover:text-foreground hover:bg-secondary/70'
             }`}
           >

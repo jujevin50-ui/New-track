@@ -163,7 +163,7 @@ function TradeCountSlider({ limits, value, onChange }: { limits: readonly TradeL
 
 function ChartCard({ title, children, className, action }: { title: string; children: React.ReactNode; className?: string; action?: React.ReactNode }) {
   return (
-    <div className={`flex flex-col rb-lift rounded-2xl border border-border/60 bg-card/95 backdrop-blur-md p-5 shadow-[var(--shadow-card)] ${className ?? ''}`}>
+    <div className={`min-w-0 flex flex-col rounded-2xl border border-border/60 bg-card/95 backdrop-blur-md p-5 shadow-[var(--shadow-card)] ${className ?? ''}`}>
       <div className="flex items-center justify-between mb-4 shrink-0">
         <span className="text-[15px] font-semibold text-foreground">{title}</span>
         {action}
@@ -192,7 +192,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 /** Reference-style KPI card: label + trend badge top row, big number, muted subtitle. */
 function KpiCard({ label, value, prefix, badge, badgeUp, sub }: { label: string; value: string; prefix?: string; badge?: string; badgeUp?: boolean; sub?: string }) {
   return (
-    <div className="rounded-2xl border border-border/60 bg-card/95 backdrop-blur-md p-5 shadow-[var(--shadow-card)]">
+    <div className="rounded-2xl border border-border/60 bg-card/95 backdrop-blur-md p-4 sm:p-5 shadow-[var(--shadow-card)]">
       <div className="flex items-center justify-between mb-3">
         <span className="text-[13px] font-medium text-muted-foreground">{label}</span>
         {badge && (
@@ -202,7 +202,7 @@ function KpiCard({ label, value, prefix, badge, badgeUp, sub }: { label: string;
           </span>
         )}
       </div>
-      <p className="text-[26px] font-bold font-mono tabular-nums text-foreground leading-none">
+      <p className="text-xl sm:text-[26px] font-semibold font-mono tabular-nums text-foreground leading-none">
         {prefix && <span className="text-muted-foreground mr-0.5">{prefix}</span>}{value}
       </p>
       {sub && <p className="text-[12px] text-muted-foreground mt-2.5">{sub}</p>}
@@ -593,10 +593,38 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
   }
 
   return (
-    <div className="w-full max-w-[1600px] mx-auto space-y-5 pb-10">
+    <div className="w-full max-w-[1480px] mx-auto space-y-6 pb-10">
+
+      {/* ── Filters ── */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground leading-none">{activeAccount.name}</h1>
+          <div className="flex items-center gap-1 mt-3">
+            {CATEGORIES.map(cat => (
+              <button key={cat} onClick={() => setCategory(cat)}
+                className={`h-6 px-2.5 text-[11px] rounded-md font-medium transition-colors ${categoryFilter === cat ? 'selected-tab border border-transparent' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60 border border-transparent'}`}>
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap sm:justify-end">
+      <div className="flex items-center gap-1 p-1 rounded-xl border border-border/60 bg-card/95 backdrop-blur-md w-fit shrink-0">
+        {(['account', 'global'] as const).map(v => (
+          <button key={v} aria-pressed={view === v} onClick={() => setDashView(v)}
+            className={`px-5 py-1.5 text-[12px] font-semibold rounded-lg transition-colors ${view === v ? 'selected-tab' : 'text-muted-foreground hover:text-foreground'}`}>
+            {v === 'account' ? 'Compte' : 'Global'}
+          </button>
+        ))}
+      </div>
+
+          <DashboardDateFilter value={dateRange} onChange={setDateRange} />
+          <TradeCountSlider limits={TRADE_LIMITS} value={tradeLimit} onChange={setTradeLimit} />
+        </div>
+      </div>
 
       {/* ── Account chips ── */}
-      <div className="rounded-xl border border-border/60 bg-card/95 backdrop-blur-md p-3">
+      {accountCards.length > 1 && <div className="min-w-0">
         <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
           {accountCards.map(a => {
             const isActive = a.id === activeAccount.id;
@@ -629,43 +657,14 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
             );
           })}
         </div>
-      </div>
-
-      {/* ── Filters ── */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground leading-none">{activeAccount.name}</h1>
-          <div className="flex items-center gap-1 mt-3">
-            {CATEGORIES.map(cat => (
-              <button key={cat} onClick={() => setCategory(cat)}
-                className={`h-6 px-2.5 text-[11px] rounded-md font-medium transition-colors ${categoryFilter === cat ? 'bg-secondary border border-border/60 text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60 border border-transparent'}`}>
-                {cat}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap justify-end">
-          <DashboardDateFilter value={dateRange} onChange={setDateRange} />
-          <TradeCountSlider limits={TRADE_LIMITS} value={tradeLimit} onChange={setTradeLimit} />
-        </div>
-      </div>
-
-      {/* ── View toggle: Account (principal) vs Global ── */}
-      <div className="flex items-center gap-1 p-1 rounded-xl border border-border/60 bg-card/95 backdrop-blur-md w-fit">
-        {(['account', 'global'] as const).map(v => (
-          <button key={v} onClick={() => setDashView(v)}
-            className={`px-5 py-1.5 text-[12px] font-semibold rounded-lg transition-colors ${view === v ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
-            {v === 'account' ? 'Account' : 'Global'}
-          </button>
-        ))}
-      </div>
+      </div>}
 
       {view === 'account' && (
       <>
       {/* ══════════════════════════════════════════
           SECTION 1 — KPI cards (4 separate cards, reference layout)
       ══════════════════════════════════════════ */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
+      <div className="dashboard-overview grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 stagger-children">
         <KpiCard
           label="Balance"
           prefix="$"
@@ -696,9 +695,14 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
       {/* ══════════════════════════════════════════
           SECTION 2 — Activity heatmap + Equity performance
       ══════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)] gap-4">
+        <ChartCard title="Equity Performance">
+          <div className="h-[320px]">
+            <EquityCurveChart data={chartData.equityCurve} medianLineVisible accentColor={ACCENT.balance} />
+          </div>
+        </ChartCard>
         <ChartCard title="Trading Activity">
-          <div className="h-[300px] flex flex-col justify-center gap-4">
+          <div className="min-h-[250px] h-full flex flex-col justify-center gap-4 min-w-0">
             <CalendarHeatmap dailyPnL={dailyPnL} />
             <div className="flex items-center gap-1.5 pt-3 border-t border-border/40 text-[10px] text-muted-foreground">
               <span>Loss</span>
@@ -709,11 +713,6 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
               </div>
               <span>Profit</span>
             </div>
-          </div>
-        </ChartCard>
-        <ChartCard title="Equity Performance">
-          <div className="h-[300px]">
-            <EquityCurveChart data={chartData.equityCurve} medianLineVisible accentColor={ACCENT.balance} />
           </div>
         </ChartCard>
       </div>
@@ -768,15 +767,10 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
       {/* ══════════════════════════════════════════
           SECTION 4 — Account equity curves ($ + %) grouped on one row
       ══════════════════════════════════════════ */}
-      <SectionLabel>Performance & Analysis</SectionLabel>
+      <SectionLabel>Analyse détaillée</SectionLabel>
       <ChartCarousel
         height={380}
         slides={[
-          {
-            id: 'equity-usd',
-            title: 'Equity Curve ($)',
-            content: <EquityCurveChart data={chartData.equityCurve} medianLineVisible accentColor={ACCENT.balance} />,
-          },
           {
             id: 'equity-pct',
             title: 'Performance (%)',

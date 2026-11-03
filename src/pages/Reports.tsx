@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, useCallback, type ReactNode } from 'react';
 import { Account } from '@/types/account';
 import { Trade, getNetResult, getTradeScreenshots } from '@/types/trade';
 import { useTrades } from '@/hooks/useTrades';
@@ -18,9 +18,9 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import {
+  Check,
   CalendarDays,
   CalendarRange,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -52,9 +52,9 @@ const EMOTIONS = ['Excellent', 'Good', 'Neutral', 'Bad', 'Very Bad'];
 const fmt = (n: number) => `${n >= 0 ? '+' : ''}${n.toFixed(2)}`;
 
 const SECTION_META: Record<PeriodType, { title: string; icon: typeof CalendarDays }> = {
-  weekly: { title: 'Weekly Reports', icon: CalendarDays },
-  monthly: { title: 'Monthly', icon: CalendarRange },
-  yearly: { title: 'Yearly', icon: CalendarRange },
+  weekly: { title: 'Semaine', icon: CalendarDays },
+  monthly: { title: 'Mois', icon: CalendarRange },
+  yearly: { title: 'Année', icon: CalendarRange },
 };
 
 const periodWord = (type: PeriodType) => (
@@ -115,12 +115,7 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
   const { allTrades } = useTrades(activeAccount?.id || null, activeAccount?.initialBalance || 0);
   const { reports, getReport, saveReport } = usePeriodReports();
 
-  const [open, setOpen] = useState<Record<PeriodType, boolean>>({
-    weekly: true,
-    monthly: false,
-    yearly: false,
-  });
-
+  const [browseType, setBrowseType] = useState<PeriodType>('weekly');
   const [selected, setSelected] = useState<{ type: PeriodType; key: string } | null>(null);
   const [formData, setFormData] = useState<PeriodReportData>({
     emotionGenerale: '',
@@ -134,10 +129,8 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
   });
   const [previewImgs, setPreviewImgs] = useState<string[] | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [pdfLoading, setPdfLoading] = useState(false);
 
-  const buildEntries = (type: PeriodType): PeriodEntry[] => {
+  const buildEntries = useCallback((type: PeriodType): PeriodEntry[] => {
     const keys = new Set<string>(Object.keys(reports[type]));
 
     // Une période existe même sans trade : on génère toutes les périodes depuis la plus ancienne
@@ -169,25 +162,19 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
         wins: tradesInPeriod.filter(t => getNetResult(t) > 0).length,
       };
     }).sort((a, b) => b.key.localeCompare(a.key));
-  };
+  }, [allTrades, reports]);
 
-  const reportEntries: Record<PeriodType, PeriodEntry[]> = {
+  const reportEntries = useMemo<Record<PeriodType, PeriodEntry[]>>(() => ({
     weekly: buildEntries('weekly'),
     monthly: buildEntries('monthly'),
     yearly: buildEntries('yearly'),
-  };
+  }), [buildEntries]);
 
   useEffect(() => {
     if (selected) return;
-    const first =
-      reportEntries.weekly[0] ||
-      reportEntries.monthly[0] ||
-      reportEntries.yearly[0];
-    if (first) {
-      const type = reportEntries.weekly[0] ? 'weekly' : reportEntries.monthly[0] ? 'monthly' : 'yearly';
-      setSelected({ type, key: first.key });
-    }
-  }, [reportEntries, selected]);
+    const first = reportEntries[browseType][0];
+    if (first) setSelected({ type: browseType, key: first.key });
+  }, [reportEntries, selected, browseType]);
 
   useEffect(() => {
     if (!selected) return;
@@ -261,12 +248,13 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
   const selectPeriod = (type: PeriodType, key: string) => {
     setSelected({ type, key });
     setIsEditing(false);
-    setOpen(prev => ({ ...prev, [type]: true }));
+    setBrowseType(type);
   };
 
   const createCurrent = (type: PeriodType) => {
     const key = getPeriodKey(type, new Date());
     selectPeriod(type, key);
+    setIsEditing(true);
   };
 
   const handleSave = async () => {
@@ -453,44 +441,6 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
     return undefined;
   };
 
-  // Generate the PDF automatically so the report is visible immediately.
-  useEffect(() => {
-    if (!selected || isEditing) return;
-    let cancelled = false;
-    setPdfLoading(true);
-
-    (async () => {
-      try {
-        const url = await handleDownloadPDF('blob');
-        if (cancelled) {
-          if (url) URL.revokeObjectURL(url);
-          return;
-        }
-        setPdfUrl(prev => {
-          if (prev) URL.revokeObjectURL(prev);
-          return url || null;
-        });
-      } catch {
-        if (!cancelled) setPdfUrl(null);
-      } finally {
-        if (!cancelled) setPdfLoading(false);
-      }
-    })();
-
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    selected?.type,
-    selected?.key,
-    isEditing,
-    JSON.stringify(formData),
-    selectedTrades.map(t => t.id).join('|'),
-  ]);
-
-  useEffect(() => () => {
-    if (pdfUrl) URL.revokeObjectURL(pdfUrl);
-  }, [pdfUrl]);
-
   if (!activeAccount) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
@@ -506,94 +456,52 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
     : undefined;
 
   return (
-    <div className="w-full h-full">
-      <div className="mb-5">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Reports</h1>
-      </div>
-
-      <div className="flex flex-col lg:flex-row gap-4 items-start">
-        {/* Left navigation — three connected dropdowns */}
-        <aside className="w-full lg:w-[300px] shrink-0 rounded-2xl border border-border/60 bg-card overflow-hidden">
-          {(['weekly', 'monthly', 'yearly'] as PeriodType[]).map((type, sectionIndex) => {
-            const meta = SECTION_META[type];
-            const Icon = meta.icon;
-            const isOpen = open[type];
-
-            return (
-              <section key={type} className={sectionIndex > 0 ? 'border-t border-border/50' : ''}>
-                <button
-                  onClick={() => setOpen(prev => ({ ...prev, [type]: !prev[type] }))}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-secondary/40 transition-colors"
-                >
-                  <span className="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                    <Icon className="h-4 w-4" />
-                  </span>
-                  <span className="text-sm font-semibold text-foreground flex-1">{meta.title}</span>
-                  <span className="text-[10px] text-muted-foreground mr-1">{reportEntries[type].length}</span>
-                  <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                {isOpen && (
-                  <div className="border-t border-border/40 bg-background/20 max-h-[340px] overflow-auto">
-                    {reportEntries[type].length === 0 ? (
-                      <div className="px-4 py-5 text-xs text-muted-foreground text-center">
-                        No reports or trades yet.
-                      </div>
-                    ) : (
-                      reportEntries[type].map(entry => {
-                        const active = selected?.type === type && selected.key === entry.key;
-                        return (
-                          <button
-                            key={entry.key}
-                            onClick={() => selectPeriod(type, entry.key)}
-                            className={`w-full text-left px-4 py-3 border-b border-border/30 last:border-0 transition-colors ${
-                              active ? 'bg-primary/10 border-l-2 border-l-primary' : 'hover:bg-secondary/35'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-semibold text-foreground truncate">{entry.label}</span>
-                              {entry.hasReport && <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" title="Saved report" />}
-                            </div>
-                            <div className="flex items-center justify-between mt-1.5">
-                              <span className="text-[10px] text-muted-foreground">{entry.tradeCount} trades</span>
-                              <span className={`text-[10px] font-mono tabular-nums ${entry.pnl >= 0 ? 'text-profit' : 'text-loss'}`}>
-                                {fmt(entry.pnl)}$
-                              </span>
-                            </div>
-                          </button>
-                        );
-                      })
-                    )}
-
-                    <button
-                      onClick={() => createCurrent(type)}
-                      className="w-full px-4 py-3 text-left text-[11px] font-medium text-primary hover:bg-primary/5 transition-colors"
-                    >
-                      + Create current {periodWord(type)} report
-                    </button>
-                  </div>
-                )}
-              </section>
-            );
+    <div className="w-full max-w-[1480px] mx-auto pb-10">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Rapports</h1>
+        <div role="group" aria-label="Périodicité des rapports" className="flex items-center gap-1 rounded-2xl border border-border/60 bg-card p-1">
+          {(['weekly', 'monthly', 'yearly'] as PeriodType[]).map(type => {
+            const Icon = SECTION_META[type].icon;
+            return <button key={type} type="button" aria-pressed={browseType === type} onClick={() => {
+              setBrowseType(type);
+              const first = reportEntries[type][0];
+              if (first) selectPeriod(type, first.key);
+              else { setSelected(null); setIsEditing(false); }
+            }} className={`inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm transition-colors ${browseType === type ? 'selected-tab font-semibold' : 'text-muted-foreground hover:text-foreground'}`}><Icon className="h-3.5 w-3.5" />{SECTION_META[type].title}</button>;
           })}
+        </div>
+      </div>
+      <div className="grid gap-5 items-start lg:grid-cols-[260px_minmax(0,1fr)]">
+        <aside aria-label="Périodes" className="min-w-0 rounded-2xl border border-border/60 bg-card p-3 lg:sticky lg:top-20">
+          <Button onClick={() => createCurrent(browseType)} className="w-full rounded-xl mb-3" variant="outline">+ Nouveau rapport</Button>
+          <div className="flex gap-2 overflow-x-auto lg:max-h-[70vh] lg:flex-col lg:overflow-y-auto">
+            {reportEntries[browseType].map(entry => {
+              const active = selected?.type === browseType && selected.key === entry.key;
+              return <button key={entry.key} type="button" aria-current={active ? 'true' : undefined} onClick={() => selectPeriod(browseType, entry.key)} className={`min-w-[190px] shrink-0 rounded-xl p-3.5 text-left transition-colors lg:min-w-0 ${active ? 'selected-tab' : 'hover:bg-secondary/60'}`}>
+                <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium">{entry.label}</span>{entry.hasReport && <Check className="h-3.5 w-3.5 shrink-0 text-profit" aria-label="Enregistré" />}</div>
+                <div className="mt-2 flex items-center justify-between gap-3"><span className="text-xs text-muted-foreground">{entry.tradeCount} trades</span><span className={`font-mono text-xs font-semibold ${entry.pnl >= 0 ? 'text-profit' : 'text-loss'}`}>{fmt(entry.pnl)}$</span></div>
+              </button>;
+            })}
+            {!reportEntries[browseType].length && <p className="py-6 text-center text-sm text-muted-foreground">Aucun rapport</p>}
+          </div>
         </aside>
 
         {/* Right detail */}
-        <section className="flex-1 min-w-0 rounded-2xl border border-border/60 bg-card overflow-hidden">
+        <section className="report-paper min-w-0 rounded-3xl border border-border/60 shadow-[var(--shadow-card)] overflow-hidden">
           {!selected ? (
             <div className="h-[60vh] flex flex-col items-center justify-center text-center p-8">
               <FileText className="h-8 w-8 text-muted-foreground/40 mb-3" />
-              <p className="text-sm font-medium">Select a report</p>
+              <p className="text-sm font-medium">Sélectionnez une période</p>
             </div>
           ) : (
             <>
-              <div className="px-5 py-4 border-b border-border/50 flex items-start justify-between gap-4">
+              <div className="px-5 py-6 sm:px-7 border-b border-border/50 flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <currentMeta.icon className="h-4 w-4 text-primary" />
                     <span className="text-[10px] uppercase tracking-widest text-muted-foreground">{currentMeta.title}</span>
-                    {selectedSaved && <span className="text-[9px] px-1.5 py-0.5 rounded bg-profit/10 text-profit">Saved</span>}
-                    {!selectedSaved && <span className="text-[9px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">Not saved</span>}
+                    {selectedSaved && <span className="text-[9px] px-1.5 py-0.5 rounded bg-profit/10 text-profit">Enregistré</span>}
+                    {!selectedSaved && <span className="text-[9px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">Brouillon</span>}
                   </div>
                   <h2 className="text-xl font-bold tracking-tight">{selectedEntry?.label || getPeriodLabel(selected.type, selected.key)}</h2>
                 </div>
@@ -781,21 +689,29 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
                 </div>
               </div>
               ) : (
-                <div className="p-3">
-                  <div className="relative rounded-xl border border-border/60 bg-background/20 overflow-hidden" style={{ height: 'calc(100vh - 14rem)', minHeight: '520px' }}>
-                    {pdfLoading || !pdfUrl ? (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground text-sm">
-                        <div className="h-5 w-5 rounded-full border-2 border-primary/25 border-t-primary animate-spin" />
-                        Génération du PDF…
-                      </div>
-                    ) : (
-                      <iframe
-                        src={`${pdfUrl}#toolbar=1&navpanes=0&zoom=100`}
-                        title="Trading report PDF"
-                        className="w-full h-full bg-white"
-                      />
-                    )}
+                <div className="p-5 sm:p-7 space-y-7">
+                  <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+                    {[
+                      { label: 'Résultat net', value: `${fmt(stats.pnl)}$`, color: stats.pnl >= 0 ? 'text-profit' : 'text-loss' },
+                      { label: 'Trades', value: String(stats.total), color: 'text-foreground' },
+                      { label: 'Win rate', value: `${stats.winRate}%`, color: 'text-foreground' },
+                      { label: 'Plan respecté', value: `${stats.strategy}%`, color: 'text-foreground' },
+                    ].map(item => <div key={item.label} className="rounded-2xl border border-border/50 bg-secondary/30 p-4"><p className="text-xs text-muted-foreground">{item.label}</p><p className={`mt-2 font-mono text-2xl font-semibold tracking-tight ${item.color}`}>{item.value}</p></div>)}
                   </div>
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-3 border-b border-border/60 pb-5 text-sm">
+                    <span className="text-muted-foreground">Profit factor <strong className="ml-2 font-mono text-foreground">{stats.profitFactor === Infinity ? '∞' : stats.profitFactor.toFixed(2)}</strong></span>
+                    {formData.emotionGenerale && <span className="rounded-full bg-primary/10 px-3 py-1 text-primary">{formData.emotionGenerale}</span>}
+                    <span className="text-muted-foreground">Trades émotionnels <strong className="ml-2 font-mono text-foreground">{formData.tradesEmotionnels}</strong></span>
+                  </div>
+                  <div className="grid gap-5 xl:grid-cols-[1.2fr_1fr]">
+                    <article className="min-w-0 rounded-2xl border border-border/60 p-5"><h3 className="mb-3 text-base font-semibold">Bilan de la période</h3><p className="report-reading text-sm text-foreground/80">{formData.conclusion || '—'}</p></article>
+                    <article className="min-w-0 rounded-2xl bg-primary/[0.06] p-5"><h3 className="mb-3 text-base font-semibold">Prochain objectif</h3><p className="report-reading text-sm font-medium">{formData.objectifPrincipal || '—'}</p>{formData.objectifsSecondaires && <p className="report-reading mt-4 text-sm text-muted-foreground">{formData.objectifsSecondaires}</p>}</article>
+                  </div>
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <article className="min-w-0"><h3 className="mb-3 text-sm font-semibold">Psychologie</h3><p className="report-reading text-sm text-muted-foreground">{formData.pointsPsychologiques || '—'}</p></article>
+                    <article className="min-w-0"><h3 className="mb-3 text-sm font-semibold">Plan d’action</h3><p className="report-reading text-sm text-muted-foreground">{formData.solutions || '—'}</p></article>
+                  </div>
+                  {selectedTrades.length > 0 && <section className="border-t border-border/60 pt-6"><h3 className="mb-3 text-base font-semibold">Trades de la période</h3><div className="divide-y divide-border/50">{selectedTrades.map(trade => <div key={trade.id} className="py-4"><div className="flex flex-wrap items-center justify-between gap-2"><span className="font-medium">{trade.pair} <span className="ml-2 text-xs text-muted-foreground">{trade.type === 'Buy' ? 'Long' : 'Short'} · {getTradeReportDate(trade)}</span></span><span className={`font-mono text-sm font-semibold ${getNetResult(trade) >= 0 ? 'text-profit' : 'text-loss'}`}>{fmt(getNetResult(trade))}$</span></div>{(formData.tradeNotes[trade.id] ?? trade.notes) && <p className="report-reading mt-2 text-sm text-muted-foreground">{formData.tradeNotes[trade.id] ?? trade.notes}</p>}{getTradeScreenshots(trade).length > 0 && <button onClick={() => setPreviewImgs(getTradeScreenshots(trade))} className="mt-2 inline-flex items-center gap-1.5 text-xs text-primary"><Image className="h-3.5 w-3.5" />Captures</button>}</div>)}</div></section>}
                 </div>
               )}
             </>

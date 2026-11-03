@@ -51,7 +51,7 @@ const EquityCurveChart = ({ data, accentColor, liveColor, medianLineColor, media
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <ComposedChart data={chartData} margin={chartMargin}>
+      <ComposedChart data={chartData} margin={{ ...chartMargin, right: 40 }}>
         <defs>
           <Glow id={`glow-${uid}`} />
           <linearGradient id={`balGrad-${uid}`} x1="0" y1="0" x2="0" y2="1">

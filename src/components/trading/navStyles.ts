@@ -9,8 +9,8 @@ export const NAV_PILL =
 export const navItemClass = (active: boolean) =>
   `flex items-center justify-center whitespace-nowrap px-2.5 2xl:px-4 h-8 rounded-full text-[12px] 2xl:text-[13px] font-medium transition-all duration-200 ${
     active
-      ? 'rb-active-pill bg-accent text-accent-foreground font-semibold'
-      : 'rb-glow-hover text-muted-foreground hover:text-foreground hover:bg-secondary'
+      ? 'selected-tab font-semibold'
+      : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
   }`;
 
 /** Barre d'en-tête : sélecteur de modules à gauche, menu CENTRÉ, colonne symétrique à droite. */
