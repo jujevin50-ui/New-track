@@ -508,7 +508,10 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
                     <div className="space-y-2"><Label htmlFor={`${fieldId}-notes`}>Notes</Label><Textarea id={`${fieldId}-notes`} value={form.notes || ''} onChange={e => set('notes', e.target.value)} className="min-h-24 resize-y rounded-xl border-border/60 bg-secondary/50 text-sm" /></div>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between gap-3">
-                        <Label>Captures{screenshots.length > 0 ? ` · ${screenshots.length}` : ''}</Label>
+                        <div className="flex items-center gap-2">
+                          <Label>Captures{screenshots.length > 0 ? ` · ${screenshots.length}` : ''}</Label>
+                          <kbd className="rounded-md border border-border/60 px-1.5 py-0.5 text-[11px] text-muted-foreground">Ctrl + V</kbd>
+                        </div>
                         <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5 rounded-lg" onClick={() => imageInput.current?.click()}><ImagePlus className="h-3.5 w-3.5" />Ajouter</Button>
                       </div>
                       <input ref={imageInput} type="file" accept="image/*" multiple aria-label="Ajouter des captures" className="sr-only" tabIndex={-1} onChange={e => { void addFiles(e.target.files); e.target.value = ''; }} />
