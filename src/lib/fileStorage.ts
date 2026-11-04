@@ -1,3 +1,5 @@
+import type { StrategyDocument } from './strategyDocuments';
+
 const DB_NAME = 'tr7upfx-fs';
 const STORE = 'handles';
 const HANDLE_KEY = 'main';
@@ -60,6 +62,7 @@ export async function requestPermission(handle: FileSystemFileHandle): Promise<b
 
 export interface AppData {
   version: number;
+  strategyDocuments: StrategyDocument[];
   accounts: any[];
   trades: any[];
   pendingOrders: any[];
@@ -88,6 +91,7 @@ export interface AppData {
 
 export const DEFAULT_DATA: AppData = {
   version: 1,
+  strategyDocuments: [],
   accounts: [],
   trades: [],
   pendingOrders: [],
@@ -173,7 +177,8 @@ export function readLocalData(): AppData | null {
 }
 
 export function writeLocalData(data: AppData): void {
-  try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch { /* quota / disabled */ }
+  try { localStorage.setItem(LS_KEY, JSON.stringify(data)); }
+  catch { throw new Error('Stockage local plein ou indisponible. Libérez de l’espace ou utilisez un fichier de données.'); }
 }
 
 export function clearLocalData(): void {

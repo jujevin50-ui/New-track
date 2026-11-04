@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   { id: 'trades', title: 'Trades', url: '/trades' },
   { id: 'reports', title: 'Reports', url: '/reports' },
   { id: 'ai-assistant', title: 'AI Assistant', url: '/ai-assistant' },
+  { id: 'strategy', title: 'Stratégie', url: '/strategy' },
   { id: 'accounts', title: 'Accounts', url: '/accounts' },
 ];
 

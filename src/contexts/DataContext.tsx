@@ -70,10 +70,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const persist = useCallback(async (newData: AppData) => {
+    const previous = dataRef.current;
     dataRef.current = newData;
     setData(newData);
-    if (handleRef.current) await writeFileData(handleRef.current, newData);
-    else if (fallbackRef.current) writeLocalData(newData);
+    try {
+      if (handleRef.current) await writeFileData(handleRef.current, newData);
+      else if (fallbackRef.current) writeLocalData(newData);
+    } catch (error) {
+      if (dataRef.current === newData) { dataRef.current = previous; setData(previous); }
+      throw error;
+    }
   }, []);
 
   const connectNew = useCallback(async () => {
