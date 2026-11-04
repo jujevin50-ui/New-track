@@ -1,6 +1,9 @@
-import { Component, useMemo, type ReactNode } from 'react';
+import { Component, lazy, Suspense, useMemo, type ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 import GradientWaves from '@/components/GradientWaves';
 import { useWaveBackground } from '@/hooks/useWaveBackground';
+
+const FinanceBackground = lazy(() => import('./FinanceBackground'));
 
 /** Catch WebGL errors so the app keeps working. */
 class BgErrorBoundary extends Component<{ children: ReactNode }, { ok: boolean }> {
@@ -81,7 +84,11 @@ function WavesInner() {
  */
 export function AppBackground() {
   const { config } = useWaveBackground();
+  const { pathname } = useLocation();
   if (!config.enabled) return null;
+  if (pathname === '/finance' || pathname.startsWith('/finance/')) {
+    return <BgErrorBoundary><Suspense fallback={null}><FinanceBackground /></Suspense></BgErrorBoundary>;
+  }
   return (
     <BgErrorBoundary>
       <WavesInner />
