@@ -26,7 +26,7 @@ export const WAVE_PRESETS: { name: string; waveColor: string; amplitude: number;
   { name: 'Forest', waveColor: '#22c55e', amplitude: 2.0, swell: 28 },
 ];
 
-/** Voile équilibré : lisible sur Trading, Finance et Tasks */
+/** Voile équilibré : lisible sur Trading et Finance */
 const DEFAULT: WaveBgConfig = {
   waveColor: '#fb923c',
   veil: 0.58,

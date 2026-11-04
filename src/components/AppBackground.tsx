@@ -76,7 +76,7 @@ function WavesInner() {
 }
 
 /**
- * Fond animé global (Track Record, Finance, Tasks).
+ * Fond animé global (Track Record, Finance).
  * Désactivable dans Paramètres → Fond animé.
  */
 export function AppBackground() {

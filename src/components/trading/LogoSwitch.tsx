@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, Landmark, CheckSquare } from 'lucide-react';
+import { BarChart3, Landmark } from 'lucide-react';
 import { NAV_HEIGHT } from './navStyles';
 
 interface LogoSwitchProps {
@@ -14,7 +14,7 @@ const TABS = [
   {
     id: 'trading',
     path: '/',
-    match: (p: string) => !['/finance', '/tasks'].includes(p),
+    match: (p: string) => p !== '/finance',
     label: 'Track Record',
     Icon: BarChart3,
   },
@@ -24,13 +24,6 @@ const TABS = [
     match: (p: string) => p === '/finance',
     label: 'My Finance',
     Icon: Landmark,
-  },
-  {
-    id: 'tasks',
-    path: '/tasks',
-    match: (p: string) => p === '/tasks',
-    label: 'Tâches',
-    Icon: CheckSquare,
   },
 ] as const;
 

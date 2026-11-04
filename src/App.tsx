@@ -35,7 +35,6 @@ const Accounts = lazyWithReload(() => import("./pages/Accounts"));
 const Reports = lazyWithReload(() => import("./pages/Reports"));
 const DailyReport = lazyWithReload(() => import("./pages/DailyReport"));
 const Finance = lazyWithReload(() => import("./pages/Finance"));
-const Tasks = lazyWithReload(() => import("./pages/Tasks"));
 const AiAssistant = lazyWithReload(() => import("./pages/AiAssistant"));
 import NotFound from "./pages/NotFound";
 
@@ -94,8 +93,8 @@ const AppContent = () => {
   useEffect(() => {
     if (!routeRestored && status === "connected") {
       const last = localStorage.getItem("app-last-route");
-      // Ne restaure que des routes connues (évite de bloquer /finance /tasks)
-      const allowed = ["/", "/calendar", "/trades", "/reports", "/daily-report", "/ai-assistant", "/accounts", "/finance", "/tasks"];
+      // Ne restaure que les routes encore disponibles.
+      const allowed = ["/", "/calendar", "/trades", "/reports", "/daily-report", "/ai-assistant", "/accounts", "/finance"];
       if (last && last !== location.pathname && allowed.includes(last)) {
         navigate(last, { replace: true });
       }
@@ -125,18 +124,6 @@ const AppContent = () => {
     );
   }
 
-  if (location.pathname === "/tasks") {
-    return (
-      <div className="relative z-10 min-h-screen text-foreground">
-        <ErrorBoundary resetKey="tasks">
-          <Suspense fallback={<PageLoader />}>
-            <Tasks />
-          </Suspense>
-        </ErrorBoundary>
-      </div>
-    );
-  }
-
   return (
     <>
       {showSplash && <WelcomeSplash name={userName} onDone={() => setShowSplash(false)} />}
@@ -145,6 +132,7 @@ const AppContent = () => {
           <ErrorBoundary resetKey={location.pathname}>
             <Suspense fallback={<PageLoader />}>
               <Routes>
+                <Route path="/tasks" element={<Navigate to="/" replace />} />
                 <Route path="/" element={<Dashboard activeAccount={displayAccount} accounts={accounts} />} />
                 <Route path="/calendar" element={<CalendarView activeAccount={displayAccount} accounts={accounts} />} />
                 <Route path="/trades" element={<Trades activeAccount={displayAccount} accounts={accounts} onAddAccount={addAccount} onUpdateAccount={updateAccount} />} />

@@ -1,4 +1,4 @@
-/** Styles partagés du menu en pilule (Track Record + My Finance + Tâches). Source unique : modifie ici. */
+/** Styles partagés du menu en pilule (Track Record + My Finance). Source unique : modifie ici. */
 
 /** Hauteur commune du sélecteur de modules et de la pilule de menu. */
 export const NAV_HEIGHT = 40;
