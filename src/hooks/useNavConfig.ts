@@ -12,7 +12,6 @@ export interface NavItem {
 const DEFAULT_NAV: NavItem[] = [
   { id: 'dashboard', title: 'Dashboard', visible: true },
   { id: 'calendar', title: 'Calendar', visible: true },
-  { id: 'daily-report', title: 'Bilan', visible: true },
   { id: 'trades', title: 'Trades', visible: true },
   { id: 'reports', title: 'Reports', visible: true },
   { id: 'ai-assistant', title: 'AI Assistant', visible: true },

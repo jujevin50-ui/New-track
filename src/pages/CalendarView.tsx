@@ -4,7 +4,8 @@ import { useTrades } from '@/hooks/useTrades';
 import { useCalendarConfig, CALENDAR_WIDGET_DEFS } from '@/hooks/useDashboardConfig';
 import { useEventColors } from '@/hooks/useEventColors';
 import { useDailyJournal } from '@/hooks/useDailyJournal';
-import DailyJournalDialog from '@/components/trading/DailyJournalDialog';
+import DailyReview from '@/components/trading/DailyReview';
+import { Input } from '@/components/ui/input';
 import { Account } from '@/types/account';
 import { Trade, getNetResult } from '@/types/trade';
 import {
@@ -55,14 +56,14 @@ const CalendarView = ({ activeAccount, accounts }: CalendarViewProps) => {
   const { trades: rawTrades } = useTrades(activeAccount?.id || null, activeAccount?.initialBalance || 0);
   const { configs, setWidgetColor, toggleWidget } = useCalendarConfig();
   const { colors: evtColors } = useEventColors();
-  const { getJournal, saveJournal, deleteJournal } = useDailyJournal();
+  const { getJournal, saveJournal } = useDailyJournal();
 
   // Navigated here from Dashboard's "Global > Monthly Metrics" table with a target month
   const location = useLocation();
   const targetMonth = location.state as { year?: number; month?: number } | null;
 
   const [editMode,       setEditMode]       = useState(false);
-  const [journalDate,    setJournalDate]    = useState<string | null>(null);
+  const [journalDate,    setJournalDate]    = useState<string>(() => { const today = new Date(); return dateStr(today.getFullYear(), today.getMonth(), today.getDate()); });
   const [currentDate,    setCurrentDate]    = useState(() =>
     targetMonth?.year !== undefined && targetMonth?.month !== undefined
       ? new Date(targetMonth.year, targetMonth.month, 1)
@@ -373,10 +374,12 @@ const CalendarView = ({ activeAccount, accounts }: CalendarViewProps) => {
                     const isBE    = data ? Math.abs(data.pct) <= 0.10 : false;
                     const col     = isBE ? '246,90%,63%' : data?.pnl > 0 ? '142,71%,45%' : '0,84%,60%';
                     return (
-                      <div key={di} onClick={() => setJournalDate(ds)}
+                      <div key={di} role="button" tabIndex={0} aria-label={`Bilan du ${ds}`} aria-pressed={journalDate === ds}
+                        onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setJournalDate(ds); document.getElementById('daily-review')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }}
+                        onClick={() => { setJournalDate(ds); document.getElementById('daily-review')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
                         className={`group relative rounded-xl h-28 p-2 flex flex-col cursor-pointer select-none overflow-hidden animate-pop-in day-glow
                           transition-all duration-300 hover:-translate-y-1 hover:scale-[1.03] hover:z-10
-                          ${isT ? 'ring-2 ring-inset ring-primary animate-ring-pulse' : ''}
+                          ${journalDate === ds ? 'ring-2 ring-inset ring-primary' : isT ? 'ring-1 ring-inset ring-primary/40' : ''}
                           ${!data ? (isWkd ? '' : 'bg-card/40') : ''}`}
                         style={{
                           animationDelay: `${(wi * 7 + di) * 14}ms`,
@@ -462,19 +465,14 @@ const CalendarView = ({ activeAccount, accounts }: CalendarViewProps) => {
         </div>
 
 
-      {journalDate && (
-        <DailyJournalDialog
-          open={!!journalDate}
-          onOpenChange={o => { if (!o) setJournalDate(null); }}
-          date={journalDate}
-          dayTrades={trades.filter(t => t.endDate === journalDate)}
-          dayPnL={dailyPnL[journalDate]?.pnl || 0}
-          existing={getJournal(journalDate)}
-          onSave={saveJournal}
-          onDelete={deleteJournal}
-          accounts={accounts}
-        />
-      )}
+      <section id="daily-review" aria-labelledby="daily-review-title" className="scroll-mt-24 rounded-2xl border border-border/60 bg-card p-5 sm:p-7 space-y-6">
+        <header className="flex flex-wrap items-center justify-between gap-4">
+          <h2 id="daily-review-title" className="text-xl font-semibold tracking-tight">Bilan de la journée</h2>
+          <Input aria-label="Date du bilan" type="date" required value={journalDate} onChange={event => { if (event.target.value) { setJournalDate(event.target.value); setCurrentDate(new Date(`${event.target.value}T12:00:00`)); } }} className="h-10 w-auto max-w-full rounded-xl bg-secondary/40" />
+        </header>
+        <DailyReview key={journalDate} date={journalDate} existing={getJournal(journalDate)} trades={trades.filter(trade => trade.endDate?.slice(0, 10) === journalDate)} onSave={saveJournal} />
+      </section>
+
     </div>
   );
 };

@@ -14,7 +14,6 @@ import { NAV_PILL, navItemClass } from './navStyles';
 const NAV_ITEMS = [
   { id: 'dashboard', title: 'Dashboard', url: '/' },
   { id: 'calendar', title: 'Calendar', url: '/calendar' },
-  { id: 'daily-report', title: 'Bilan', url: '/daily-report' },
   { id: 'trades', title: 'Trades', url: '/trades' },
   { id: 'reports', title: 'Reports', url: '/reports' },
   { id: 'ai-assistant', title: 'AI Assistant', url: '/ai-assistant' },

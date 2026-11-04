@@ -33,7 +33,6 @@ const CalendarView = lazyWithReload(() => import("./pages/CalendarView"));
 const Trades = lazyWithReload(() => import("./pages/Trades"));
 const Accounts = lazyWithReload(() => import("./pages/Accounts"));
 const Reports = lazyWithReload(() => import("./pages/Reports"));
-const DailyReport = lazyWithReload(() => import("./pages/DailyReport"));
 const Strategy = lazyWithReload(() => import("./pages/Strategy"));
 const Finance = lazyWithReload(() => import("./pages/Finance"));
 const AiAssistant = lazyWithReload(() => import("./pages/AiAssistant"));
@@ -95,7 +94,7 @@ const AppContent = () => {
     if (!routeRestored && status === "connected") {
       const last = localStorage.getItem("app-last-route");
       // Ne restaure que les routes encore disponibles.
-      const allowed = ["/", "/calendar", "/trades", "/reports", "/daily-report", "/ai-assistant", "/accounts", "/finance", "/strategy"];
+      const allowed = ["/", "/calendar", "/trades", "/reports", "/ai-assistant", "/accounts", "/finance", "/strategy"];
       if (last && last !== location.pathname && allowed.includes(last)) {
         navigate(last, { replace: true });
       }
@@ -140,7 +139,7 @@ const AppContent = () => {
                 <Route path="/trades" element={<Trades activeAccount={displayAccount} accounts={accounts} onAddAccount={addAccount} onUpdateAccount={updateAccount} />} />
                 <Route path="/reports" element={<Reports activeAccount={displayAccount} accounts={accounts} />} />
                 <Route path="/weekly-report" element={<Navigate to="/reports" replace />} />
-                <Route path="/daily-report" element={<DailyReport activeAccount={displayAccount} accounts={accounts} />} />
+                <Route path="/daily-report" element={<Navigate to="/calendar#daily-review" replace />} />
                 <Route path="/ai-assistant" element={<AiAssistant activeAccount={displayAccount} accounts={accounts} />} />
                 <Route path="/accounts" element={<Accounts accounts={accounts} activeAccountId={activeAccountId} onSelectAccount={setActiveAccountId} onAdd={addAccount} onUpdate={updateAccount} onDelete={deleteAccount} categories={categories} allTrades={allTrades} />} />
                 <Route path="*" element={<NotFound />} />
