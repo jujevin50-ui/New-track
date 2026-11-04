@@ -458,7 +458,7 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
     <div className="w-full max-w-[1040px] mx-auto pb-16">
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Rapports</h1>
-        <div role="group" aria-label="Périodicité des rapports" className="flex items-center gap-1 rounded-2xl border border-border/60 bg-card p-1">
+        <div role="group" aria-label="Périodicité des rapports" className="page-segments">
           {(['weekly', 'monthly', 'yearly'] as PeriodType[]).map(type => {
             const Icon = SECTION_META[type].icon;
             return <button key={type} type="button" aria-pressed={browseType === type} onClick={() => {

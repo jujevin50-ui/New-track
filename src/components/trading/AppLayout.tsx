@@ -50,11 +50,11 @@ export function AppLayout({ children, accounts, activeAccountId, onSelectAccount
       {/* Filtres de comptes : descendus sous le menu, alignés à droite */}
       {accounts.length > 0 && (
         <div className="relative z-40 px-3 md:px-5 pt-3 pb-1 max-w-[1800px] w-full mx-auto flex justify-end">
-          <div className="flex flex-wrap items-center justify-end gap-1 min-h-9 px-1.5 py-1 rounded-2xl bg-card border border-border shadow-[var(--shadow-card)]">
+          <div className="flex flex-wrap items-center justify-end gap-1 min-h-9 px-1.5 py-1 rounded-xl bg-background/90 border border-border/70">
             <div className="flex flex-wrap items-center gap-0.5">
               {FILTERS.filter(f => f.key === 'all' || accounts.some(a => a.status === f.key)).map(f => (
                 <button key={f.key} onClick={() => { setStatusFilter(f.key); setDropdownOpen(true); }}
-                  className={`h-7 px-2.5 text-[11px] font-medium rounded-full transition-colors flex items-center gap-1.5 ${statusFilter === f.key ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}>
+                  className={`h-7 px-2.5 text-[11px] font-medium rounded-lg transition-colors flex items-center gap-1.5 ${statusFilter === f.key ? 'selected-tab' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}>
                   {f.key !== 'all' && <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[f.key]}`} />}{f.label}
                 </button>
               ))}

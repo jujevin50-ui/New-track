@@ -227,12 +227,12 @@
   /* Surface premium : profondeur soft, bordure fine, hover discret */
   .surface {
     border: 1px solid hsl(var(--border));
-    border-radius: calc(var(--radius) + 0.35rem);
+    border-radius: 12px;
     box-shadow: var(--shadow-card);
     transition: box-shadow 0.28s cubic-bezier(0.16,1,0.3,1), border-color 0.2s ease, transform 0.28s cubic-bezier(0.16,1,0.3,1);
   }
   .surface:hover {
-    box-shadow: var(--shadow-pop);
+    border-color: hsl(var(--border) / 0.9);
   }
   .surface-interactive:hover {
     box-shadow: var(--shadow-pop);
@@ -827,28 +827,14 @@ html [role="dialog"].trade-editor {
   .module-tab, .module-tab-label { transition: none; }
 }
 
-/* Sélection commune : relief discret, contraste stable et repère inférieur. */
+/* Shared selection mirrors the top navigation. */
 .selected-tab {
   position: relative;
-  color: hsl(var(--foreground));
-  background: linear-gradient(180deg, hsl(var(--card)), hsl(var(--accent)));
-  box-shadow: inset 0 0 0 1px hsl(var(--border) / 0.85), inset 0 1px 0 hsl(0 0% 100% / 0.3), 0 3px 8px -4px hsl(var(--foreground) / 0.2);
+  color: hsl(var(--background));
+  background: hsl(var(--foreground));
+  box-shadow: 0 3px 8px -4px hsl(var(--foreground) / 0.25);
 }
-.selected-tab::after {
-  content: '';
-  position: absolute;
-  bottom: 3px;
-  left: 50%;
-  width: 16px;
-  transform: translateX(-50%);
-  height: 2px;
-  border-radius: 999px;
-  background: hsl(var(--primary) / 0.65);
-  pointer-events: none;
-}
-.report-paper { background: hsl(var(--card) / 0.97); }
-.report-reading { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.95; }
-.dashboard-overview > :first-child { background-image: linear-gradient(135deg, hsl(var(--primary) / 0.1), transparent 75%); }
+.selected-tab .text-muted-foreground { color: inherit; opacity: 0.75; }
 
 /* Decorative flow fields never intercept clicks or sit above the controls. */
 .kinetic-flow-layer { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; border-radius: inherit; }
@@ -873,3 +859,14 @@ html [role="dialog"].trade-editor {
   .header-nav-item.is-current { background: transparent; }
   .module-switch .module-tab.is-current { background: hsl(var(--foreground)); }
 }
+
+/* Page panels use the same precise edges and restrained depth as navigation. */
+.app-panel {
+  border-radius: 12px;
+  border-color: hsl(var(--border) / 0.7);
+  box-shadow: 0 1px 3px hsl(var(--foreground) / 0.025);
+}
+html .app-panel { background-color: var(--glass-bg-strong); background-image: none; }
+.page-segments { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.page-segments > button { border: 1px solid hsl(var(--border) / 0.65); border-radius: 10px; background: hsl(var(--background) / 0.9); }
+.page-segments > button.selected-tab { border-color: transparent; background: hsl(var(--foreground)); }

@@ -42,7 +42,7 @@ const TradeFilters = ({ trades, onFiltered }: TradeFiltersProps) => {
 
   const hasFilters = pair || type || exitType || result || dateFrom || dateTo;
 
-  const chipClass = (active: boolean) => `px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${active ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground hover:text-foreground'}`;
+  const chipClass = (active: boolean) => `border px-2.5 py-1 rounded-[10px] text-[11px] font-medium transition-colors cursor-pointer ${active ? 'selected-tab border-transparent' : 'border-border/70 bg-background/90 text-muted-foreground hover:text-foreground'}`;
 
   return (
     <div className="space-y-2">
@@ -52,7 +52,7 @@ const TradeFilters = ({ trades, onFiltered }: TradeFiltersProps) => {
       </div>
 
       {expanded && (
-        <div className="bg-card border border-border rounded-lg p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="app-panel bg-card border border-border rounded-xl p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <div className="space-y-1">
             <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Pair</label>
             <select value={pair} onChange={e => update(setPair, 'pair', e.target.value)} className="w-full h-8 rounded-md border border-input bg-background px-2 text-xs">
@@ -63,7 +63,7 @@ const TradeFilters = ({ trades, onFiltered }: TradeFiltersProps) => {
           <div className="space-y-1">
             <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Type</label>
             <div className="flex gap-1">
-              {['', 'Buy', 'Sell'].map(v => (<span key={v} className={chipClass(type === v)} onClick={() => update(setType, 'type', v)}>{v || 'All'}</span>))}
+              {['', 'Buy', 'Sell'].map(v => (<button type="button" key={v} className={chipClass(type === v)} onClick={() => update(setType, 'type', v)}>{v || 'All'}</button>))}
             </div>
           </div>
           <div className="space-y-1">
@@ -76,7 +76,7 @@ const TradeFilters = ({ trades, onFiltered }: TradeFiltersProps) => {
           <div className="space-y-1">
             <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Result</label>
             <div className="flex gap-1">
-              {[{ v: '', l: 'All' }, { v: 'win', l: 'Win' }, { v: 'loss', l: 'Loss' }].map(({ v, l }) => (<span key={v} className={chipClass(result === v)} onClick={() => update(setResult, 'result', v)}>{l}</span>))}
+              {[{ v: '', l: 'All' }, { v: 'win', l: 'Win' }, { v: 'loss', l: 'Loss' }].map(({ v, l }) => (<button type="button" key={v} className={chipClass(result === v)} onClick={() => update(setResult, 'result', v)}>{l}</button>))}
             </div>
           </div>
           <div className="space-y-1">

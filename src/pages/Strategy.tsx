@@ -72,20 +72,20 @@ export default function Strategy() {
       </header>
       {error && <p role="alert" className="rounded-xl border border-loss/20 bg-loss/5 p-3 text-sm text-loss">{error}</p>}
       {!documents.length ? (
-        <div className="flex min-h-[55vh] flex-col items-center justify-center gap-5 rounded-3xl border border-dashed border-border bg-card/40 p-8 text-center">
+        <div className="flex min-h-[55vh] flex-col items-center justify-center gap-5 rounded-xl border border-dashed border-border bg-card/40 p-8 text-center">
           <BookOpen className="h-10 w-10 text-muted-foreground" strokeWidth={1.4} />
           <div><h2 className="text-lg font-semibold">Votre stratégie, à portée de main</h2><p className="mt-2 text-sm text-muted-foreground">PDF, Word (.docx) ou HTML</p></div>
           <Button variant="outline" className="rounded-xl" disabled={busy} onClick={() => input.current?.click()}>Choisir un fichier</Button>
         </div>
       ) : (
         <div className="grid items-start gap-4 lg:grid-cols-[250px_minmax(0,1fr)]">
-          <nav aria-label="Documents de stratégie" className="flex min-w-0 gap-2 overflow-x-auto rounded-2xl border border-border/60 bg-card p-2 lg:max-h-[75vh] lg:flex-col lg:overflow-y-auto">
+          <nav aria-label="Documents de stratégie" className="flex min-w-0 gap-2 overflow-x-auto app-panel rounded-xl border border-border/60 bg-card p-2 lg:max-h-[75vh] lg:flex-col lg:overflow-y-auto">
             {documents.map(document => <button key={document.id} type="button" aria-current={selected?.id === document.id ? 'true' : undefined} onClick={() => setSelectedId(document.id)} className={`flex min-w-[190px] shrink-0 items-center gap-3 rounded-xl px-3 py-4 text-left lg:min-w-0 ${selected?.id === document.id ? 'selected-tab' : 'hover:bg-secondary/60'}`}>
               <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
               <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium" title={document.name}>{document.name}</span><span className="mt-1 block text-xs text-muted-foreground">{document.kind === 'pdf' ? 'PDF' : document.kind === 'html' ? 'HTML' : 'Word'} · {Math.max(1, Math.round(document.size / 1024))} Ko</span></span>
             </button>)}
           </nav>
-          <section aria-label="Lecteur de stratégie" className="min-w-0 overflow-hidden rounded-2xl border border-border/60 bg-card">
+          <section aria-label="Lecteur de stratégie" className="min-w-0 overflow-hidden app-panel rounded-xl border border-border/60 bg-card">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 px-4 py-3">
               <h2 className="min-w-0 max-w-full truncate text-sm font-medium">{selected?.name}</h2>
               <div className="flex items-center gap-2">

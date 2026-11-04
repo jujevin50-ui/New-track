@@ -315,7 +315,7 @@ const CalendarView = ({ activeAccount, accounts }: CalendarViewProps) => {
 
       {/* ═══════════════════════ MONTHLY ═══════════════════════ */}
       <div className="space-y-4">
-        <div className="relative rounded-2xl border border-border bg-card/95 backdrop-blur-md overflow-hidden shadow-[var(--shadow-card)]">
+        <div className="relative app-panel rounded-xl border border-border bg-card/95 backdrop-blur-md overflow-hidden shadow-[var(--shadow-card)]">
 
             {/* Ambient glows */}
             <div className="absolute inset-x-0 top-0 h-48 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--primary)/0.12),transparent_60%)] pointer-events-none" />

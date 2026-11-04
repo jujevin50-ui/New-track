@@ -51,7 +51,7 @@ export function CategoryTile({ category, color, size }: { category: string; colo
 
 export function Card({ title, subtitle, action, children, className = '' }: { title?: string; subtitle?: ReactNode; action?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={`surface p-5 ${className}`}>
+    <section className={`app-panel surface p-5 ${className}`}>
       {(title || action) && (
         <div className="flex items-start justify-between gap-3 mb-4">
           <div className="min-w-0">
@@ -69,7 +69,7 @@ export function Card({ title, subtitle, action, children, className = '' }: { ti
 /** Indicateur clé : pastille d'icône, libellé, gros montant, mention optionnelle. */
 export function Stat({ label, value, icon, color, hint, children }: { label: string; value: string; icon: ReactNode; color: string; hint?: string; children?: ReactNode }) {
   return (
-    <div className="surface p-5">
+    <div className="app-panel surface p-5">
       <div className="flex items-center gap-2.5">
         <Tile color={color} size="sm">{icon}</Tile>
         <span className="text-[13px] text-muted-foreground">{label}</span>
@@ -95,10 +95,10 @@ export function DeltaPill({ value, label }: { value: number; label: string }) {
 /** Segmented control clair : fond gris, option active en carte blanche. */
 export function Segmented<T extends string>({ value, onChange, options }: { value: T; onChange: (v: T) => void; options: [T, string][] }) {
   return (
-    <div role="tablist" className="inline-flex items-center gap-0.5 p-1 rounded-full bg-secondary w-fit">
+    <div role="tablist" className="inline-flex flex-wrap items-center gap-1.5 w-fit">
       {options.map(([v, label]) => (
         <button key={v} role="tab" aria-selected={value === v} onClick={() => onChange(v)}
-          className={`h-8 px-4 rounded-full text-[13px] font-medium whitespace-nowrap transition-colors ${value === v ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+          className={`h-8 px-4 rounded-[10px] border text-[13px] font-medium whitespace-nowrap transition-colors ${value === v ? 'selected-tab border-transparent' : 'border-border/70 bg-background/90 text-muted-foreground hover:text-foreground'}`}>
           {label}
         </button>
       ))}

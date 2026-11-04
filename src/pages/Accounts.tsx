@@ -138,7 +138,7 @@ const Accounts = ({ accounts, activeAccountId, onSelectAccount, onAdd, onUpdate,
 
       <div className="flex flex-wrap gap-2 items-center">
         {(['all', 'active', 'pending', 'terminated', 'paid_out'] as const).map(s => (
-          <button key={s} onClick={() => setFilterStatus(s)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filterStatus === s ? 'bg-primary/15 text-primary border border-primary/40' : 'bg-secondary/50 text-muted-foreground border border-border hover:text-foreground'}`}>
+          <button key={s} onClick={() => setFilterStatus(s)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filterStatus === s ? 'selected-tab border border-transparent' : 'bg-secondary/50 text-muted-foreground border border-border hover:text-foreground'}`}>
             {s === 'all' ? 'All' : STATUS_CONFIG[s].label} ({statusCounts[s]})
           </button>
         ))}
@@ -152,7 +152,7 @@ const Accounts = ({ accounts, activeAccountId, onSelectAccount, onAdd, onUpdate,
       </div>
 
       {filtered.length === 0 ? (
-        <div className="bg-card border border-border rounded-lg p-12 text-center"><p className="text-muted-foreground">No accounts.</p></div>
+        <div className="app-panel bg-card border border-border rounded-xl p-12 text-center"><p className="text-muted-foreground">No accounts.</p></div>
       ) : (
         <div className="space-y-6">
           {Object.entries(grouped).map(([category, catAccounts]) => (
@@ -165,7 +165,7 @@ const Accounts = ({ accounts, activeAccountId, onSelectAccount, onAdd, onUpdate,
                   const gainPct = gainByAccount[account.id] || 0;
                   const isPositive = gainPct >= 0;
                   return (
-                    <div key={account.id} className={`bg-card border rounded-lg p-4 flex items-center justify-between cursor-pointer transition-colors animate-fade-in-up ${account.id === activeAccountId ? 'border-primary/50 glow-primary' : 'border-border hover:border-border/80'} ${account.status === 'terminated' ? 'opacity-60' : ''}`} style={{ animationDelay: `${ai * 50}ms` }} onClick={() => onSelectAccount(account.id)}>
+                    <div key={account.id} className={`app-panel bg-card border rounded-xl p-4 flex items-center justify-between cursor-pointer transition-colors animate-fade-in-up ${account.id === activeAccountId ? 'border-primary/60' : 'border-border hover:border-border/80'} ${account.status === 'terminated' ? 'opacity-60' : ''}`} style={{ animationDelay: `${ai * 50}ms` }} onClick={() => onSelectAccount(account.id)}>
                       <div className="flex items-center gap-3">
                         {account.id === activeAccountId && (<CheckCircle2 className="h-4 w-4 text-primary shrink-0" />)}
                         <div>
@@ -208,7 +208,7 @@ const Accounts = ({ accounts, activeAccountId, onSelectAccount, onAdd, onUpdate,
         {/* ═══ PAID ACCOUNTS TAB ═══ */}
         <TabsContent value="paid" className="mt-4">
           {paidAccounts.length === 0 ? (
-            <div className="bg-card border border-border rounded-lg p-12 text-center">
+            <div className="app-panel bg-card border border-border rounded-xl p-12 text-center">
               <Banknote className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
               <p className="text-muted-foreground text-sm">Aucun compte paid out pour l'instant.</p>
             </div>
@@ -225,7 +225,7 @@ const Accounts = ({ accounts, activeAccountId, onSelectAccount, onAdd, onUpdate,
                 );
                 const gainPct = gainByAccount[acc.id] || 0;
                 return (
-                  <div key={acc.id} className="bg-card border rounded-xl p-5 space-y-4"
+                  <div key={acc.id} className="app-panel bg-card border rounded-xl p-5 space-y-4"
                     style={{ borderColor: 'hsl(38 92% 50% / 0.3)', backgroundColor: 'hsl(38 92% 50% / 0.03)' }}>
                     {/* Header */}
                     <div className="flex items-start justify-between gap-4">

@@ -163,7 +163,7 @@ function TradeCountSlider({ limits, value, onChange }: { limits: readonly TradeL
 
 function ChartCard({ title, children, className, action }: { title: string; children: React.ReactNode; className?: string; action?: React.ReactNode }) {
   return (
-    <div className={`min-w-0 flex flex-col rounded-2xl border border-border/60 bg-card/95 backdrop-blur-md p-5 shadow-[var(--shadow-card)] ${className ?? ''}`}>
+    <div className={`min-w-0 flex flex-col app-panel rounded-xl border border-border/60 bg-card/95 backdrop-blur-md p-5 shadow-[var(--shadow-card)] ${className ?? ''}`}>
       <div className="flex items-center justify-between mb-4 shrink-0">
         <span className="text-[15px] font-semibold text-foreground">{title}</span>
         {action}
@@ -175,7 +175,7 @@ function ChartCard({ title, children, className, action }: { title: string; chil
 
 function Panel({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rb-lift rounded-2xl border border-border/60 bg-card/95 backdrop-blur-md p-5 shadow-[var(--shadow-card)] ${className ?? ''}`}>
+    <div className={`rb-lift app-panel rounded-xl border border-border/60 bg-card/95 backdrop-blur-md p-5 shadow-[var(--shadow-card)] ${className ?? ''}`}>
       {children}
     </div>
   );
@@ -192,7 +192,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 /** Reference-style KPI card: label + trend badge top row, big number, muted subtitle. */
 function KpiCard({ label, value, prefix, badge, badgeUp, sub }: { label: string; value: string; prefix?: string; badge?: string; badgeUp?: boolean; sub?: string }) {
   return (
-    <div className="rounded-2xl border border-border/60 bg-card/95 backdrop-blur-md p-4 sm:p-5 shadow-[var(--shadow-card)]">
+    <div className="app-panel rounded-xl border border-border/60 bg-card/95 backdrop-blur-md p-4 sm:p-5 shadow-[var(--shadow-card)]">
       <div className="flex items-center justify-between mb-3">
         <span className="text-[13px] font-medium text-muted-foreground">{label}</span>
         {badge && (
@@ -609,7 +609,7 @@ const Dashboard = ({ activeAccount, accounts }: DashboardPageProps) => {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap sm:justify-end">
-      <div className="flex items-center gap-1 p-1 rounded-xl border border-border/60 bg-card/95 backdrop-blur-md w-fit shrink-0">
+      <div className="page-segments w-fit shrink-0">
         {(['account', 'global'] as const).map(v => (
           <button key={v} aria-pressed={view === v} onClick={() => setDashView(v)}
             className={`px-5 py-1.5 text-[12px] font-semibold rounded-lg transition-colors ${view === v ? 'selected-tab' : 'text-muted-foreground hover:text-foreground'}`}>
