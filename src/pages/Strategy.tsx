@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, lazy, Suspense } from 'react';
 import { BookOpen, Download, FileText, Loader2, Plus, Trash2 } from 'lucide-react';
 import { useData } from '@/contexts/DataContext';
 import { Button } from '@/components/ui/button';
+import { htmlFrame } from '@/lib/htmlDocument';
 import { importStrategyDocument, documentBuffer, wordPreview, wordFrame, type StrategyDocument } from '@/lib/strategyDocuments';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
@@ -29,7 +30,7 @@ export default function Strategy() {
       try {
         const buffer = documentBuffer(selected.content);
         url = URL.createObjectURL(new Blob([buffer], { type: selected.kind === 'pdf' ? 'application/pdf' : selected.kind === 'html' ? 'text/html' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }));
-        const html = selected.kind === 'docx' ? wordFrame(await wordPreview(buffer)) : selected.kind === 'html' ? wordFrame(new TextDecoder().decode(buffer)) : undefined;
+        const html = selected.kind === 'docx' ? wordFrame(await wordPreview(buffer)) : selected.kind === 'html' ? await htmlFrame(new TextDecoder().decode(buffer)) : undefined;
         if (!cancelled) setPreview({ id: selected.id, url, html });
       } catch {
         if (!cancelled) setReadingError('Impossible d’afficher ce document. Réimportez le fichier original.');
@@ -94,7 +95,7 @@ export default function Strategy() {
             </div>
             {readingError ? <p role="alert" className="p-8 text-sm text-loss">{readingError}</p> : currentPreview ? (
               currentPreview.html !== undefined
-                ? <iframe title={`Document de stratégie ${selected.kind === 'html' ? 'HTML' : 'Word'}`} srcDoc={currentPreview.html} sandbox="" referrerPolicy="no-referrer" className="block h-[75dvh] min-h-[500px] w-full bg-white" />
+                ? <iframe title={`Document de stratégie ${selected.kind === 'html' ? 'HTML' : 'Word'}`} srcDoc={currentPreview.html} sandbox={selected.kind === 'html' ? 'allow-scripts' : ''} referrerPolicy="no-referrer" className="block h-[75dvh] min-h-[500px] w-full bg-white" />
                 : <Suspense fallback={<div role="status" className="p-8 text-sm text-muted-foreground">Ouverture du PDF…</div>}><StrategyPdfViewer key={selected.id} content={selected.content} /></Suspense>
             ) : <div role="status" className="flex min-h-[500px] items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Ouverture du document…</div>}
           </section>
