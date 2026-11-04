@@ -1,4 +1,3 @@
-import { FlowSurface } from '@/components/FlowSurface';
 import { useState, useMemo, useRef, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -41,7 +40,6 @@ export function AppLayout({ children, accounts, activeAccountId, onSelectAccount
     <div className="min-h-screen flex flex-col w-full relative z-10">
       {/* Barre du haut : logo | menu centré | colonne vide symétrique → le menu ne peut plus chevaucher les filtres */}
       <header className={HEADER_BAR}>
-        <FlowSurface />
         <div className={HEADER_GRID}>
           <LogoSwitch className="pointer-events-auto shrink-0" />
           <div className="flex justify-center min-w-0"><TopNav /></div>

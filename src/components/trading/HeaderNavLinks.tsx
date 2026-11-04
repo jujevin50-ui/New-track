@@ -1,4 +1,3 @@
-import { FlowSurface } from '@/components/FlowSurface';
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 
 /** A single selection surface slides between links without shifting the layout. */
@@ -39,7 +38,6 @@ export function HeaderNavLinks({ activeKey, children }: { activeKey: string; chi
 
   return (
     <div className="header-nav-surface">
-      <FlowSurface />
     <div ref={ref} className="header-nav-links no-scrollbar">
       <span aria-hidden="true" className="header-nav-indicator" style={{ width: indicator.width, opacity: indicator.width ? 1 : 0, transform: `translate3d(${indicator.x}px,0,0)` }} />
       {children}

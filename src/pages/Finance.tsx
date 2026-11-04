@@ -1,4 +1,3 @@
-import { FlowSurface } from '@/components/FlowSurface';
 import { useMemo, useState } from 'react';
 import { HeaderNavLinks } from '@/components/trading/HeaderNavLinks';
 import { LogoSwitch } from '@/components/trading/LogoSwitch';
@@ -188,7 +187,6 @@ export default function Finance() {
     <div className="min-h-screen text-foreground relative z-10">
       {/* Barre du haut : logo | menu CENTRÉ | colonne symétrique (aucun élément ne peut se superposer au menu) */}
       <header className={HEADER_BAR}>
-        <FlowSurface />
         <div className={HEADER_GRID}>
           <LogoSwitch className="pointer-events-auto shrink-0" />
           <div className="flex justify-center min-w-0">
