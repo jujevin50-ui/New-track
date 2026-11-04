@@ -46,7 +46,10 @@ export default function StrategyPdfViewer({ content }: { content: string }) {
         const page = await pdf.getPage(pageNumber);
         if (cancelled) return;
         const viewport = page.getViewport({ scale: (width / page.getViewport({ scale: 1 }).width) * zoom });
-        const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        // Suréchantillonnage pour garder les petits caractères nets, sans dépasser
+        // un budget de 16 millions de pixels pour les pages très grandes.
+        const desiredRatio = Math.max(2, Math.min(window.devicePixelRatio || 1, 3));
+        const ratio = Math.min(desiredRatio, Math.sqrt(16_000_000 / (viewport.width * viewport.height)));
         target.width = Math.ceil(viewport.width * ratio);
         target.height = Math.ceil(viewport.height * ratio);
         target.style.width = `${viewport.width}px`;

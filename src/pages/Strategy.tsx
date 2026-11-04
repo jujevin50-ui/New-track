@@ -28,8 +28,8 @@ export default function Strategy() {
     (async () => {
       try {
         const buffer = documentBuffer(selected.content);
-        url = URL.createObjectURL(new Blob([buffer], { type: selected.kind === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }));
-        const html = selected.kind === 'docx' ? wordFrame(await wordPreview(buffer)) : undefined;
+        url = URL.createObjectURL(new Blob([buffer], { type: selected.kind === 'pdf' ? 'application/pdf' : selected.kind === 'html' ? 'text/html' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }));
+        const html = selected.kind === 'docx' ? wordFrame(await wordPreview(buffer)) : selected.kind === 'html' ? wordFrame(new TextDecoder().decode(buffer)) : undefined;
         if (!cancelled) setPreview({ id: selected.id, url, html });
       } catch {
         if (!cancelled) setReadingError('Impossible d’afficher ce document. Réimportez le fichier original.');
@@ -67,13 +67,13 @@ export default function Strategy() {
         <Button className="gap-2 rounded-xl" disabled={busy} onClick={() => input.current?.click()}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}Importer un document
         </Button>
-        <input ref={input} type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" aria-label="Importer un document de stratégie" className="sr-only" tabIndex={-1} disabled={busy} onChange={event => { void importFile(event.target.files?.[0]); event.target.value = ''; }} />
+        <input ref={input} type="file" accept=".html,.htm,text/html,.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" aria-label="Importer un document de stratégie" className="sr-only" tabIndex={-1} disabled={busy} onChange={event => { void importFile(event.target.files?.[0]); event.target.value = ''; }} />
       </header>
       {error && <p role="alert" className="rounded-xl border border-loss/20 bg-loss/5 p-3 text-sm text-loss">{error}</p>}
       {!documents.length ? (
         <div className="flex min-h-[55vh] flex-col items-center justify-center gap-5 rounded-3xl border border-dashed border-border bg-card/40 p-8 text-center">
           <BookOpen className="h-10 w-10 text-muted-foreground" strokeWidth={1.4} />
-          <div><h2 className="text-lg font-semibold">Votre stratégie, à portée de main</h2><p className="mt-2 text-sm text-muted-foreground">PDF ou Word (.docx)</p></div>
+          <div><h2 className="text-lg font-semibold">Votre stratégie, à portée de main</h2><p className="mt-2 text-sm text-muted-foreground">PDF, Word (.docx) ou HTML</p></div>
           <Button variant="outline" className="rounded-xl" disabled={busy} onClick={() => input.current?.click()}>Choisir un fichier</Button>
         </div>
       ) : (
@@ -81,7 +81,7 @@ export default function Strategy() {
           <nav aria-label="Documents de stratégie" className="flex min-w-0 gap-2 overflow-x-auto rounded-2xl border border-border/60 bg-card p-2 lg:max-h-[75vh] lg:flex-col lg:overflow-y-auto">
             {documents.map(document => <button key={document.id} type="button" aria-current={selected?.id === document.id ? 'true' : undefined} onClick={() => setSelectedId(document.id)} className={`flex min-w-[190px] shrink-0 items-center gap-3 rounded-xl px-3 py-4 text-left lg:min-w-0 ${selected?.id === document.id ? 'selected-tab' : 'hover:bg-secondary/60'}`}>
               <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium" title={document.name}>{document.name}</span><span className="mt-1 block text-xs text-muted-foreground">{document.kind === 'pdf' ? 'PDF' : 'Word'} · {Math.max(1, Math.round(document.size / 1024))} Ko</span></span>
+              <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium" title={document.name}>{document.name}</span><span className="mt-1 block text-xs text-muted-foreground">{document.kind === 'pdf' ? 'PDF' : document.kind === 'html' ? 'HTML' : 'Word'} · {Math.max(1, Math.round(document.size / 1024))} Ko</span></span>
             </button>)}
           </nav>
           <section aria-label="Lecteur de stratégie" className="min-w-0 overflow-hidden rounded-2xl border border-border/60 bg-card">
@@ -94,7 +94,7 @@ export default function Strategy() {
             </div>
             {readingError ? <p role="alert" className="p-8 text-sm text-loss">{readingError}</p> : currentPreview ? (
               currentPreview.html !== undefined
-                ? <iframe title="Document de stratégie Word" srcDoc={currentPreview.html} sandbox="" referrerPolicy="no-referrer" className="block h-[75dvh] min-h-[500px] w-full bg-white" />
+                ? <iframe title={`Document de stratégie ${selected.kind === 'html' ? 'HTML' : 'Word'}`} srcDoc={currentPreview.html} sandbox="" referrerPolicy="no-referrer" className="block h-[75dvh] min-h-[500px] w-full bg-white" />
                 : <Suspense fallback={<div role="status" className="p-8 text-sm text-muted-foreground">Ouverture du PDF…</div>}><StrategyPdfViewer key={selected.id} content={selected.content} /></Suspense>
             ) : <div role="status" className="flex min-h-[500px] items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Ouverture du document…</div>}
           </section>

@@ -1,7 +1,7 @@
 export interface StrategyDocument {
   id: string;
   name: string;
-  kind: 'pdf' | 'docx';
+  kind: 'pdf' | 'docx' | 'html';
   size: number;
   createdAt: string;
   content: string;
@@ -28,7 +28,7 @@ export function wordFrame(html: string): string {
 
 export async function importStrategyDocument(file: File): Promise<StrategyDocument> {
   const extension = file.name.split('.').pop()?.toLowerCase();
-  if (extension !== 'pdf' && extension !== 'docx') throw new Error('Choisissez un PDF ou un document Word (.docx).');
+  if (extension !== 'pdf' && extension !== 'docx' && extension !== 'html' && extension !== 'htm') throw new Error('Choisissez un PDF, un document Word (.docx) ou un fichier HTML.');
   if (!file.size) throw new Error('Ce fichier est vide.');
   if (file.size > 10 * 1024 * 1024) throw new Error('Le fichier dépasse la limite de 10 Mo.');
   const dataUrl = await new Promise<string>((resolve, reject) => {
@@ -42,9 +42,9 @@ export async function importStrategyDocument(file: File): Promise<StrategyDocume
   if (extension === 'pdf') {
     const header = new TextDecoder().decode(buffer.slice(0, 1024));
     if (!header.includes('%PDF-')) throw new Error('Ce fichier n’est pas un PDF valide.');
-  } else {
+  } else if (extension === 'docx') {
     try { await wordPreview(buffer); }
     catch { throw new Error('Impossible de lire ce document Word. Utilisez un fichier .docx valide.'); }
   }
-  return { id: crypto.randomUUID(), name: file.name, kind: extension, size: file.size, createdAt: new Date().toISOString(), content };
+  return { id: crypto.randomUUID(), name: file.name, kind: extension === 'htm' ? 'html' : extension, size: file.size, createdAt: new Date().toISOString(), content };
 }
