@@ -253,7 +253,7 @@ export function SettingsDialog({
           </div>
 
 
-          {/* Fond animé (Gradient Waves) */}
+          {/* Fond animé (flux cinétique) */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs text-muted-foreground font-medium">Fond animé</p>
@@ -328,7 +328,7 @@ export function SettingsDialog({
                     className="w-full h-2 rounded-full appearance-none cursor-pointer bg-secondary"
                   />
                   <div className="flex justify-between text-[9px] text-muted-foreground mt-1">
-                    <span>Vagues visibles</span>
+                    <span>Animation visible</span>
                     <span>Lecture prioritaire</span>
                   </div>
                 </div>

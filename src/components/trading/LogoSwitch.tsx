@@ -1,3 +1,4 @@
+import { FlowSurface } from '@/components/FlowSurface';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { BarChart3, Landmark } from 'lucide-react';
 import { NAV_HEIGHT } from './navStyles';
@@ -38,6 +39,7 @@ export function LogoSwitch({ floating = false, className = '' }: LogoSwitchProps
       className={`module-switch flex items-center gap-1 px-1 ${floating ? FLOATING_CLASS : ''} ${className}`}
       style={{ height: NAV_HEIGHT }}
     >
+      <FlowSurface />
       {TABS.map(({ id, path, match, label, Icon }) => {
         const active = match(location.pathname);
         return (

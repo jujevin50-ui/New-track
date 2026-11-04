@@ -1,15 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useSyncExternalStore, useEffect, useCallback } from 'react';
 
 const KEY = 'trading-journal-wave-bg-v4';
 
 export interface WaveBgConfig {
-  /** Couleur principale des vagues (hex) */
+  /** Couleur principale du flux (hex) */
   waveColor: string;
-  /** Opacité du voile (0 = vagues très visibles, 1 = quasi opaque) */
+  /** Opacité du voile (0 = flux très visible, 1 = quasi opaque) */
   veil: number;
-  /** Amplitude des vagues */
+  /** Densité du flux */
   amplitude: number;
-  /** Intensité du swell */
+  /** Énergie du flux */
   swell: number;
   /** Activer / désactiver le fond animé */
   enabled: boolean;
@@ -35,24 +35,45 @@ const DEFAULT: WaveBgConfig = {
   enabled: true,
 };
 
-function read(): WaveBgConfig {
+const CHANGE_EVENT = 'trading-background-change';
+let cachedRaw: string | null | undefined;
+let cachedConfig: WaveBgConfig = DEFAULT;
+
+function snapshot(): WaveBgConfig {
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return { ...DEFAULT };
-    return { ...DEFAULT, ...JSON.parse(raw) };
-  } catch {
-    return { ...DEFAULT };
-  }
+    if (raw !== cachedRaw) {
+      cachedRaw = raw;
+      try { cachedConfig = raw ? { ...DEFAULT, ...JSON.parse(raw) } : DEFAULT; }
+      catch { cachedConfig = DEFAULT; }
+    }
+  } catch { /* Keep the in-memory preference when storage is unavailable. */ }
+  return cachedConfig;
+}
+
+function subscribe(listener: () => void) {
+  const storage = (event: StorageEvent) => { if (!event.key || event.key === KEY) listener(); };
+  window.addEventListener(CHANGE_EVENT, listener);
+  window.addEventListener('storage', storage);
+  return () => { window.removeEventListener(CHANGE_EVENT, listener); window.removeEventListener('storage', storage); };
+}
+
+function setConfig(update: (config: WaveBgConfig) => WaveBgConfig) {
+  const next = update(snapshot());
+  try {
+    const raw = JSON.stringify(next);
+    localStorage.setItem(KEY, raw);
+    cachedRaw = raw;
+    cachedConfig = next;
+  } catch { return; }
+  window.dispatchEvent(new Event(CHANGE_EVENT));
 }
 
 export function useWaveBackground() {
-  const [config, setConfig] = useState<WaveBgConfig>(read);
-
+  const config = useSyncExternalStore(subscribe, snapshot, () => DEFAULT);
   useEffect(() => {
-    localStorage.setItem(KEY, JSON.stringify(config));
-    const root = document.documentElement;
-    root.style.setProperty('--wave-veil', String(config.veil));
-    root.style.setProperty('--wave-color', config.waveColor);
+    document.documentElement.style.setProperty('--wave-veil', String(config.veil));
+    document.documentElement.style.setProperty('--wave-color', config.waveColor);
   }, [config]);
 
   const setWaveColor = useCallback((waveColor: string) => {

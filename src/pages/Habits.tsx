@@ -1,3 +1,4 @@
+import { FlowSurface } from '@/components/FlowSurface';
 import { useMemo, useState } from 'react';
 import { LogoSwitch } from '@/components/trading/LogoSwitch';
 import { HEADER_BAR, HEADER_GRID, NAV_PILL, navItemClass } from '@/components/trading/navStyles';
@@ -403,6 +404,7 @@ export default function Habits() {
   return (
     <div className="min-h-screen flex flex-col w-full bg-background">
       <header className={HEADER_BAR}>
+        <FlowSurface />
         <div className={HEADER_GRID}>
           <LogoSwitch className="pointer-events-auto shrink-0" />
           <div className="flex justify-center min-w-0">
