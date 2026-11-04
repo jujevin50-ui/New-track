@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { LogOut, Settings } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { useNavConfig } from '@/hooks/useNavConfig';
@@ -10,6 +10,7 @@ import { CsvImportDialog } from './CsvImportDialog';
 import { NotionImportDialog } from './NotionImportDialog';
 import { useAccounts } from '@/hooks/useAccounts';
 import { NAV_PILL, navItemClass } from './navStyles';
+import { HeaderNavLinks } from './HeaderNavLinks';
 
 const NAV_ITEMS = [
   { id: 'dashboard', title: 'Dashboard', url: '/' },
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
 ];
 
 export function TopNav() {
+  const location = useLocation();
   const { disconnect } = useData();
   const { theme, mode, setColor, toggleMode, presets } = useTheme();
   const { navItems, toggleNav, reorderNav, addSeparator, removeSeparator } = useNavConfig();
@@ -39,7 +41,7 @@ export function TopNav() {
   return (
     <>
       <nav className={NAV_PILL} aria-label="Navigation principale">
-        <div className="flex flex-wrap items-center justify-center gap-1 min-w-0">
+        <HeaderNavLinks activeKey={location.pathname}>
           {navEntries.map(entry => (
             <NavLink
               key={entry.id}
@@ -50,15 +52,13 @@ export function TopNav() {
               {entry.title}
             </NavLink>
           ))}
-        </div>
+        </HeaderNavLinks>
 
-        <div className="w-px h-4 bg-border mx-0.5 shrink-0" />
-
-        <div className="flex items-center gap-0.5 shrink-0">
-          <button onClick={() => setSettingsOpen(true)} className="h-8 w-8 inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors" aria-label="Settings">
+        <div className="header-nav-actions">
+          <button onClick={() => setSettingsOpen(true)} className="header-action" aria-label="Settings">
             <Settings className="h-3.5 w-3.5" />
           </button>
-          <button onClick={disconnect} className="h-8 w-8 inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-loss hover:bg-loss-soft transition-colors" aria-label="Changer de fichier">
+          <button onClick={disconnect} className="header-action hover:!text-loss" aria-label="Changer de fichier">
             <LogOut className="h-3.5 w-3.5" />
           </button>
         </div>

@@ -8,7 +8,7 @@ interface LogoSwitchProps {
   size?: number;
 }
 
-const FLOATING_CLASS = 'fixed top-4 left-6 z-50';
+const FLOATING_CLASS = 'fixed top-2 left-3 z-50';
 
 const TABS = [
   {
@@ -35,7 +35,7 @@ export function LogoSwitch({ floating = false, className = '' }: LogoSwitchProps
     <div
       role="navigation"
       aria-label="Modules de l'application"
-      className={`rb-liquid flex items-center gap-0.5 px-1 rounded-full ${floating ? FLOATING_CLASS : ''} ${className}`}
+      className={`module-switch flex items-center gap-1 px-1 ${floating ? FLOATING_CLASS : ''} ${className}`}
       style={{ height: NAV_HEIGHT }}
     >
       {TABS.map(({ id, path, match, label, Icon }) => {
@@ -51,7 +51,7 @@ export function LogoSwitch({ floating = false, className = '' }: LogoSwitchProps
             }}
             className={`module-tab ${
               active
-                ? 'selected-tab'
+                ? 'is-current'
                 : 'text-muted-foreground hover:text-foreground hover:bg-secondary/70'
             }`}
           >

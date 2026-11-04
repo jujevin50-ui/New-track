@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { HeaderNavLinks } from '@/components/trading/HeaderNavLinks';
 import { LogoSwitch } from '@/components/trading/LogoSwitch';
 import { HEADER_BAR, HEADER_GRID, NAV_PILL, navItemClass } from '@/components/trading/navStyles';
 import { StatementsView, type FinanceStatement } from '@/components/finance/StatementsView';
@@ -190,11 +191,11 @@ export default function Finance() {
           <LogoSwitch className="pointer-events-auto shrink-0" />
           <div className="flex justify-center min-w-0">
             <nav className={NAV_PILL} aria-label="Navigation My Finance">
-              <div className="flex flex-wrap items-center justify-center gap-1 min-w-0">
+              <HeaderNavLinks activeKey={tab}>
                 {TABS.map(([value, label]) => (
                   <button key={value} onClick={() => setTab(value)} aria-current={tab === value ? 'page' : undefined} className={navItemClass(tab === value)}>{label}</button>
                 ))}
-              </div>
+              </HeaderNavLinks>
             </nav>
           </div>
           <div aria-hidden />
