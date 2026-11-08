@@ -1,11 +1,11 @@
 import type { DailyJournal } from '@/hooks/useDailyJournal';
 
 export const DISCIPLINE_MISSIONS = [
-  { id: 'prepare', title: 'Préparer ma séance', detail: 'Scénarios, niveaux et risque définis.' },
-  { id: 'wait', title: 'Attendre mon setup', detail: 'Une entrée prévue dans mon plan.' },
-  { id: 'risk', title: 'Respecter mon risque', detail: 'Taille de position et stop maîtrisés.' },
-  { id: 'pause', title: 'Garder le contrôle', detail: 'Faire une pause plutôt que forcer un trade.' },
-  { id: 'review', title: 'Prendre du recul', detail: 'Relire ma séance et en tirer une leçon.' },
+  { id: 'prepare', title: 'Aucune entrée sans validation complète de la checklist', detail: '' },
+  { id: 'risk', title: 'Risque respecté', detail: '' },
+  { id: 'wait', title: 'Deux trades par semaine max', detail: '' },
+  { id: 'pause', title: 'Aucun trade destiné à récupérer une perte précédente', detail: '' },
+  { id: 'review', title: 'Bilan obligatoire', detail: '' },
 ] as const;
 export const DISCIPLINE_TRIGGERS = ['FOMO', 'Revenge trading', 'Impatience', 'Surconfiance', 'Peur de perdre', 'Fatigue'];
 export const MOODS = [

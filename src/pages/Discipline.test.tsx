@@ -17,7 +17,7 @@ describe('Discipline session', () => {
     mock.journals = [{ ...newDailyJournal(localDay()), mistakes: ['Ancienne erreur'], event: 'challenge_realise', notes: 'Note existante' }];
     mock.save.mockResolvedValue(undefined);
     render(<Discipline activeAccount={null} />);
-    fireEvent.click(screen.getByRole('button', { name: /Préparer ma séance/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Aucune entrée sans validation complète de la checklist/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Tendu' }));
     fireEvent.click(screen.getByRole('button', { name: 'FOMO' }));
     fireEvent.change(screen.getByLabelText('Stress'), { target: { value: '4' } });
@@ -29,11 +29,11 @@ describe('Discipline session', () => {
   it('keeps the whole draft editable if saving fails and does not award saved XP', async () => {
     mock.save.mockRejectedValue(new Error('Écriture impossible'));
     render(<Discipline activeAccount={null} />);
-    fireEvent.click(screen.getByRole('button', { name: /Respecter mon risque/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Risque respecté/ }));
     fireEvent.change(screen.getByLabelText('À retenir'), { target: { value: 'Attendre.' } });
     fireEvent.click(screen.getByRole('button', { name: 'Enregistrer la journée' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Écriture impossible');
-    expect(screen.getByRole('button', { name: /Respecter mon risque/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /Risque respecté/ })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByLabelText('À retenir')).toHaveValue('Attendre.');
     expect(screen.getByText('0 XP')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Enregistrer la journée' })).toBeEnabled();
@@ -42,9 +42,9 @@ describe('Discipline session', () => {
     mock.journals = [{ ...newDailyJournal(localDay()), disciplineTracking: { missions: ['risk'], stress: 2, triggers: ['Fatigue'] } }];
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
     render(<Discipline activeAccount={null} />);
-    expect(screen.getByRole('button', { name: /Respecter mon risque/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /Risque respecté/ })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByLabelText('Stress')).toHaveValue('2');
-    fireEvent.click(screen.getByRole('button', { name: /Préparer ma séance/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Aucune entrée sans validation complète de la checklist/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Jour précédent' }));
     expect(confirm).toHaveBeenCalled();
     expect(screen.getByLabelText('Date de discipline')).toHaveValue(localDay());
