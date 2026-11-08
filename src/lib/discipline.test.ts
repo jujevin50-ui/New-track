@@ -17,3 +17,18 @@ describe('Discipline progress', () => {
     expect(shiftDay('2026-03-01', -1)).toBe('2026-02-28');
   });
 });
+
+describe('Annual discipline chart', () => {
+  it('includes every day, leap day and true zero scores without counting missing or future data', async () => {
+    const { disciplineYear } = await import('./discipline');
+    const days = disciplineYear([journal('2024-02-28', []), journal('2024-02-29', ['risk', 'prepare']), newDailyJournal('2024-03-01'), journal('2024-03-03', ['risk'])], 2024, '2024-03-02');
+    expect(days).toHaveLength(366);
+    expect(days[0].date).toBe('2024-01-01');
+    expect(days.at(-1)?.date).toBe('2024-12-31');
+    expect(days.find(day => day.date === '2024-02-28')?.percent).toBe(0);
+    expect(days.find(day => day.date === '2024-02-29')?.percent).toBe(40);
+    expect(days.find(day => day.date === '2024-03-01')?.percent).toBeNull();
+    expect(days.find(day => day.date === '2024-03-03')?.percent).toBeNull();
+    expect(disciplineYear([], 2026, '2026-11-08')).toHaveLength(365);
+  });
+});

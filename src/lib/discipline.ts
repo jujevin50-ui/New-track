@@ -7,15 +7,6 @@ export const DISCIPLINE_MISSIONS = [
   { id: 'pause', title: 'Aucun trade destiné à récupérer une perte précédente', detail: '' },
   { id: 'review', title: 'Bilan obligatoire', detail: '' },
 ] as const;
-export const DISCIPLINE_TRIGGERS = ['FOMO', 'Revenge trading', 'Impatience', 'Surconfiance', 'Peur de perdre', 'Fatigue'];
-export const MOODS = [
-  { value: 'excellent', face: '😌', label: 'Serein' },
-  { value: 'good', face: '🙂', label: 'Bien' },
-  { value: 'neutral', face: '😐', label: 'Neutre' },
-  { value: 'bad', face: '😟', label: 'Tendu' },
-  { value: 'terrible', face: '😣', label: 'Débordé' },
-] as const;
-
 export function localDay(date = new Date()): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
@@ -37,4 +28,16 @@ export function disciplineStats(journals: DailyJournal[], today: string) {
   let streak = 0;
   while (recorded.has(cursor)) { streak++; cursor = shiftDay(cursor, -1); }
   return { xp, streak, days: recorded.size };
+}
+
+/** Missing tracking and future days remain gaps rather than failures. */
+export function disciplineYear(journals: DailyJournal[], year: number, today: string) {
+  const recorded = new Map(journals.map(journal => [journal.date, journal]));
+  const days: { date: string; percent: number | null }[] = [];
+  for (let date = `${year}-01-01`; date.startsWith(`${year}-`); date = shiftDay(date, 1)) {
+    const journal = recorded.get(date);
+    const percent = date <= today && journal?.disciplineTracking ? completedMissions(journal).length / DISCIPLINE_MISSIONS.length * 100 : null;
+    days.push({ date, percent });
+  }
+  return days;
 }

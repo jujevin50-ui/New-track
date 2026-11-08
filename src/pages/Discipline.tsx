@@ -1,13 +1,14 @@
 import { useRef, useState } from 'react';
-import { Check, ChevronLeft, ChevronRight, Flame, Sparkles, Target, Trophy, Brain } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Flame, Sparkles, Target, Trophy } from 'lucide-react';
 import { useDailyJournal, type DailyJournal } from '@/hooks/useDailyJournal';
 import { useTrades } from '@/hooks/useTrades';
+import DisciplineYearChart from '@/components/trading/DisciplineYearChart';
 import DailyReview from '@/components/trading/DailyReview';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { Account } from '@/types/account';
 import type { Trade } from '@/types/trade';
-import { completedMissions, disciplineStats, DISCIPLINE_MISSIONS, DISCIPLINE_TRIGGERS, localDay, MOODS, newDailyJournal, shiftDay } from '@/lib/discipline';
+import { completedMissions, disciplineStats, DISCIPLINE_MISSIONS, localDay, newDailyJournal, shiftDay } from '@/lib/discipline';
 
 const prettyDay = (date: string) => new Date(`${date}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 
@@ -40,13 +41,7 @@ export default function Discipline({ activeAccount }: { activeAccount: Account |
       {[{ Icon: Flame, value: `${stats.streak} jour${stats.streak === 1 ? '' : 's'}`, label: stats.streak === 1 ? 'de suivi consécutif' : 'de suivi consécutifs' }, { Icon: Sparkles, value: `${stats.xp} XP`, label: 'de bonnes habitudes enregistrées' }, { Icon: Trophy, value: `${stats.days} séance${stats.days === 1 ? '' : 's'}`, label: 'avec une mission accomplie' }].map(({ Icon, value, label }) => <div key={label} className="app-panel surface flex items-center gap-3 px-5 py-4"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-secondary/80"><Icon className="h-5 w-5" strokeWidth={1.6} /></span><div><p className="text-lg font-semibold tracking-tight">{value}</p><p className="text-xs text-muted-foreground">{label}</p></div></div>)}
     </div>
     <DisciplineSession key={date} date={date} existing={getJournal(date)} trades={trades.filter(trade => trade.endDate?.slice(0, 10) === date)} accountName={activeAccount?.name} onDirty={value => { dirty.current = value; }} onSaving={value => { saving.current = value; }} onSave={saveJournal} />
-    <section className="app-panel surface p-5" aria-label="Historique de discipline">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-semibold">Les 7 derniers jours</h2><span className="text-xs text-muted-foreground">Missions enregistrées</span></div>
-      <div className="grid grid-cols-7 gap-1.5 sm:gap-3">{Array.from({ length: 7 }, (_, index) => shiftDay(today, index - 6)).map(day => {
-        const count = completedMissions(getJournal(day)).length;
-        return <button key={day} type="button" aria-label={`${prettyDay(day)}, ${count} missions sur 5`} aria-pressed={date === day} onClick={() => chooseDate(day)} className={`flex min-w-0 flex-col items-center gap-2 rounded-[10px] border px-1 py-3 text-xs transition-colors ${date === day ? 'selected-tab border-transparent' : 'border-border/60 hover:bg-secondary/60'}`}><span className={date === day ? 'opacity-75' : 'text-muted-foreground'}>{new Date(`${day}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '')}</span><span className="text-sm font-semibold">{Number(day.slice(-2))}</span><span className="font-mono text-[10px]">{count}/5</span></button>;
-      })}</div>
-    </section>
+    <DisciplineYearChart journals={journals} selectedDate={date} today={today} onSelectDate={chooseDate} />
   </div>;
 }
 
@@ -61,7 +56,7 @@ function DisciplineSession({ date, existing, trades, accountName, onDirty, onSav
   const save = async (journal: DailyJournal) => {
     if (busy.current) return;
     busy.current = true; setSaving(true); onSaving(true);
-    try { await onSave(journal); onDirty(false); }
+    try { await onSave({ ...journal, disciplineTracking: journal.disciplineTracking ?? tracking }); onDirty(false); }
     finally { busy.current = false; setSaving(false); onSaving(false); }
   };
 
@@ -77,12 +72,6 @@ function DisciplineSession({ date, existing, trades, accountName, onDirty, onSav
           const checked = missions.includes(mission.id);
           return <button key={mission.id} type="button" aria-pressed={checked} onClick={() => updateTracking({ missions: checked ? missions.filter(id => id !== mission.id) : [...missions, mission.id] })} className={`flex w-full items-center gap-3 rounded-[10px] border p-3 text-left transition-colors ${checked ? 'border-foreground/20 bg-secondary/70' : 'border-transparent hover:border-border/60 hover:bg-secondary/40'}`}><span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] border text-xs font-semibold ${checked ? 'border-transparent bg-foreground text-background' : 'border-border/70 text-muted-foreground'}`}>{checked ? <Check className="h-4 w-4" /> : `0${index + 1}`}</span><span className="min-w-0 flex-1"><span className="block text-sm font-medium">{mission.title}</span>{mission.detail && <span className="mt-0.5 block text-xs text-muted-foreground">{mission.detail}</span>}</span><span className="shrink-0 text-[10px] text-muted-foreground">+20 XP</span></button>;
         })}</div>
-      </section>
-      <section className="app-panel surface space-y-5 p-5">
-        <h2 className="flex items-center gap-2 text-sm font-semibold"><Brain className="h-4 w-4" />Mon état d’esprit</h2>
-        <div className="grid grid-cols-5 gap-1.5" role="group" aria-label="Humeur de la séance">{MOODS.map(mood => <button key={mood.value} type="button" aria-pressed={draft.mood === mood.value} onClick={() => update({ ...draft, mood: mood.value })} className={`flex min-w-0 flex-col items-center gap-2 rounded-[10px] border px-0.5 py-3 transition-colors ${draft.mood === mood.value ? 'selected-tab border-transparent' : 'border-border/60 hover:bg-secondary/60'}`}><span className="text-xl" aria-hidden="true">{mood.face}</span><span className="text-[10px] sm:text-xs">{mood.label}</span></button>)}</div>
-        <div className="space-y-4">{[{ id: 'stress', label: 'Stress', value: tracking.stress, ends: ['Calme', 'Très élevé'], onChange: (value: number) => updateTracking({ stress: value }) }, { id: 'confidence', label: 'Confiance', value: draft.confidence, ends: ['Fragile', 'Solide'], onChange: (value: number) => update({ ...draft, confidence: value }) }, { id: 'discipline', label: 'Discipline ressentie', value: draft.discipline, ends: ['À travailler', 'Maîtrisée'], onChange: (value: number) => update({ ...draft, discipline: value }) }].map(scale => <div key={scale.id}><div className="mb-2 flex items-center justify-between"><label htmlFor={`discipline-${scale.id}`} className="text-xs font-medium">{scale.label}</label><span className="text-xs text-muted-foreground">{scale.value}/5</span></div><input id={`discipline-${scale.id}`} type="range" min={1} max={5} step={1} value={scale.value} onChange={event => scale.onChange(Number(event.target.value))} className="block h-5 w-full cursor-pointer accent-foreground" /><div className="mt-1 flex justify-between text-[10px] text-muted-foreground"><span>{scale.ends[0]}</span><span>{scale.ends[1]}</span></div></div>)}</div>
-        <div><h3 className="mb-2 text-xs font-medium">Ce qui m’a déstabilisé</h3><div className="flex flex-wrap gap-1.5">{DISCIPLINE_TRIGGERS.map(trigger => <button type="button" key={trigger} aria-pressed={tracking.triggers.includes(trigger)} onClick={() => updateTracking({ triggers: tracking.triggers.includes(trigger) ? tracking.triggers.filter(value => value !== trigger) : [...tracking.triggers, trigger] })} className={`rounded-[10px] border px-3 py-2 text-xs transition-colors ${tracking.triggers.includes(trigger) ? 'selected-tab border-transparent' : 'border-border/70 hover:bg-secondary/60'}`}>{trigger}</button>)}</div></div>
       </section>
     </fieldset>
     <section className="app-panel surface min-w-0 p-5 sm:p-6" aria-labelledby="discipline-review-title">

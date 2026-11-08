@@ -13,14 +13,11 @@ vi.mock('@/hooks/useTrades', () => ({ useTrades: () => ({ trades: [] }) }));
 afterEach(() => { cleanup(); mock.journals = []; mock.save.mockReset(); });
 
 describe('Discipline session', () => {
-  it('saves missions, psychological state and daily review together without losing existing fields', async () => {
-    mock.journals = [{ ...newDailyJournal(localDay()), mistakes: ['Ancienne erreur'], event: 'challenge_realise', notes: 'Note existante' }];
+  it('saves missions and daily review together without losing existing fields', async () => {
+    mock.journals = [{ ...newDailyJournal(localDay()), mistakes: ['Ancienne erreur'], event: 'challenge_realise', notes: 'Note existante', mood: 'bad', disciplineTracking: { missions: [], stress: 4, triggers: ['FOMO'] } }];
     mock.save.mockResolvedValue(undefined);
     render(<Discipline activeAccount={null} />);
     fireEvent.click(screen.getByRole('button', { name: /Aucune entrée sans validation complète de la checklist/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Tendu' }));
-    fireEvent.click(screen.getByRole('button', { name: 'FOMO' }));
-    fireEvent.change(screen.getByLabelText('Stress'), { target: { value: '4' } });
     fireEvent.change(screen.getByLabelText('Notes du jour'), { target: { value: 'J’ai pris une pause.' } });
     fireEvent.click(screen.getByRole('button', { name: 'Enregistrer la journée' }));
     expect(await screen.findByRole('status')).toHaveTextContent('Enregistré');
@@ -43,7 +40,7 @@ describe('Discipline session', () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
     render(<Discipline activeAccount={null} />);
     expect(screen.getByRole('button', { name: /Risque respecté/ })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByLabelText('Stress')).toHaveValue('2');
+    expect(screen.queryByText('Mon état d’esprit')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Aucune entrée sans validation complète de la checklist/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Jour précédent' }));
     expect(confirm).toHaveBeenCalled();
