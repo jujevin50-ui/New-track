@@ -4,6 +4,7 @@ import { useData } from '@/contexts/DataContext';
 export type DailyEvent = 'perte_compte' | 'challenge_echoue' | 'challenge_realise' | null;
 
 export interface DailyJournal {
+  disciplineTracking?: { missions: string[]; stress: number; triggers: string[] };
   date: string;
   strategyRespected: boolean;
   productive?: boolean;
@@ -20,7 +21,7 @@ export interface DailyJournal {
 export const useDailyJournal = () => {
   const { data, upsertRow, saveTable } = useData();
 
-  const journals: DailyJournal[] = (Array.isArray(data?.dailyJournals) ? data.dailyJournals as any[] : []).map(j => ({
+  const journals: DailyJournal[] = (Array.isArray(data?.dailyJournals) ? data.dailyJournals as DailyJournal[] : []).map(j => ({
     date: j.date,
     strategyRespected: j.strategyRespected,
     productive: j.productive === true,
@@ -32,6 +33,7 @@ export const useDailyJournal = () => {
     mistakes: j.mistakes || [],
     goals: j.goals || '',
     event: j.event || null,
+    ...(j.disciplineTracking ? { disciplineTracking: j.disciplineTracking } : {}),
   }));
 
   const getJournal = useCallback((date: string) => {
@@ -43,7 +45,7 @@ export const useDailyJournal = () => {
   }, [upsertRow]);
 
   const deleteJournal = useCallback(async (date: string) => {
-    await saveTable('dailyJournals', (Array.isArray(data?.dailyJournals) ? data.dailyJournals as any[] : []).filter(j => j.date !== date));
+    await saveTable('dailyJournals', (Array.isArray(data?.dailyJournals) ? data.dailyJournals as DailyJournal[] : []).filter(j => j.date !== date));
   }, [saveTable, data.dailyJournals]);
 
   return { journals, getJournal, saveJournal, deleteJournal };

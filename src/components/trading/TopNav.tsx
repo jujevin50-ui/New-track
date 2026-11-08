@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { id: 'dashboard', title: 'Dashboard', url: '/' },
   { id: 'calendar', title: 'Calendar', url: '/calendar' },
   { id: 'trades', title: 'Trades', url: '/trades' },
+  { id: 'discipline', title: 'Discipline', url: '/discipline' },
   { id: 'reports', title: 'Reports', url: '/reports' },
   { id: 'ai-assistant', title: 'AI Assistant', url: '/ai-assistant' },
   { id: 'strategy', title: 'Stratégie', url: '/strategy' },

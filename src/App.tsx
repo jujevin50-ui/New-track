@@ -33,6 +33,7 @@ const CalendarView = lazyWithReload(() => import("./pages/CalendarView"));
 const Trades = lazyWithReload(() => import("./pages/Trades"));
 const Accounts = lazyWithReload(() => import("./pages/Accounts"));
 const Reports = lazyWithReload(() => import("./pages/Reports"));
+const Discipline = lazyWithReload(() => import("./pages/Discipline"));
 const Strategy = lazyWithReload(() => import("./pages/Strategy"));
 const Finance = lazyWithReload(() => import("./pages/Finance"));
 const AiAssistant = lazyWithReload(() => import("./pages/AiAssistant"));
@@ -94,7 +95,7 @@ const AppContent = () => {
     if (!routeRestored && status === "connected") {
       const last = localStorage.getItem("app-last-route");
       // Ne restaure que les routes encore disponibles.
-      const allowed = ["/", "/calendar", "/trades", "/reports", "/ai-assistant", "/accounts", "/finance", "/strategy"];
+      const allowed = ["/", "/calendar", "/trades", "/reports", "/ai-assistant", "/accounts", "/finance", "/strategy", "/discipline"];
       if (last && last !== location.pathname && allowed.includes(last)) {
         navigate(last, { replace: true });
       }
@@ -132,6 +133,7 @@ const AppContent = () => {
           <ErrorBoundary resetKey={location.pathname}>
             <Suspense fallback={<PageLoader />}>
               <Routes>
+                <Route path="/discipline" element={<Discipline activeAccount={displayAccount} />} />
                 <Route path="/strategy" element={<Strategy />} />
                 <Route path="/tasks" element={<Navigate to="/" replace />} />
                 <Route path="/" element={<Dashboard activeAccount={displayAccount} accounts={accounts} />} />
