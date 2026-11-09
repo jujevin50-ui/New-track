@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Banknote, ChevronDown, ChevronRight, ClipboardList, Copy, FileText, Pencil, Plus, Trash2, TrendingDown, TrendingUp, X,
 } from 'lucide-react';
-import { Donut, MultiLineChart, ValueAreaChart, PALETTE, PROFIT } from './financeCharts';
+import StatementAllocation from './StatementAllocation';
+import { MultiLineChart, ValueAreaChart, PALETTE, PROFIT } from './financeCharts';
 import { toast } from 'sonner';
 
 /* ───────────── Types ───────────── */
@@ -532,11 +533,9 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
           </Box>
 
           {allocation.length > 0 && (
-            <div className="grid lg:grid-cols-[1fr_1.6fr] gap-4">
+            <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
               <Box title="Répartition" subtitle={`Relevé du ${fmtDate(last.date)}`}>
-                <div className="h-[240px]">
-                  <Donut data={allocation.map(h => ({ name: h.name, value: Number(h.value) }))} centerLabel="Total" />
-                </div>
+                <StatementAllocation key={`${selected}-${last.id}`} holdings={allocation} />
               </Box>
               <Box title="Actifs & performances" subtitle={prev ? `Dernier relevé · Δ vs ${fmtDate(prev.date)} · perf. globale depuis la 1re apparition` : 'Dernier relevé · ajoute un autre relevé pour les variations'}>
                 <div className="overflow-x-auto">
@@ -766,7 +765,7 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
 /* ───────────── Petits composants ───────────── */
 function Box({ title, subtitle, children }: { title?: string; subtitle?: string; children: React.ReactNode }) {
   return (
-    <section className="app-panel surface p-4 md:p-5">
+    <section className="app-panel surface min-w-0 p-4 md:p-5">
       {title && (
         <div className="mb-3.5">
           <h2 className="text-[13px] font-semibold tracking-tight">{title}</h2>
