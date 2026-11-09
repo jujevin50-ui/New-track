@@ -1,3 +1,4 @@
+import type { LucideIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { HeaderNavLinks } from '@/components/trading/HeaderNavLinks';
 import { LogoSwitch } from '@/components/trading/LogoSwitch';
@@ -12,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
-  ArrowDownLeft, ArrowRightLeft, ArrowUpRight, CalendarClock, ChevronLeft, ChevronRight,
+  LayoutDashboard, List, ArrowDownLeft, ArrowRightLeft, ArrowUpRight, CalendarClock, ChevronLeft, ChevronRight,
   Landmark, Pencil, Plus, Repeat2, Save, Search, Settings2, TrendingUp, X, PiggyBank,
 } from 'lucide-react';
 import { YearFlowBars, CashflowChart, FlowAreaChart, Donut, AccountBars, PALETTE } from '@/components/finance/financeCharts';
@@ -174,7 +175,7 @@ export default function Finance() {
     await updateRow('financeAccounts' as any, accountId, { initialCapital: capital, initialDate: date });
   };
 
-  const TABS: [Tab, string][] = [['overview', 'Vue d’ensemble'], ['transactions', 'Transactions'], ['accounts', 'Comptes'], ['invest', 'Invest'], ['subscriptions', 'Abonnements'], ['transfers', 'Virements']];
+  const TABS: [Tab, string, LucideIcon][] = [['overview', 'Vue d’ensemble', LayoutDashboard], ['transactions', 'Transactions', List], ['accounts', 'Comptes', Landmark], ['invest', 'Invest', TrendingUp], ['subscriptions', 'Abonnements', Repeat2], ['transfers', 'Virements', ArrowRightLeft]];
   const openNewTx = () => { setTx({ ...emptyTx, accountId: accounts[0]?.id || '' }); setTxOpen(true); };
   const prev = () => setCursor(new Date(cursor.getFullYear() + (overviewMode === 'year' ? -1 : 0), cursor.getMonth() + (overviewMode === 'month' ? -1 : 0), 1));
   const next = () => setCursor(new Date(cursor.getFullYear() + (overviewMode === 'year' ? 1 : 0), cursor.getMonth() + (overviewMode === 'month' ? 1 : 0), 1));
@@ -192,8 +193,8 @@ export default function Finance() {
           <div className="flex justify-center min-w-0">
             <nav className={NAV_PILL} aria-label="Navigation My Finance">
               <HeaderNavLinks activeKey={tab}>
-                {TABS.map(([value, label]) => (
-                  <button key={value} onClick={() => { setTab(value); if (value === 'invest') setStatementsAccountId(undefined); }} aria-current={tab === value ? 'page' : undefined} className={navItemClass(tab === value)}>{label}</button>
+                {TABS.map(([value, label, Icon]) => (
+                  <button key={value} onClick={() => { setTab(value); if (value === 'invest') setStatementsAccountId(undefined); }} aria-current={tab === value ? 'page' : undefined} className={navItemClass(tab === value)}><Icon className="header-nav-icon" aria-hidden="true" strokeWidth={1.8} /><span>{label}</span></button>
                 ))}
               </HeaderNavLinks>
             </nav>

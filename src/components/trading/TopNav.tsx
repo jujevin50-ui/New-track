@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LogOut, Settings } from 'lucide-react';
+import { LogOut, Settings, LayoutDashboard, CalendarDays, ArrowRightLeft, Target, BarChart3, Sparkles, BookOpen, Wallet } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { useNavConfig } from '@/hooks/useNavConfig';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -13,14 +13,14 @@ import { NAV_PILL, navItemClass } from './navStyles';
 import { HeaderNavLinks } from './HeaderNavLinks';
 
 const NAV_ITEMS = [
-  { id: 'dashboard', title: 'Dashboard', url: '/' },
-  { id: 'calendar', title: 'Calendar', url: '/calendar' },
-  { id: 'trades', title: 'Trades', url: '/trades' },
-  { id: 'discipline', title: 'Discipline', url: '/discipline' },
-  { id: 'reports', title: 'Reports', url: '/reports' },
-  { id: 'ai-assistant', title: 'AI Assistant', url: '/ai-assistant' },
-  { id: 'strategy', title: 'Stratégie', url: '/strategy' },
-  { id: 'accounts', title: 'Accounts', url: '/accounts' },
+  { id: 'dashboard', title: 'Dashboard', url: '/', Icon: LayoutDashboard },
+  { id: 'calendar', title: 'Calendar', url: '/calendar', Icon: CalendarDays },
+  { id: 'trades', title: 'Trades', url: '/trades', Icon: ArrowRightLeft },
+  { id: 'discipline', title: 'Discipline', url: '/discipline', Icon: Target },
+  { id: 'reports', title: 'Reports', url: '/reports', Icon: BarChart3 },
+  { id: 'ai-assistant', title: 'AI Assistant', url: '/ai-assistant', Icon: Sparkles },
+  { id: 'strategy', title: 'Stratégie', url: '/strategy', Icon: BookOpen },
+  { id: 'accounts', title: 'Accounts', url: '/accounts', Icon: Wallet },
 ];
 
 export function TopNav() {
@@ -50,7 +50,7 @@ export function TopNav() {
               end={entry.url === '/'}
               className={({ isActive }) => navItemClass(isActive)}
             >
-              {entry.title}
+              <entry.Icon className="header-nav-icon" aria-hidden="true" strokeWidth={1.8} /><span>{entry.title}</span>
             </NavLink>
           ))}
         </HeaderNavLinks>

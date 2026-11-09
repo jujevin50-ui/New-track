@@ -38,10 +38,10 @@ export function HeaderNavLinks({ activeKey, children }: { activeKey: string; chi
 
   return (
     <div className="header-nav-surface">
-    <div ref={ref} className="header-nav-links no-scrollbar">
-      <span aria-hidden="true" className="header-nav-indicator" style={{ width: indicator.width, opacity: indicator.width ? 1 : 0, transform: `translate3d(${indicator.x}px,0,0)` }} />
-      {children}
-    </div>
+      <div ref={ref} className="header-nav-links no-scrollbar">
+        <span aria-hidden="true" className="header-nav-indicator" style={{ width: indicator.width, opacity: indicator.width ? 1 : 0, transform: `translate3d(${indicator.x}px,0,0)` }} />
+        {children}
+      </div>
     </div>
   );
 }
