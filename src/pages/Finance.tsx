@@ -193,7 +193,7 @@ export default function Finance() {
             <nav className={NAV_PILL} aria-label="Navigation My Finance">
               <HeaderNavLinks activeKey={tab}>
                 {TABS.map(([value, label]) => (
-                  <button key={value} onClick={() => setTab(value)} aria-current={tab === value ? 'page' : undefined} className={navItemClass(tab === value)}>{label}</button>
+                  <button key={value} onClick={() => { setTab(value); if (value === 'invest') setStatementsAccountId(undefined); }} aria-current={tab === value ? 'page' : undefined} className={navItemClass(tab === value)}>{label}</button>
                 ))}
               </HeaderNavLinks>
             </nav>
@@ -203,7 +203,7 @@ export default function Finance() {
       </header>
 
       {/* Barre d'outils : période à gauche (Mois / Année), actions à droite — fond carte pour rester lisible sur le noir */}
-      <div className="relative z-40">
+      {tab !== 'invest' && <div className="relative z-40">
         <div className="max-w-[1500px] mx-auto px-4 md:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3 min-h-10">
             {tab === 'overview' && <>
@@ -214,16 +214,16 @@ export default function Finance() {
               </div>
               <Segmented<'month' | 'year'> value={overviewMode} onChange={setOverviewMode} options={[['month', 'Mois'], ['year', 'Année']]} />
             </>}
-            {tab !== 'overview' && tab !== 'invest' && (
+            {tab !== 'overview' && (
               <p className="text-sm text-muted-foreground">{TABS.find(([id]) => id === tab)?.[1]}</p>
             )}
           </div>
           <div className="flex items-center gap-2">
             <Button size="sm" variant="outline" className="h-10 rounded-full gap-1.5 px-4 bg-card" onClick={() => setTab('accounts')}><Landmark className="h-4 w-4" />{accounts.length} {accounts.length > 1 ? 'comptes' : 'compte'}</Button>
-            {tab !== 'invest' && <Button size="sm" className="h-10 rounded-full gap-1.5 px-4" onClick={openNewTx}><Plus className="h-4 w-4" />Transaction</Button>}
+            <Button size="sm" className="h-10 rounded-full gap-1.5 px-4" onClick={openNewTx}><Plus className="h-4 w-4" />Transaction</Button>
           </div>
         </div>
-      </div>
+      </div>}
 
       <main className="max-w-[1500px] mx-auto px-4 md:px-6 pb-10 pt-5 space-y-4">
         {tab === 'overview' && overviewMode === 'year' && <>
