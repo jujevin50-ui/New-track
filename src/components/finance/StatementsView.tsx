@@ -421,7 +421,7 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
       setSelectedRaw(draft.accountId);
       setOpen(false);
       toast.success(editing ? 'Relevé modifié' : 'Relevé enregistré');
-    } finally { setSaving(false); }
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Impossible d’enregistrer le relevé.'); } finally { setSaving(false); }
   };
 
   const remove = async (s: FinanceStatement) => {
@@ -435,12 +435,12 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold">Relevés & évolution</h1>
-          <p className="text-xs text-muted-foreground mt-1">Saisis tes relevés (assurance-vie, PEA, CTO…) et suis la valeur de tes comptes et de chaque actif dans le temps</p>
+          <h2 className="text-lg font-semibold tracking-tight">Relevés et évolution</h2>
+          <p className="text-xs text-muted-foreground mt-1">Valorisation, répartition et évolution de tes placements.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           <Select value={selected} onValueChange={setSelectedRaw}>
-            <SelectTrigger className="w-[220px] h-10 text-xs rounded-full bg-background/60 border-border/60"><SelectValue placeholder="Compte" /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-[220px] h-10 text-xs rounded-[10px] bg-background/60 border-border/60"><SelectValue placeholder="Compte" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tous les comptes</SelectItem>
               {orderedAccounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}{byAccount[a.id]?.length ? ` · ${byAccount[a.id].length} relevé${byAccount[a.id].length > 1 ? 's' : ''}` : ''}</SelectItem>)}
@@ -766,7 +766,7 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
 /* ───────────── Petits composants ───────────── */
 function Box({ title, subtitle, children }: { title?: string; subtitle?: string; children: React.ReactNode }) {
   return (
-    <section className="surface p-4 md:p-5">
+    <section className="app-panel surface p-4 md:p-5">
       {title && (
         <div className="mb-3.5">
           <h2 className="text-[13px] font-semibold tracking-tight">{title}</h2>
@@ -779,7 +779,7 @@ function Box({ title, subtitle, children }: { title?: string; subtitle?: string;
 }
 function Metric({ title, value, sub, toneClass, icon }: { title: string; value: string; sub?: string; toneClass?: string; icon?: React.ReactNode }) {
   return (
-    <div className="metric-card">
+    <div className="app-panel metric-card">
       <div className="flex items-center justify-between gap-2">
         <span className="text-[11px] font-medium text-muted-foreground tracking-tight">{title}</span>
         {icon && <span className={`${toneClass || ''} opacity-80`}>{icon}</span>}

@@ -117,7 +117,7 @@ describe('Clipboard image button', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Coller une image' }));
     expect(await screen.findByAltText('Capture 2')).toBeInTheDocument();
     expect(screen.getByAltText('Capture 1')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
     await waitFor(() => expect(onSubmit).toHaveBeenCalled());
     expect(onSubmit.mock.calls[0][0].screenshots).toEqual([trade.screenshot, expect.stringMatching(/^data:image\/png;base64,/)]);
   });

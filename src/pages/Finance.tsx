@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { HeaderNavLinks } from '@/components/trading/HeaderNavLinks';
 import { LogoSwitch } from '@/components/trading/LogoSwitch';
 import { HEADER_BAR, HEADER_GRID, NAV_PILL, navItemClass } from '@/components/trading/navStyles';
-import { StatementsView, type FinanceStatement } from '@/components/finance/StatementsView';
+import { InvestmentView } from '@/components/finance/InvestmentView';
+import { type FinanceStatement } from '@/components/finance/StatementsView';
 import { useData } from '@/contexts/DataContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,7 +24,7 @@ interface FinanceTransaction { id: string; date: string; description: string; am
 interface FinanceSubscription { id: string; name: string; amount: number; frequency: 'monthly' | 'yearly' | 'weekly'; nextDate: string; accountId: string; category: string; active: boolean; }
 interface FinanceTransfer { id: string; date: string; fromAccountId: string; toAccountId: string; amount: number; recurring: boolean; frequency?: 'monthly' | 'weekly' | 'yearly'; nextDate?: string; active: boolean; }
 
-type Tab = 'overview' | 'transactions' | 'accounts' | 'subscriptions' | 'transfers';
+type Tab = 'overview' | 'transactions' | 'accounts' | 'subscriptions' | 'transfers' | 'invest';
 
 const ACCOUNT_TYPES = ['Compte courant', 'Épargne', 'Assurance-vie', 'PEA', 'CTO', 'Crypto', 'Espèces', 'Autre'];
 const EXPENSE_CATEGORIES = ['Logement', 'Alimentation', 'Transport', 'Abonnements', 'Loisirs', 'Shopping', 'Santé', 'Formation', 'Trading', 'Famille', 'Impôts', 'Autre'];
@@ -45,7 +46,6 @@ export default function Finance() {
   const subscriptions = (Array.isArray((data as any)?.financeSubscriptions) ? (data as any).financeSubscriptions : []) as FinanceSubscription[];
   const transfers = (Array.isArray((data as any)?.financeTransfers) ? (data as any).financeTransfers : []) as FinanceTransfer[];
   const statements = (Array.isArray((data as any)?.financeStatements) ? (data as any).financeStatements : []) as FinanceStatement[];
-  const [accountsView, setAccountsView] = useState<'list' | 'statements'>('list');
   const [statementsAccountId, setStatementsAccountId] = useState<string | undefined>(undefined);
   const [tab, setTab] = useState<Tab>('overview');
   const [overviewMode, setOverviewMode] = useState<'month' | 'year'>('month');
@@ -174,7 +174,7 @@ export default function Finance() {
     await updateRow('financeAccounts' as any, accountId, { initialCapital: capital, initialDate: date });
   };
 
-  const TABS: [Tab, string][] = [['overview', 'Vue d’ensemble'], ['transactions', 'Transactions'], ['accounts', 'Comptes'], ['subscriptions', 'Abonnements'], ['transfers', 'Virements']];
+  const TABS: [Tab, string][] = [['overview', 'Vue d’ensemble'], ['transactions', 'Transactions'], ['accounts', 'Comptes'], ['invest', 'Invest'], ['subscriptions', 'Abonnements'], ['transfers', 'Virements']];
   const openNewTx = () => { setTx({ ...emptyTx, accountId: accounts[0]?.id || '' }); setTxOpen(true); };
   const prev = () => setCursor(new Date(cursor.getFullYear() + (overviewMode === 'year' ? -1 : 0), cursor.getMonth() + (overviewMode === 'month' ? -1 : 0), 1));
   const next = () => setCursor(new Date(cursor.getFullYear() + (overviewMode === 'year' ? 1 : 0), cursor.getMonth() + (overviewMode === 'month' ? 1 : 0), 1));
@@ -214,16 +214,13 @@ export default function Finance() {
               </div>
               <Segmented<'month' | 'year'> value={overviewMode} onChange={setOverviewMode} options={[['month', 'Mois'], ['year', 'Année']]} />
             </>}
-            {tab === 'accounts' && (
-              <Segmented<'list' | 'statements'> value={accountsView} onChange={(v) => { if (v === 'statements') setStatementsAccountId(undefined); setAccountsView(v); }} options={[['list', 'Mes comptes'], ['statements', 'Relevés & évolution']]} />
-            )}
-            {tab !== 'overview' && tab !== 'accounts' && (
+            {tab !== 'overview' && tab !== 'invest' && (
               <p className="text-sm text-muted-foreground">{TABS.find(([id]) => id === tab)?.[1]}</p>
             )}
           </div>
           <div className="flex items-center gap-2">
             <Button size="sm" variant="outline" className="h-10 rounded-full gap-1.5 px-4 bg-card" onClick={() => setTab('accounts')}><Landmark className="h-4 w-4" />{accounts.length} {accounts.length > 1 ? 'comptes' : 'compte'}</Button>
-            <Button size="sm" className="h-10 rounded-full gap-1.5 px-4" onClick={openNewTx}><Plus className="h-4 w-4" />Transaction</Button>
+            {tab !== 'invest' && <Button size="sm" className="h-10 rounded-full gap-1.5 px-4" onClick={openNewTx}><Plus className="h-4 w-4" />Transaction</Button>}
           </div>
         </div>
       </div>
@@ -332,8 +329,8 @@ export default function Finance() {
         </>}
 
         {tab === 'transactions' && <TransactionsView transactions={transactions} accounts={accounts} onAdd={openNewTx} onEdit={(x) => { setTx(x); setTxOpen(true); }} onDelete={async (x) => { await deleteRow('financeTransactions' as any, x.id); toast.success('Transaction supprimée'); }} />}
-        {tab === 'accounts' && accountsView === 'list' && <AccountsView onStatements={(a) => { setStatementsAccountId(a.id); setAccountsView('statements'); }} accounts={accounts.map(a => ({ ...a, balance: accountBalances[a.id] ?? Number(a.balance || 0) }))} onNew={() => { setEditingAccount(null); setAccountForm({ id: '', name: '', type: 'Compte courant', institution: '', balance: 0, currency: 'EUR' }); setAccountOpen(true); }} onEdit={(a) => { const original = accounts.find(x => x.id === a.id) || a; setEditingAccount(original); setAccountForm(a); setAccountOpen(true); }} onDelete={async a => { await deleteRow('financeAccounts' as any, a.id); toast.success('Compte supprimé'); }} />}
-        {tab === 'accounts' && accountsView === 'statements' && <StatementsView key={statementsAccountId || 'all'} accounts={accounts} statements={statements} initialAccountId={statementsAccountId} onSave={saveStatement} onDelete={deleteStatement} onSetInitial={setInitialCapital} />}
+        {tab === 'accounts' && <AccountsView onStatements={(a) => { setStatementsAccountId(a.id); setTab('invest'); }} accounts={accounts.map(a => ({ ...a, balance: accountBalances[a.id] ?? Number(a.balance || 0) }))} onNew={() => { setEditingAccount(null); setAccountForm({ id: '', name: '', type: 'Compte courant', institution: '', balance: 0, currency: 'EUR' }); setAccountOpen(true); }} onEdit={(a) => { const original = accounts.find(x => x.id === a.id) || a; setEditingAccount(original); setAccountForm(a); setAccountOpen(true); }} onDelete={async a => { await deleteRow('financeAccounts' as any, a.id); toast.success('Compte supprimé'); }} />}
+        {tab === 'invest' && <InvestmentView key={statementsAccountId || 'all'} accounts={accounts} statements={statements} initialAccountId={statementsAccountId} onSave={saveStatement} onDelete={deleteStatement} onSetInitial={setInitialCapital} />}
         {tab === 'subscriptions' && <SubscriptionsView subscriptions={subscriptions} accounts={accounts} onNew={() => { setSubForm({ ...subForm, id: '', name: '', amount: 0, accountId: accounts[0]?.id || '' }); setSubOpen(true); }} onToggle={async s => await updateRow('financeSubscriptions' as any, s.id, { active: !s.active })} onDelete={async s => { await deleteRow('financeSubscriptions' as any, s.id); toast.success('Abonnement supprimé'); }} />}
         {tab === 'transfers' && <TransfersView transfers={transfers} accounts={accounts} onNew={() => { setTransferForm({ ...transferForm, id: '', fromAccountId: accounts[0]?.id || '', toAccountId: accounts[1]?.id || '' }); setTransferOpen(true); }} onDelete={async t => { await deleteRow('financeTransfers' as any, t.id); toast.success('Virement supprimé'); }} />}
       </main>

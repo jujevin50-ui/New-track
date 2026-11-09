@@ -1,3 +1,4 @@
+import type { FinanceAssetProfile } from './financeAssets';
 import type { StrategyDocument } from './strategyDocuments';
 
 const DB_NAME = 'tr7upfx-fs';
@@ -83,6 +84,7 @@ export interface AppData {
   financeSubscriptions: any[];
   financeTransfers: any[];
   financeStatements: any[];
+  financeAssets: FinanceAssetProfile[];
   habits: any[];
   habitCompletions: any[];
   taskLists: any[];
@@ -112,6 +114,7 @@ export const DEFAULT_DATA: AppData = {
   financeSubscriptions: [],
   financeTransfers: [],
   financeStatements: [],
+  financeAssets: [],
   habits: [],
   habitCompletions: [],
   taskLists: [],
