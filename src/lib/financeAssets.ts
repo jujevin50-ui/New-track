@@ -3,6 +3,7 @@ import type { FinanceStatement } from '@/components/finance/StatementsView';
 export interface FinanceAssetProfile {
   id: string;
   name: string;
+  details?: string;
   identifier: string;
   category: string;
   sector: string;
@@ -51,4 +52,17 @@ export function investmentAssets(statements: FinanceStatement[], profiles: Finan
     else assets.set(profile.id, { id: profile.id, name: profile.name, profile, history: [], currentValue: 0, present: false });
   }
   return [...assets.values()].sort((a, b) => Number(b.present) - Number(a.present) || a.name.localeCompare(b.name, 'fr'));
+}
+
+export function assetDetails(profile?: FinanceAssetProfile): string {
+  if (!profile) return '';
+  if (profile.details !== undefined) return profile.details;
+  return [
+    profile.identifier && `Ticker / ISIN : ${profile.identifier}`,
+    profile.category && `Type : ${profile.category}`,
+    profile.sector && `Secteur / zone : ${profile.sector}`,
+    profile.firstInvestedOn && `Premier investissement : ${profile.firstInvestedOn}`,
+    profile.thesis,
+    profile.notes,
+  ].filter(Boolean).join('\n\n');
 }

@@ -23,3 +23,15 @@ describe('Investment asset history', () => {
     expect(data.financeStatements).toEqual(statements);
   });
 });
+
+describe('Asset details', () => {
+  it('preserves legacy information in a single field and respects intentional clearing', async () => {
+    const { assetDetails } = await import('./financeAssets');
+    const profile: FinanceAssetProfile = { id: 'etf', name: 'ETF', identifier: 'WORLD', category: 'ETF', sector: 'Monde', firstInvestedOn: '', thesis: 'Long terme', notes: 'Frais réduits' };
+    expect(assetDetails(profile)).toContain('WORLD');
+    expect(assetDetails(profile)).toContain('Long terme');
+    expect(assetDetails(profile)).toContain('Frais réduits');
+    expect(assetDetails({ ...profile, details: 'Mes détails' })).toBe('Mes détails');
+    expect(assetDetails({ ...profile, details: '' })).toBe('');
+  });
+});
