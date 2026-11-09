@@ -107,3 +107,29 @@ describe('Trade entry', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });
+
+describe('Clipboard image button', () => {
+  afterEach(() => { vi.restoreAllMocks(); });
+  it('adds a clipboard image to existing captures in one click and saves it', async () => {
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { read: vi.fn().mockResolvedValue([{ types: ['image/png'], getType: vi.fn().mockResolvedValue(new Blob(['image'], { type: 'image/png' })) }]) } });
+    const onSubmit = vi.fn();
+    render(<AddTradeDialog open onOpenChange={vi.fn()} onSubmit={onSubmit} editTrade={trade} accounts={[account]} activeAccountId={account.id} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Coller une image' }));
+    expect(await screen.findByAltText('Capture 2')).toBeInTheDocument();
+    expect(screen.getByAltText('Capture 1')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer', exact: true }));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+    expect(onSubmit.mock.calls[0][0].screenshots).toEqual([trade.screenshot, expect.stringMatching(/^data:image\/png;base64,/)]);
+  });
+  it('explains empty and denied clipboard access without changing captures', async () => {
+    const read = vi.fn().mockResolvedValue([{ types: ['text/plain'] }]);
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { read } });
+    render(<AddTradeDialog open onOpenChange={vi.fn()} onSubmit={vi.fn()} accounts={[account]} activeAccountId={account.id} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Coller une image' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Aucune image');
+    read.mockRejectedValue(new DOMException('Denied', 'NotAllowedError'));
+    fireEvent.click(screen.getByRole('button', { name: 'Coller une image' }));
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Ctrl + V'));
+    expect(screen.queryByAltText('Capture 1')).not.toBeInTheDocument();
+  });
+});

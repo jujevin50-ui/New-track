@@ -134,6 +134,9 @@ const AddTradeDialog = ({ open, onOpenChange, onSubmit, editTrade, accounts, act
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [imageError, setImageError] = useState('');
+  const [pastingImage, setPastingImage] = useState(false);
+  const clipboardBusy = useRef(false);
+  const clipboardSession = useRef(0);
   const [feesOpen, setFeesOpen] = useState(false);
   const [form, setForm] = useState<TradeFormData>(makeDefaultForm(defaultAccountId));
   const [resultText, setResultText] = useState('');
@@ -150,6 +153,9 @@ const AddTradeDialog = ({ open, onOpenChange, onSubmit, editTrade, accounts, act
   const fmtNum = (n: number) => n === 0 ? '' : String(n);
 
   useEffect(() => {
+    clipboardSession.current++;
+    clipboardBusy.current = false;
+    setPastingImage(false);
     if (!open) return;
     setFormError('');
     setImageError('');
@@ -407,9 +413,37 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
     }
   };
 
+  const pasteImage = async () => {
+    if (clipboardBusy.current) return;
+    setImageError('');
+    if (!navigator.clipboard?.read) {
+      setImageError('Le collage en un clic n’est pas disponible ici. Utilisez Ctrl + V.');
+      return;
+    }
+    clipboardBusy.current = true;
+    setPastingImage(true);
+    const session = clipboardSession.current;
+    try {
+      const items = await navigator.clipboard.read();
+      const files: File[] = [];
+      for (const item of items) {
+        const type = item.types.find(type => type.startsWith('image/'));
+        if (type) files.push(new File([await item.getType(type)], 'capture', { type }));
+      }
+      if (session !== clipboardSession.current) return;
+      if (!files.length) { setImageError('Aucune image dans le presse-papiers. Copiez une image puis réessayez.'); return; }
+      const urls = await Promise.all(files.map(fileToDataUrl));
+      if (session === clipboardSession.current) setForm(previous => ({ ...previous, screenshots: [...(previous.screenshots || []), ...urls] }));
+    } catch {
+      if (session === clipboardSession.current) setImageError('Accès au presse-papiers impossible. Autorisez l’accès dans le navigateur ou utilisez Ctrl + V.');
+    } finally {
+      if (session === clipboardSession.current) { clipboardBusy.current = false; setPastingImage(false); }
+    }
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (saving) return;
+    if (saving || clipboardBusy.current) return;
     if (!selectedAccount) { setFormError('Sélectionnez un compte.'); return; }
     if (form.endDate && form.endDate < form.date) { setFormError('La clôture doit suivre la date d’ouverture.'); return; }
     if ((form.riskPercent || 0) > 100) { setFormError('Le risque ne peut pas dépasser 100 %.'); return; }
@@ -507,15 +541,15 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
                     </div>
                     <div className="space-y-2"><Label htmlFor={`${fieldId}-notes`}>Notes</Label><Textarea id={`${fieldId}-notes`} value={form.notes || ''} onChange={e => set('notes', e.target.value)} className="min-h-24 resize-y rounded-xl border-border/60 bg-secondary/50 text-sm" /></div>
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between gap-3">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
                           <Label>Captures{screenshots.length > 0 ? ` · ${screenshots.length}` : ''}</Label>
                           <kbd className="rounded-md border border-border/60 px-1.5 py-0.5 text-[11px] text-muted-foreground">Ctrl + V</kbd>
                         </div>
-                        <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5 rounded-lg" onClick={() => imageInput.current?.click()}><ImagePlus className="h-3.5 w-3.5" />Ajouter</Button>
+                        <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" size="sm" className="h-8 gap-1.5 rounded-lg" disabled={pastingImage} onClick={() => { void pasteImage(); }}>{pastingImage ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Clipboard className="h-3.5 w-3.5" />}Coller une image</Button><Button type="button" variant="outline" size="sm" className="h-8 gap-1.5 rounded-lg" onClick={() => imageInput.current?.click()}><ImagePlus className="h-3.5 w-3.5" />Ajouter</Button></div>
                       </div>
                       <input ref={imageInput} type="file" accept="image/*" multiple aria-label="Ajouter des captures" className="sr-only" tabIndex={-1} onChange={e => { void addFiles(e.target.files); e.target.value = ''; }} />
-                      {screenshots.length > 0 ? <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{screenshots.map((img, i) => <div key={i} className="group relative overflow-hidden rounded-xl border border-border/60"><img src={img} alt={`Capture ${i + 1}`} className="h-24 w-full object-cover" /><Button type="button" variant="secondary" size="icon" aria-label={`Supprimer la capture ${i + 1}`} className="absolute right-1 top-1 h-7 w-7 rounded-full" onClick={() => removeImage(i)}><X className="h-3.5 w-3.5" /></Button></div>)}</div> : <button type="button" onClick={() => imageInput.current?.click()} className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border px-4 py-5 text-xs text-muted-foreground transition-colors hover:bg-secondary/50"><Clipboard className="h-4 w-4" />Importer ou coller une capture</button>}
+                      {screenshots.length > 0 ? <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{screenshots.map((img, i) => <div key={i} className="group relative overflow-hidden rounded-xl border border-border/60"><img src={img} alt={`Capture ${i + 1}`} className="h-24 w-full object-cover" /><Button type="button" variant="secondary" size="icon" aria-label={`Supprimer la capture ${i + 1}`} className="absolute right-1 top-1 h-7 w-7 rounded-full" onClick={() => removeImage(i)}><X className="h-3.5 w-3.5" /></Button></div>)}</div> : <button type="button" onClick={() => imageInput.current?.click()} className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border px-4 py-5 text-xs text-muted-foreground transition-colors hover:bg-secondary/50"><Clipboard className="h-4 w-4" />Importer une capture</button>}
                       {imageError && <p role="alert" className="text-sm text-loss">{imageError}</p>}
                     </div>
                   </section>
@@ -541,7 +575,7 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
             <footer className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-border/60 bg-background/80 px-5 py-4 sm:px-7">
               {formError && <p role="alert" className="w-full text-sm text-loss">{formError}</p>}
               <Button type="button" variant="ghost" disabled={saving} className="rounded-xl" onClick={() => onOpenChange(false)}>Annuler</Button>
-              <Button type="submit" disabled={saving || !accounts.length} className="gap-2 rounded-xl px-5">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}{editTrade ? 'Enregistrer' : 'Ajouter le trade'}</Button>
+              <Button type="submit" disabled={saving || pastingImage || !accounts.length} className="gap-2 rounded-xl px-5">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}{editTrade ? 'Enregistrer' : 'Ajouter le trade'}</Button>
             </footer>
           </form>
         </DialogContent>
