@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 
 GlobalWorkerOptions.workerSrc = workerUrl;
 
-export default function StrategyPdfViewer({ content }: { content: string }) {
+export default function StrategyPdfViewer({ content, label = 'Document de stratégie PDF' }: { content: string; label?: string }) {
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [zoom, setZoom] = useState(1);
@@ -69,7 +69,7 @@ export default function StrategyPdfViewer({ content }: { content: string }) {
   }, [pdf, pageNumber, width, zoom]);
 
   return (
-    <div className="flex h-[75dvh] min-h-[500px] flex-col" aria-label="Document de stratégie PDF">
+    <div className="flex h-[75dvh] min-h-[500px] flex-col" aria-label={label}>
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border/60 px-3 py-2">
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Page précédente" disabled={!pdf || pageNumber === 1} onClick={() => setPageNumber(number => number - 1)}><ChevronLeft className="h-4 w-4" /></Button>

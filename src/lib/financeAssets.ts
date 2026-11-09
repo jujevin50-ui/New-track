@@ -4,6 +4,8 @@ export interface FinanceAssetProfile {
   id: string;
   name: string;
   details?: string;
+  isin?: string;
+  pdf?: { name: string; size: number; content: string };
   identifier: string;
   category: string;
   sector: string;
@@ -51,7 +53,7 @@ export function investmentAssets(statements: FinanceStatement[], profiles: Finan
     if (asset) asset.profile = profile;
     else assets.set(profile.id, { id: profile.id, name: profile.name, profile, history: [], currentValue: 0, present: false });
   }
-  return [...assets.values()].sort((a, b) => Number(b.present) - Number(a.present) || a.name.localeCompare(b.name, 'fr'));
+  return [...assets.values()].map(asset => ({ ...asset, isin: assetIsin(asset.profile, asset.name) })).sort((a, b) => Number(b.present) - Number(a.present) || a.name.localeCompare(b.name, 'fr'));
 }
 
 export function assetDetails(profile?: FinanceAssetProfile): string {
@@ -65,4 +67,27 @@ export function assetDetails(profile?: FinanceAssetProfile): string {
     profile.thesis,
     profile.notes,
   ].filter(Boolean).join('\n\n');
+}
+
+export const normalizeIsin = (value: string) => value.replace(/\s/g, '').toUpperCase();
+
+export function isValidIsin(value: string): boolean {
+  const isin = normalizeIsin(value);
+  if (!/^[A-Z]{2}[A-Z0-9]{9}[0-9]$/.test(isin)) return false;
+  const digits = [...isin].map(char => /[A-Z]/.test(char) ? String(char.charCodeAt(0) - 55) : char).join('');
+  let sum = 0;
+  for (let i = digits.length - 1, position = 0; i >= 0; i--, position++) {
+    let digit = Number(digits[i]);
+    if (position % 2 === 1) { digit *= 2; if (digit > 9) digit -= 9; }
+    sum += digit;
+  }
+  return sum % 10 === 0;
+}
+
+/** Recover a single unambiguous existing code; never guess an ISIN from a name. */
+export function assetIsin(profile?: FinanceAssetProfile, name = ''): string {
+  if (profile?.isin !== undefined) return normalizeIsin(profile.isin);
+  const text = [name, profile?.identifier, profile?.details, profile?.thesis, profile?.notes].filter(Boolean).join(' ');
+  const candidates = [...new Set((text.toUpperCase().match(/\b[A-Z]{2}[A-Z0-9]{9}[0-9]\b/g) ?? []).filter(isValidIsin))];
+  return candidates.length === 1 ? candidates[0] : '';
 }

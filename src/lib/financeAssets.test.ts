@@ -35,3 +35,17 @@ describe('Asset details', () => {
     expect(assetDetails({ ...profile, details: '' })).toBe('');
   });
 });
+
+describe('Asset ISIN', () => {
+  it('validates the checksum and recovers existing codes without guessing or overriding a cleared field', async () => {
+    const { isValidIsin, assetIsin } = await import('./financeAssets');
+    expect(isValidIsin('ie00 b4l5y983')).toBe(true);
+    expect(isValidIsin('IE00B4L5Y984')).toBe(false);
+    expect(isValidIsin('ETF Monde')).toBe(false);
+    expect(assetIsin(undefined, 'ETF Monde')).toBe('');
+    expect(assetIsin(undefined, 'ETF IE00B4L5Y983')).toBe('IE00B4L5Y983');
+    const profile: FinanceAssetProfile = { id: 'etf', name: 'ETF', identifier: 'IE00B4L5Y983', category: '', sector: '', firstInvestedOn: '', thesis: '', notes: '' };
+    expect(assetIsin(profile)).toBe('IE00B4L5Y983');
+    expect(assetIsin({ ...profile, isin: '' })).toBe('');
+  });
+});
