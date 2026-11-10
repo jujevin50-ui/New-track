@@ -1066,3 +1066,9 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 .workspace-shell main :is(.border-t, .border-b) { border-top-width: 0 !important; border-bottom-width: 0 !important; }
 .workspace-shell main :is(hr, [role=separator]) { display: none; }
 .workspace-rail { border-right: 0; }
+
+@media (min-width: 1024px) {
+  .dashboard-bottom-grid > section { display: flex; flex-direction: column; }
+  .dashboard-bottom-grid > section:first-child > dl { margin-top: auto; padding-top: 16px; }
+  .dashboard-bottom-grid > section:last-child > .divide-y { display: flex; flex-direction: column; flex: 1; justify-content: space-between; }
+}
