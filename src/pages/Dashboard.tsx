@@ -91,7 +91,7 @@ export default function Dashboard({ activeAccount, accounts, onSelectAccount }: 
         {label: 'Résultat net réalisé', value: money(stats.netProfit, currency, true), color: tone(stats.netProfit)},
         {label: 'Espérance par trade', value: stats.expectancy === null ? '—' : money(stats.expectancy, currency, true)},
         {label: 'Profit factor', value: ratio(stats.profitFactor)},
-        {label: 'Taux de réussite', value: pct(stats.winRate), gauge: true, percent: stats.winRate},
+        {label: 'Win rate', value: pct(stats.winRate), gauge: true, percent: stats.winRate},
         {label: 'Stratégie respectée', value: pct(stats.strategyRate), gauge: true, percent: stats.strategyRate},
       ].map(metric => <div key={metric.label} className="min-w-0 text-center">
         <p className="text-xs text-muted-foreground">{metric.label}</p>
