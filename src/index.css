@@ -1044,3 +1044,13 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 .dashboard-filter-option[data-state=checked] { background: hsl(var(--primary) / 0.09); font-weight: 500; }
 @media (max-width: 639px) { .dashboard-filter-controls { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; } .dashboard-filter-trigger { width: 100%; } }
 @media (prefers-reduced-motion: reduce) { .dashboard-filter-trigger > svg, .dashboard-filter-option { transition: none; } }
+
+.rail-links-sliding { position: relative; isolation: isolate; }
+.rail-links-sliding .rail-link { justify-content: center; text-align: center; border-color: transparent; }
+.rail-links-sliding .rail-link.is-current { background: transparent; }
+.rail-links-sliding .rail-link.is-current::before { display: none; }
+.rail-selection-slider { position: absolute; top: 0; left: 0; right: 0; z-index: -1; border-radius: 12px; background: hsl(var(--primary) / 0.08); pointer-events: none; transition: transform 380ms cubic-bezier(0.22,1,0.36,1), height 380ms cubic-bezier(0.22,1,0.36,1); }
+.rail-selection-slider i { position: absolute; top: 50%; width: 3px; height: 14px; margin-top: -7px; border-radius: 3px; background: hsl(var(--primary)); }
+.rail-selection-slider i:first-child { left: 0; }
+.rail-selection-slider i:last-child { right: 0; }
+@media (prefers-reduced-motion: reduce) { .rail-selection-slider { transition: none; } }
