@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { DailyJournal } from '@/hooks/useDailyJournal';
@@ -21,7 +21,7 @@ export default function DisciplineYearChart({ journals, selectedDate, today, onS
     <div className="mb-5 flex flex-wrap items-baseline gap-x-3 gap-y-1"><span className="text-3xl font-semibold tracking-tight">{average === null ? '—' : `${average} %`}</span><span className="text-xs text-muted-foreground">{recorded.length ? `en moyenne · ${recorded.length} journée${recorded.length > 1 ? 's' : ''} enregistrée${recorded.length > 1 ? 's' : ''}` : 'Aucune journée enregistrée sur cette année'}</span></div>
     <div className="h-[280px] w-full min-w-0" role="img" aria-label={`Pourcentage de règles respectées par jour en ${year}, ${data.length} jours, ${recorded.length} journées enregistrées${average === null ? '' : `, moyenne ${average} %`}`}>
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 12, right: 12, bottom: 8, left: -12 }} onClick={event => { if (typeof event?.activeLabel === 'string' && event.activeLabel <= today) onSelectDate(event.activeLabel); }}>
+        <AreaChart data={data} margin={{ top: 12, right: 12, bottom: 8, left: -12 }} onClick={event => { if (typeof event?.activeLabel === 'string' && event.activeLabel <= today) onSelectDate(event.activeLabel); }}>
           <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeDasharray="3 5" />
           <XAxis dataKey="date" ticks={monthTicks} tickFormatter={date => new Date(`${date}T12:00:00`).toLocaleDateString('fr-FR', { month: 'short' })} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} tickLine={false} axisLine={false} minTickGap={18} dy={8} />
           <YAxis domain={[0, 100]} ticks={[0, 20, 40, 60, 80, 100]} tickFormatter={value => `${value} %`} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} tickLine={false} axisLine={false} width={52} />
@@ -30,8 +30,8 @@ export default function DisciplineYearChart({ journals, selectedDate, today, onS
             const percent = payload[0]?.payload?.percent;
             return <div className="rounded-[10px] border border-border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-sm"><p className="font-medium">{new Date(`${label}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</p><p className="mt-1 text-muted-foreground">{percent === null ? label > today ? 'À venir' : 'Sans suivi' : `${percent} % · ${percent / 20} règles sur 5`}</p></div>;
           }} />
-          <Line type="linear" dataKey="percent" stroke="hsl(var(--foreground))" strokeWidth={2} dot={{ r: 2, fill: 'hsl(var(--foreground))', strokeWidth: 0 }} activeDot={{ r: 5 }} connectNulls={false} isAnimationActive={false} />
-        </LineChart>
+          <Area type="linear" dataKey="percent" fill="hsl(var(--muted-foreground))" fillOpacity={0.22} stroke="hsl(var(--foreground))" strokeWidth={2} dot={{ r: 2, fill: 'hsl(var(--foreground))', strokeWidth: 0 }} activeDot={{ r: 5 }} connectNulls={false} isAnimationActive={false} />
+        </AreaChart>
       </ResponsiveContainer>
     </div>
     <p className="mt-3 text-xs text-muted-foreground">Les journées sans suivi restent vides. Chaque règle validée vaut 20 %.</p>
