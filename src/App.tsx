@@ -13,17 +13,12 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LogoTransitionProvider } from "@/components/trading/LogoTransition";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { WelcomeSplash } from "@/components/trading/WelcomeSplash";
+import { recoverAppAssets } from "@/lib/assetRecovery";
 import { AppBackground } from "@/components/AppBackground";
 
 function lazyWithReload<T extends { default: ComponentType<any> }>(factory: () => Promise<T>) {
   return lazy(() => factory().catch((err) => {
-    const key = "chunk-reload-at";
-    const last = Number(sessionStorage.getItem(key) || 0);
-    if (Date.now() - last > 10000) {
-      sessionStorage.setItem(key, String(Date.now()));
-      window.location.reload();
-      return new Promise<T>(() => {});
-    }
+    if (recoverAppAssets(err)) return new Promise<T>(() => {});
     throw err;
   }));
 }
