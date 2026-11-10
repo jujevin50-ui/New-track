@@ -6,19 +6,19 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { RotateCcw } from 'lucide-react';
 
-interface Props { trades: Trade[]; filters: TradeFilterState; onChange: (filters: TradeFilterState) => void; children?: ReactNode; }
-export default function TradeFilters({ trades, filters, onChange, children }: Props) {
+interface Props { trades: Trade[]; filters: TradeFilterState; onChange: (filters: TradeFilterState) => void; children?: ReactNode; actions?: ReactNode; }
+export default function TradeFilters({ trades, filters, onChange, children, actions }: Props) {
   const pairs = [...new Set([...trades.map(trade => trade.pair), ...(filters.pair !== 'all' ? [filters.pair] : [])])].sort();
   const set = (key: keyof TradeFilterState, value: string) => onChange({...filters,[key]:value});
   const active = Object.keys(filters).some(key => filters[key as keyof TradeFilterState] !== initialTradeFilters[key as keyof TradeFilterState]);
   const field = (key: keyof TradeFilterState, label: string, options: {value:string;label:string}[]) => <DashboardFilter label={label} ariaLabel={`Filtre ${label.toLowerCase()}`} value={filters[key]} onChange={value => set(key,value)} options={options}/>;
   return <div className="space-y-5">
-    <div className="dashboard-filter-controls trades-filter-controls">
+    <div className="trades-toolbar"><div className="dashboard-filter-controls trades-filter-controls">
       {children}
-      {field('pair','Paire',[{value:'all',label:'Toutes les paires'},...pairs.map(pair => ({value:pair,label:pair}))])}
+      {field('pair','Paire',[{value:'all',label:'Toutes'},...pairs.map(pair => ({value:pair,label:pair}))])}
       {field('position','Position',[{value:'all',label:'Toutes'},{value:'open',label:'Ouvertes'},{value:'closed',label:'Clôturées'}])}
       {field('result','Résultat',[{value:'all',label:'Tous'},{value:'win',label:'Gagnants'},{value:'loss',label:'Perdants'},{value:'neutral',label:'Neutres'}])}
-    </div>
+    </div>{actions}</div>
     <details className="trades-advanced"><summary className="cursor-pointer text-xs text-muted-foreground">Plus de filtres</summary><div className="dashboard-filter-controls mt-4">
       {field('direction','Direction',[{value:'all',label:'Toutes'},{value:'Buy',label:'Long'},{value:'Sell',label:'Short'}])}
       {field('exit','Sortie',[{value:'all',label:'Toutes'},...EXIT_TYPES.map(exit => ({value:exit,label:exit}))])}

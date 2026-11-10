@@ -153,17 +153,21 @@ const Trades = ({ activeAccount, accounts, onAddAccount, onUpdateAccount, onSele
           <h1 className="text-2xl font-semibold tracking-tight">Trades</h1>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+
+      </div>
+
+      <TradeFilters trades={trades} filters={filters} onChange={setFilters} actions={
+        <div className="trades-actions flex flex-wrap items-center gap-2">
           <div className="dashboard-switch" role="group" aria-label="Vue des trades">{[{value:'table',label:'Tableau',Icon:List},{value:'gallery',label:'Galerie',Icon:Image}].map(({value,label,Icon})=><button type="button" key={value} aria-pressed={view===value} onClick={()=>setView(value as 'table' | 'gallery')} className="inline-flex items-center gap-2"><Icon className="h-3.5 w-3.5"/>{label}</button>)}</div>
 
-          <Button size="sm" variant="outline" onClick={handleExport} className="gap-1.5">
+          <Button size="sm" variant="outline" aria-label="Exporter" title="Exporter" onClick={handleExport} className="trades-action-secondary gap-1.5">
             <Download className="h-4 w-4" />
-            Exporter
+            <span>Exporter</span>
           </Button>
 
-          <Button size="sm" variant="outline" onClick={() => setPayoutOpen(true)} className="gap-1.5">
+          <Button size="sm" variant="outline" aria-label="Payout" title="Payout" onClick={() => setPayoutOpen(true)} className="trades-action-secondary gap-1.5">
             <Banknote className="h-4 w-4" />
-            Payout
+            <span>Payout</span>
           </Button>
 
           <Button size="sm" disabled={!scopeAccounts.length} onClick={() => { setEditTrade(null); setDialogOpen(true); }} className="gap-1.5">
@@ -171,10 +175,8 @@ const Trades = ({ activeAccount, accounts, onAddAccount, onUpdateAccount, onSele
             Nouveau trade
           </Button>
         </div>
-      </div>
-
-      <TradeFilters trades={trades} filters={filters} onChange={setFilters}>
-        <DashboardFilter label="Statut" ariaLabel="Statut des comptes" value={status} onChange={setStatus} options={[{value:'all',label:'Tous les comptes'},{value:'active',label:'Actifs'},{value:'pending',label:'En attente'},{value:'terminated',label:'Terminés'},{value:'paid_out',label:'Payout effectué'}]}/>
+      }>
+        <DashboardFilter label="Statut" ariaLabel="Statut des comptes" value={status} onChange={setStatus} options={[{value:'all',label:'Tous'},{value:'active',label:'Actifs'},{value:'pending',label:'En attente'},{value:'terminated',label:'Terminés'},{value:'paid_out',label:'Payout effectué'}]}/>
         <DashboardFilter label="Compte" ariaLabel="Compte des trades" value={selectedId} onChange={id => {setAccountFilter(id); if (id !== 'all') onSelectAccount(id);}} disabled={!availableAccounts.length} options={[{value:'all',label:'Tous les comptes'},...availableAccounts.map(account=>({value:account.id,label:account.name}))]}/>
       </TradeFilters>
       <div className="min-w-0">
