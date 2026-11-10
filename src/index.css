@@ -1115,3 +1115,17 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 .calendar-page .calendar-month header button { height: 40px; border-radius: 10px; }
 @media (max-width: 639px) { .calendar-days { gap: 4px; } .calendar-day { padding: 7px 4px; border-radius: 7px; } .calendar-day-result { font-size: 9px; } }
 @media (prefers-reduced-motion: reduce) { .calendar-day { transition: none; } }
+
+.trades-page > header button, .trades-page > div:first-child button { min-height: 36px; border-radius: 10px; font-size: 12px; }
+.trades-page .trades-filter-controls .dashboard-filter-field { width: 180px; }
+.trades-page .trades-filter-controls .dashboard-filter-account { width: 260px; }
+.trade-history th { font-size: 10px; font-weight: 500; color: hsl(var(--muted-foreground)); white-space: nowrap; }
+.trade-history th button { text-transform: none; letter-spacing: normal; font-weight: 500; }
+.trade-history td { font-size: 12px; }
+.trade-history td .font-mono { font-family: inherit; font-variant-numeric: tabular-nums; }
+.trade-history tr { border: 0; }
+.trade-history td > span.border { border-color: transparent; }
+.trade-history .overflow-x-auto { max-width: 100%; }
+.trades-advanced summary { width: fit-content; padding: 5px 0; }
+@media (max-width: 639px) { .trades-page .trades-filter-controls { grid-template-columns: repeat(2,minmax(0,1fr)); } .trades-page .trades-filter-controls .dashboard-filter-field { width: 100%; } .trades-page .trades-filter-controls .dashboard-filter-account { grid-column: 1 / -1; } }
+.calendar-weekend { min-width: 0; padding: 9px 7px; color: hsl(var(--muted-foreground) / 0.35); font-size: 11px; }

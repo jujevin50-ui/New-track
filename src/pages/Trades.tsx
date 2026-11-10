@@ -1,13 +1,17 @@
-import { useState, useEffect, useMemo } from 'react';
+import DashboardFilter from '@/components/trading/DashboardFilter';
+import { dashboardAnalytics } from '@/lib/dashboardAnalytics';
+import { localDay } from '@/lib/discipline';
+import { useState, useMemo } from 'react';
 import { useTrades } from '@/hooks/useTrades';
-import { usePayouts } from '@/hooks/usePayouts';
+import { usePayouts, type Payout } from '@/hooks/usePayouts';
 import { useData } from '@/contexts/DataContext';
 import { Account, AccountFormData } from '@/types/account';
-import { Trade, TradeFormData } from '@/types/trade';
+import { Trade, TradeFormData, getNetResult } from '@/types/trade';
 import TradeTable from '@/components/trading/TradeTable';
 import TradeGallery from '@/components/trading/TradeGallery';
 import TradeListView from '@/components/trading/TradeListView';
 import TradeFilters from '@/components/trading/TradeFilters';
+import { filterTradeList, initialTradeFilters } from '@/lib/tradeFilters';
 import AddTradeDialog from '@/components/trading/AddTradeDialog';
 import PayoutDialog from '@/components/trading/PayoutDialog';
 import { Button } from '@/components/ui/button';
@@ -17,6 +21,7 @@ import { exportTradesToCSV } from '@/lib/csvImport';
 interface TradesPageProps {
   activeAccount: Account | null;
   accounts: Account[];
+  onSelectAccount: (id: string) => void;
   onAddAccount: (data: AccountFormData) => Promise<Account>;
   onUpdateAccount: (id: string, data: AccountFormData) => Promise<void>;
 }
@@ -30,8 +35,8 @@ const nextAccountCode = (source: Account, allAccounts: Account[]) => {
   return `${base}-${siblings.length}`;
 };
 
-const Trades = ({ activeAccount, accounts, onAddAccount, onUpdateAccount }: TradesPageProps) => {
-  const { trades, addTrade, updateTrade, deleteTrade } = useTrades(
+const Trades = ({ activeAccount, accounts, onAddAccount, onUpdateAccount, onSelectAccount }: TradesPageProps) => {
+  const { allTrades, addTrade, updateTrade, deleteTrade } = useTrades(
     activeAccount?.id || null,
     activeAccount?.initialBalance || 0
   );
@@ -40,7 +45,7 @@ const Trades = ({ activeAccount, accounts, onAddAccount, onUpdateAccount }: Trad
   const { data } = useData();
 
   const allPayouts = useMemo(
-    () => (data.payouts as any[] || []).map((p: any) => ({
+    () => (data.payouts as Payout[] || []).map(p => ({
       id: p.id,
       accountId: p.accountId,
       amount: Number(p.amount),
@@ -54,32 +59,33 @@ const Trades = ({ activeAccount, accounts, onAddAccount, onUpdateAccount }: Trad
     const map: Record<string, number> = {};
 
     accounts.forEach(a => {
-      const acctTrades = (data.trades as any[]).filter(t => t.accountId === a.id);
-      const profit = acctTrades.reduce(
-        (sum: number, t: any) =>
-          sum + Number(t.result || 0) - Math.abs(Number(t.commission || 0)) + Number(t.swap || 0),
-        0
-      );
-
-      const paid = (data.payouts as any[] || [])
-        .filter(p => p.accountId === a.id)
-        .reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
+      const acctTrades = allTrades.filter(t => t.accountId === a.id && t.endDate && t.endDate.slice(0,10) <= localDay());
+      const profit = acctTrades.reduce((sum, trade) => sum + getNetResult(trade), 0);
+      const paid = allPayouts.filter(payout => payout.accountId === a.id).reduce((sum,payout)=>sum+payout.amount,0);
 
       map[a.id] = Math.max(0, profit - paid);
     });
 
     return map;
-  }, [accounts, data.trades, data.payouts]);
+  }, [accounts, allTrades, allPayouts]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [payoutOpen, setPayoutOpen] = useState(false);
   const [editTrade, setEditTrade] = useState<Trade | null>(null);
   const [view, setView] = useState<'list' | 'table' | 'gallery'>('table');
-  const [filteredTrades, setFilteredTrades] = useState<Trade[]>(trades);
-
-  useEffect(() => {
-    setFilteredTrades(trades);
-  }, [trades]);
+  const [status, setStatus] = useState('all');
+  const [filters, setFilters] = useState({...initialTradeFilters});
+  const availableAccounts = status === 'all' ? accounts : accounts.filter(account => account.status === status);
+  const selectedId = activeAccount?.id === 'all' ? 'all' : availableAccounts.find(account => account.id === activeAccount?.id)?.id ?? availableAccounts[0]?.id ?? '';
+  const scopeAccounts = selectedId === 'all' ? availableAccounts : availableAccounts.filter(account => account.id === selectedId);
+  const trades = useMemo(() => allTrades.filter(trade => scopeAccounts.some(account => account.id === trade.accountId)), [allTrades, scopeAccounts]);
+  const filteredTrades = useMemo(() => filterTradeList(trades,filters), [trades,filters]);
+  const currencies = [...new Set(scopeAccounts.map(account => account.currency?.trim().toUpperCase()).filter(Boolean))];
+  const uniformCurrency = currencies.length === 1 && scopeAccounts.every(account => account.currency?.trim());
+  const currency = currencies[0] ?? '';
+  const summary = dashboardAnalytics(filteredTrades, {to:localDay()});
+  const formatMoney = (value: number) => { try { return new Intl.NumberFormat('fr-FR',{style:'currency',currency,signDisplay:'exceptZero',maximumFractionDigits:2}).format(value); } catch { return '—'; } };
+  const scopedPayouts = allPayouts.filter(payout => scopeAccounts.some(account => account.id === payout.accountId));
 
   const handleSubmit = async (formData: TradeFormData) => {
     if (editTrade) {
@@ -139,49 +145,25 @@ const Trades = ({ activeAccount, accounts, onAddAccount, onUpdateAccount }: Trad
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <div className="text-center space-y-2">
-          <p className="text-muted-foreground">No account selected.</p>
+          <p className="text-muted-foreground">Ajoute un compte pour commencer à enregistrer tes trades.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-[1800px] mx-auto space-y-6">
+    <div className="trades-page w-full mx-auto space-y-8 pb-10">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-lg font-bold tracking-tight">Trades</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Trades</h1>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center rounded-lg border border-border overflow-hidden bg-card">
-            <button
-              onClick={() => setView('table')}
-              className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 transition-colors ${
-                view === 'table'
-                  ? 'bg-primary/15 text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <List className="h-3.5 w-3.5" />
-              Table
-            </button>
-
-            <button
-              onClick={() => setView('gallery')}
-              className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 transition-colors ${
-                view === 'gallery'
-                  ? 'bg-primary/15 text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Image className="h-3.5 w-3.5" />
-              Gallery
-            </button>
-          </div>
+          <div className="dashboard-switch" role="group" aria-label="Vue des trades">{[{value:'table',label:'Tableau',Icon:List},{value:'gallery',label:'Galerie',Icon:Image}].map(({value,label,Icon})=><button type="button" key={value} aria-pressed={view===value} onClick={()=>setView(value as 'table' | 'gallery')} className="inline-flex items-center gap-2"><Icon className="h-3.5 w-3.5"/>{label}</button>)}</div>
 
           <Button size="sm" variant="outline" onClick={handleExport} className="gap-1.5">
             <Download className="h-4 w-4" />
-            Export
+            Exporter
           </Button>
 
           <Button size="sm" variant="outline" onClick={() => setPayoutOpen(true)} className="gap-1.5">
@@ -189,14 +171,21 @@ const Trades = ({ activeAccount, accounts, onAddAccount, onUpdateAccount }: Trad
             Payout
           </Button>
 
-          <Button size="sm" onClick={() => { setEditTrade(null); setDialogOpen(true); }} className="gap-1.5">
+          <Button size="sm" disabled={!scopeAccounts.length} onClick={() => { setEditTrade(null); setDialogOpen(true); }} className="gap-1.5">
             <Plus className="h-4 w-4" />
             Nouveau trade
           </Button>
         </div>
       </div>
 
-      <TradeFilters trades={trades} onFiltered={setFilteredTrades} />
+      <TradeFilters trades={trades} filters={filters} onChange={setFilters}>
+        <DashboardFilter label="Statut" ariaLabel="Statut des comptes" value={status} onChange={setStatus} options={[{value:'all',label:'Tous les comptes'},{value:'active',label:'Actifs'},{value:'pending',label:'En attente'},{value:'terminated',label:'Terminés'},{value:'paid_out',label:'Payout effectué'}]}/>
+        <DashboardFilter label="Compte" ariaLabel="Compte des trades" value={selectedId} onChange={onSelectAccount} disabled={!availableAccounts.length} options={[{value:'all',label:'Tous les comptes'},...availableAccounts.map(account=>({value:account.id,label:account.name}))]}/>
+      </TradeFilters>
+      <div className="grid grid-cols-2 gap-x-5 gap-y-6 lg:grid-cols-4">
+        {[{label:'Résultat net réalisé',value:uniformCurrency ? formatMoney(summary.netProfit) : '—',color:summary.netProfit>0 ? 'text-profit' : summary.netProfit<0 ? 'text-loss' : ''}, {label:'Trades clôturés',value:String(summary.totalTrades)}, {label:'Positions ouvertes',value:String(summary.openCount)}, {label:'Win rate',value:summary.winRate===null ? '—' : `${summary.winRate.toLocaleString('fr-FR',{maximumFractionDigits:1})} %`}].map(metric=><div key={metric.label} className="min-w-0 text-center"><p className="text-xs text-muted-foreground">{metric.label}</p><p className={`mt-5 break-words text-xl font-semibold tracking-tight tabular-nums sm:text-[27px] ${metric.color??''}`}>{metric.value}</p></div>)}
+      </div>
+      {!uniformCurrency && scopeAccounts.length>0 && <p className="text-xs text-muted-foreground">Sélectionne un compte pour afficher son résultat dans sa devise.</p>}
 
       <div className="min-w-0">
         {view === 'list' ? (
@@ -212,11 +201,11 @@ const Trades = ({ activeAccount, accounts, onAddAccount, onUpdateAccount }: Trad
             onEdit={handleEdit}
             onDelete={deleteTrade}
             accounts={accounts}
-            payouts={allPayouts}
+            payouts={scopedPayouts}
             onDeletePayout={deletePayout}
           />
         ) : (
-          <TradeGallery trades={filteredTrades} />
+          <TradeGallery trades={filteredTrades} accounts={accounts} />
         )}
       </div>
 
@@ -226,7 +215,7 @@ const Trades = ({ activeAccount, accounts, onAddAccount, onUpdateAccount }: Trad
         onSubmit={handleSubmit}
         editTrade={editTrade}
         accounts={accounts}
-        activeAccountId={activeAccount.id}
+        activeAccountId={selectedId || null}
       />
 
       <PayoutDialog
@@ -234,7 +223,7 @@ const Trades = ({ activeAccount, accounts, onAddAccount, onUpdateAccount }: Trad
         onOpenChange={setPayoutOpen}
         onSubmit={handlePayout}
         accounts={accounts}
-        defaultAccountId={activeAccount.id === 'all' ? undefined : activeAccount.id}
+        defaultAccountId={selectedId === 'all' ? undefined : selectedId || undefined}
         accountProfits={accountProfits}
       />
     </div>

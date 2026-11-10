@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { Account } from '@/types/account';
 import type { Trade } from '@/types/trade';
-import { completedMissions, disciplineStats, DISCIPLINE_MISSIONS, localDay, newDailyJournal, shiftDay } from '@/lib/discipline';
+import { completedMissions, disciplineStats, DISCIPLINE_MISSIONS, localDay, newDailyJournal, isTradingDay, previousTradingDay, shiftTradingDay } from '@/lib/discipline';
 
 
 
@@ -18,13 +18,13 @@ export default function Discipline({ activeAccount, accounts, onSelectAccount }:
   const selectedAccount = accounts.find(account => account.id === activeAccount?.id) ?? accounts[0];
   const { trades } = useTrades(selectedAccount?.id ?? null, selectedAccount?.initialBalance ?? 0);
   const today = localDay();
-  const [date, setDate] = useState(today);
+  const [date, setDate] = useState(previousTradingDay(today));
   const [chartPeriod, setChartPeriod] = useState<'month' | 'year'>('year');
   const dirty = useRef(false);
   const saving = useRef(false);
   const stats = disciplineStats(journals, today);
   const chooseDate = (next: string) => {
-    if (!next || next === date || next > today || saving.current) return;
+    if (!next || !isTradingDay(next) || next === date || next > today || saving.current) return;
     if (dirty.current && !window.confirm('Changer de journée sans enregistrer les modifications ?')) return;
     dirty.current = false;
     setDate(next);
@@ -35,10 +35,10 @@ export default function Discipline({ activeAccount, accounts, onSelectAccount }:
       <div><h1 className="text-2xl font-semibold tracking-tight">Discipline</h1></div>
     </header>
     <div className="dashboard-filters"><div className="dashboard-filter-controls"><DashboardFilter label="Compte" ariaLabel="Compte du bilan" value={selectedAccount?.id ?? ''} onChange={onSelectAccount} disabled={!accounts.length} options={accounts.map(account => ({value:account.id, label:account.name}))} /><div><span className="dashboard-filter-caption">Journée</span>      <div className="discipline-date-control flex flex-wrap items-center gap-2">
-        <Button variant="outline" size="icon" aria-label="Jour précédent" onClick={() => chooseDate(shiftDay(date, -1))}><ChevronLeft /></Button>
+        <Button variant="outline" size="icon" aria-label="Jour précédent" onClick={() => chooseDate(shiftTradingDay(date, -1))}><ChevronLeft /></Button>
         <Input aria-label="Date de discipline" type="date" max={today} value={date} onChange={event => chooseDate(event.target.value)} className="h-10 w-auto max-w-full rounded-[10px] bg-transparent text-xs" />
-        <Button variant="outline" size="icon" aria-label="Jour suivant" disabled={date >= today} onClick={() => chooseDate(shiftDay(date, 1))}><ChevronRight /></Button>
-        {date !== today && <Button variant="ghost" onClick={() => chooseDate(today)}>Aujourd’hui</Button>}
+        <Button variant="outline" size="icon" aria-label="Jour suivant" disabled={shiftTradingDay(date, 1) > today} onClick={() => chooseDate(shiftTradingDay(date, 1))}><ChevronRight /></Button>
+        {date !== previousTradingDay(today) && <Button variant="ghost" onClick={() => chooseDate(previousTradingDay(today))}>Aujourd’hui</Button>}
       </div>
 </div></div></div>
     <div className="grid grid-cols-3 gap-4 py-4">

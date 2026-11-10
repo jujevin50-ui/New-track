@@ -35,11 +35,10 @@ interface TradeTableProps {
 type SortDir = 'asc' | 'desc';
 type SortField = 'tradeNumber' | 'pair' | 'date' | 'endDate' | 'result' | 'riskPercent';
 
-const money = (value: number) =>
-  value.toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+const money = (value: number, currency = '') => {
+  try { return new Intl.NumberFormat('fr-FR', {style:'currency', currency, signDisplay:'exceptZero', maximumFractionDigits:2}).format(value); }
+  catch { return value.toLocaleString('fr-FR', {signDisplay:'exceptZero', minimumFractionDigits:2, maximumFractionDigits:2}); }
+};
 
 const pad = (value: number) => String(value).padStart(4, '0');
 
@@ -79,12 +78,12 @@ const TradeTable = ({
 
     unified.sort((a, b) => {
       if (a.kind === 'trade' && b.kind === 'trade') {
-        const av = a.data[sortField as keyof Trade] as any;
-        const bv = b.data[sortField as keyof Trade] as any;
+        const av = sortField === 'result' ? getNetResult(a.data) : a.data[sortField];
+        const bv = sortField === 'result' ? getNetResult(b.data) : b.data[sortField];
 
         let comparison = 0;
 
-        if (sortField === 'result' || sortField === 'riskPercent') {
+        if (sortField === 'result' || sortField === 'riskPercent' || sortField === 'tradeNumber') {
           comparison = Number(av || 0) - Number(bv || 0);
         } else {
           comparison = String(av ?? '').localeCompare(String(bv ?? ''));
@@ -113,23 +112,6 @@ const TradeTable = ({
         ),
     [rows]
   );
-
-  const totalNet = trades.reduce((sum, trade) => sum + getNetResult(trade), 0);
-  const totalRiskR = trades.reduce((sum, trade) => {
-    const account = accounts.find(item => item.id === trade.accountId);
-    const value = getTradeR(trade, account?.initialBalance || 0);
-    return value === null ? sum : sum + value;
-  }, 0);
-
-  const wins = trades.filter(trade => getNetResult(trade) > 0).length;
-  const losses = trades.filter(trade => getNetResult(trade) < 0).length;
-  const winRate = trades.length ? (wins / trades.length) * 100 : 0;
-
-  const totalPct = trades.reduce((sum, trade) => {
-    const account = accounts.find(item => item.id === trade.accountId);
-    const balance = account?.initialBalance || 0;
-    return balance ? sum + (getNetResult(trade) / balance) * 100 : sum;
-  }, 0);
 
   const toggleSort = (field: SortField) => {
     if (field === sortField) {
@@ -168,8 +150,8 @@ const TradeTable = ({
 
   if (!rows.length) {
     return (
-      <div className="rounded-xl border border-border bg-card p-12 text-center">
-        <p className="text-sm font-medium">No trades yet.</p>
+      <div className="py-16 text-center">
+        <p className="text-sm font-medium">Aucun trade dans cette sélection.</p>
       </div>
     );
   }
@@ -201,45 +183,24 @@ const TradeTable = ({
 
   return (
     <>
-      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-        <div className="flex items-center justify-between border-b border-border bg-secondary/20 px-4 py-3">
-          <div>
-            <p className="text-sm font-semibold">Trade history</p>
-          </div>
-
-          <div className="flex items-center gap-3 text-xs font-medium">
-            <div>
-              <span className="text-muted-foreground">Net </span>
-              <span className={totalNet >= 0 ? 'text-profit' : 'text-loss'}>
-                {totalNet >= 0 ? '+' : ''}${money(totalNet)}
-              </span>
-            </div>
-            <div className="hidden sm:block h-4 w-px bg-border" />
-            <div className="hidden sm:block">
-              <span className="text-muted-foreground">R </span>
-              <span className={totalRiskR >= 0 ? 'text-profit' : 'text-loss'}>
-                {totalRiskR >= 0 ? '+' : ''}{totalRiskR.toFixed(2)}R
-              </span>
-            </div>
-          </div>
-        </div>
-
+      <div className="trade-history min-w-0">
+        <header className="mb-5 flex items-center justify-between"><h2 className="text-sm font-semibold">Historique des trades</h2><span className="text-xs text-muted-foreground">{trades.length} trade{trades.length > 1 ? 's' : ''}</span></header>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1180px] border-collapse">
+          <table className="w-full min-w-[1080px] border-collapse">
             <thead>
               <tr className="border-b border-border bg-secondary/35">
                 <th className="px-4 py-3 text-left"><SortButton field="tradeNumber">#</SortButton></th>
-                <th className="px-4 py-3 text-left"><SortButton field="pair">Pair</SortButton></th>
+                <th className="px-4 py-3 text-left"><SortButton field="pair">Paire</SortButton></th>
                 <th className="px-4 py-3 text-left"><SortButton field="date">Date</SortButton></th>
                 <th className="px-4 py-3 text-left">Direction</th>
-                <th className="px-4 py-3 text-right"><SortButton field="result">Net P&L</SortButton></th>
+                <th className="px-4 py-3 text-right"><SortButton field="result">Résultat net</SortButton></th>
                 <th className="px-4 py-3 text-right">%</th>
                 <th className="px-4 py-3 text-right">R</th>
-                <th className="px-4 py-3 text-center">Exit</th>
-                <th className="px-4 py-3 text-center">Quality</th>
-                <th className="px-4 py-3 text-center">Strategy</th>
+                <th className="px-4 py-3 text-center">Sortie</th>
+                <th className="px-4 py-3 text-center">Qualité</th>
+                <th className="px-4 py-3 text-center">Stratégie</th>
                 <th className="px-4 py-3 text-center">Note</th>
-                <th className="px-4 py-3 text-center">Screen</th>
+                <th className="px-4 py-3 text-center">Images</th>
                 <th className="w-12 px-2 py-3" />
               </tr>
             </thead>
@@ -309,7 +270,7 @@ const TradeTable = ({
                       <div className="flex items-center gap-2.5">
                         <span className={`h-2 w-2 rounded-full ${trade.type === 'Buy' ? 'bg-profit' : 'bg-loss'}`} />
                         <div className="min-w-0">
-                          <div className="font-semibold tracking-tight">{trade.pair}</div>
+                          <button type="button" className="font-medium tracking-tight hover:underline focus-visible:outline-primary" aria-label={`Modifier le trade ${trade.tradeNumber} ${trade.pair}`} onClick={event => {event.stopPropagation();onEdit(trade);}}>{trade.pair}</button>
                           {account && (
                             <div className="mt-0.5 truncate text-[9px] text-muted-foreground">{account.name}</div>
                           )}
@@ -336,7 +297,7 @@ const TradeTable = ({
 
                     <td className="px-4 py-3.5 text-right">
                       <div className={`font-mono text-sm font-bold tabular-nums ${isProfit ? 'text-profit' : net < 0 ? 'text-loss' : 'text-foreground'}`}>
-                        {net > 0 ? '+' : ''}${money(net)}
+                        {trade.endDate ? money(net,account?.currency) : '—'}
                       </div>
                     </td>
 
@@ -344,7 +305,7 @@ const TradeTable = ({
                       <span className={`font-mono text-xs font-semibold tabular-nums ${
                         pct > 0 ? 'text-profit' : pct < 0 ? 'text-loss' : 'text-muted-foreground'
                       }`}>
-                        {pct > 0 ? '+' : ''}{pct.toFixed(2)}%
+                        {trade.endDate && balance > 0 ? `${pct > 0 ? '+' : ''}${pct.toLocaleString('fr-FR',{maximumFractionDigits:2})} %` : '—'}
                       </span>
                     </td>
 
@@ -352,13 +313,13 @@ const TradeTable = ({
                       <span className={`font-mono text-xs font-bold tabular-nums ${
                         r === null ? 'text-muted-foreground' : r > 0 ? 'text-profit' : r < 0 ? 'text-loss' : 'text-foreground'
                       }`}>
-                        {r === null ? '—' : `${r > 0 ? '+' : ''}${r.toFixed(2)}R`}
+                        {r === null || !trade.endDate ? '—' : `${r > 0 ? '+' : ''}${r.toFixed(2)}R`}
                       </span>
                     </td>
 
                     <td className="px-4 py-3.5 text-center">
                       <span className={`inline-flex rounded-md border px-2 py-1 text-[9px] font-semibold ${exitStyle}`}>
-                        {trade.exitType}
+                        {trade.endDate ? trade.exitType : 'En cours'}
                       </span>
                     </td>
 
@@ -375,7 +336,7 @@ const TradeTable = ({
                           ? 'border-profit/20 bg-profit/10 text-profit'
                           : 'border-loss/20 bg-loss/10 text-loss'
                       }`}>
-                        {trade.strategyRespected ? 'Yes' : 'No'}
+                        {trade.strategyRespected ? 'Oui' : 'Non'}
                       </span>
                     </td>
 
@@ -385,7 +346,7 @@ const TradeTable = ({
                           <TooltipTrigger asChild>
                             <button
                               type="button"
-                              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
+                              aria-label={`Note du trade ${trade.tradeNumber}`} className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
                             >
                               <FileText className="h-3.5 w-3.5" />
                             </button>
@@ -421,7 +382,7 @@ const TradeTable = ({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100"
+                        className="h-7 w-7 opacity-50 transition-opacity hover:opacity-100 focus-visible:opacity-100" aria-label={`Supprimer le trade ${trade.tradeNumber}`}
                         onClick={() => onDelete(trade.id)}
                       >
                         <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
@@ -432,37 +393,7 @@ const TradeTable = ({
               })}
             </tbody>
 
-            <tfoot>
-              <tr className="border-t border-border bg-secondary/30">
-                <td className="px-4 py-3" />
-                <td className="px-4 py-3">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Total
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-[10px] text-muted-foreground">
-                  {trades.length} trade{trades.length !== 1 ? 's' : ''}
-                </td>
-                <td />
-                <td className={`px-4 py-3 text-right font-mono text-sm font-bold ${totalNet >= 0 ? 'text-profit' : 'text-loss'}`}>
-                  {totalNet >= 0 ? '+' : ''}${money(totalNet)}
-                </td>
-                <td className={`px-4 py-3 text-right font-mono text-xs font-semibold ${totalPct >= 0 ? 'text-profit' : 'text-loss'}`}>
-                  {totalPct >= 0 ? '+' : ''}{totalPct.toFixed(2)}%
-                </td>
-                <td className={`px-4 py-3 text-right font-mono text-xs font-bold ${totalRiskR >= 0 ? 'text-profit' : 'text-loss'}`}>
-                  {totalRiskR >= 0 ? '+' : ''}{totalRiskR.toFixed(2)}R
-                </td>
-                <td colSpan={2} />
-                <td className="px-4 py-3 text-center">
-                  <span className="text-[10px] font-semibold text-muted-foreground">{wins}W · {losses}L</span>
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <span className="text-[10px] font-semibold text-muted-foreground">{winRate.toFixed(0)}% WR</span>
-                </td>
-                <td colSpan={2} />
-              </tr>
-            </tfoot>
+
           </table>
         </div>
       </div>

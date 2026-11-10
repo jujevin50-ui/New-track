@@ -15,7 +15,7 @@ export default function DisciplineYearChart({ journals, selectedDate, today, onS
   const periodLabel = period === 'year' ? String(year) : new Date(`${month}-01T12:00:00`).toLocaleDateString('fr-FR', {month:'long', year:'numeric'});
   const recorded = data.filter(day => day.percent !== null);
   const average = recorded.length ? Math.round(recorded.reduce((sum, day) => sum + day.percent!, 0) / recorded.length) : null;
-  const monthTicks = data.filter(day => day.date.endsWith('-01')).map(day => day.date);
+  const monthTicks = data.filter((day,index) => index === 0 || day.date.slice(0,7) !== data[index-1].date.slice(0,7)).map(day => day.date);
 
   return <section className={`app-panel surface min-w-0 ${hideSummary ? 'py-2' : 'p-5 sm:p-6'}`} aria-labelledby="discipline-year-title">
     <header className="mb-6 flex flex-wrap items-start justify-between gap-4">

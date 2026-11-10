@@ -15,6 +15,20 @@ export function shiftDay(date: string, offset: number): string {
   day.setDate(day.getDate() + offset);
   return localDay(day);
 }
+export function isTradingDay(date: string): boolean {
+  const weekday = new Date(`${date.slice(0,10)}T12:00:00`).getDay();
+  return weekday >= 1 && weekday <= 5;
+}
+export function previousTradingDay(date: string): string {
+  if (!Number.isFinite(new Date(`${date}T12:00:00`).getTime())) return date;
+  while (!isTradingDay(date)) date = shiftDay(date, -1);
+  return date;
+}
+export function shiftTradingDay(date: string, offset: number): string {
+  let remaining = Math.abs(offset);
+  while (remaining > 0) { date = shiftDay(date, offset < 0 ? -1 : 1); if (isTradingDay(date)) remaining--; }
+  return date;
+}
 export function newDailyJournal(date: string): DailyJournal {
   return { date, strategyRespected: true, productive: false, mood: 'neutral', discipline: 3, confidence: 3, notes: '', lessonsLearned: '', mistakes: [], goals: '', event: null };
 }
@@ -22,11 +36,12 @@ export function completedMissions(journal?: DailyJournal | null): string[] {
   return DISCIPLINE_MISSIONS.filter(mission => journal?.disciplineTracking?.missions.includes(mission.id)).map(mission => mission.id);
 }
 export function disciplineStats(journals: DailyJournal[], today: string) {
-  const recorded = new Map(journals.filter(journal => journal.date <= today && completedMissions(journal).length > 0).map(journal => [journal.date, journal]));
+  const recorded = new Map(journals.filter(journal => journal.date <= today && isTradingDay(journal.date) && completedMissions(journal).length > 0).map(journal => [journal.date, journal]));
   const xp = [...recorded.values()].reduce((sum, journal) => sum + completedMissions(journal).length * 20, 0);
-  let cursor = recorded.has(today) ? today : shiftDay(today, -1);
+  const latestDay = previousTradingDay(today);
+  let cursor = recorded.has(latestDay) ? latestDay : shiftTradingDay(latestDay, -1);
   let streak = 0;
-  while (recorded.has(cursor)) { streak++; cursor = shiftDay(cursor, -1); }
+  while (recorded.has(cursor)) { streak++; cursor = shiftTradingDay(cursor, -1); }
   return { xp, streak, days: recorded.size };
 }
 
@@ -35,6 +50,7 @@ export function disciplineYear(journals: DailyJournal[], year: number, today: st
   const recorded = new Map(journals.map(journal => [journal.date, journal]));
   const days: { date: string; percent: number | null }[] = [];
   for (let date = `${year}-01-01`; date.startsWith(`${year}-`); date = shiftDay(date, 1)) {
+    if (!isTradingDay(date)) continue;
     const journal = recorded.get(date);
     const percent = date <= today && journal?.disciplineTracking ? completedMissions(journal).length / DISCIPLINE_MISSIONS.length * 100 : null;
     days.push({ date, percent });
