@@ -1100,3 +1100,18 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
   .discipline-session > fieldset > section > div:last-child { display: flex; flex-direction: column; flex: 1; justify-content: space-between; gap: 12px; }
   .discipline-session .discipline-mission { margin-top: 0; }
 }
+
+.calendar-day { display: flex; min-width: 0; flex-direction: column; align-items: stretch; padding: 9px 7px; border-radius: 10px; background: hsl(var(--secondary) / 0.3); text-align: left; transition: background 160ms ease, box-shadow 160ms ease; }
+.calendar-day.is-profit { background: hsl(var(--profit) / 0.07); }
+.calendar-day.is-loss { background: hsl(var(--loss) / 0.07); }
+.calendar-day:hover { background: hsl(var(--secondary) / 0.75); }
+.calendar-day[aria-pressed=true] { box-shadow: inset 0 0 0 2px hsl(var(--primary)); background: hsl(var(--primary) / 0.08); }
+.calendar-day[aria-current=date] .calendar-day-number { color: hsl(var(--primary)); font-weight: 700; }
+.calendar-day:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }
+.calendar-day:disabled { opacity: 0.35; cursor: default; }
+.calendar-day-number { font-size: 11px; font-weight: 500; }
+.calendar-day-result { margin-top: auto; padding-top: 6px; font-size: 10px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.calendar-day-count { min-height: 14px; margin-top: 3px; font-size: 9px; color: hsl(var(--muted-foreground)); }
+.calendar-page .calendar-month header button { height: 40px; border-radius: 10px; }
+@media (max-width: 639px) { .calendar-days { gap: 4px; } .calendar-day { padding: 7px 4px; border-radius: 7px; } .calendar-day-result { font-size: 9px; } }
+@media (prefers-reduced-motion: reduce) { .calendar-day { transition: none; } }
