@@ -1,3 +1,4 @@
+import DashboardFilter from './DashboardFilter';
 import { useEffect, useState } from 'react';
 import { Check, Save, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,7 @@ import type { DailyJournal } from '@/hooks/useDailyJournal';
 import { getNetResult, type Trade } from '@/types/trade';
 
 interface Props {
+  currency?: string;
   date: string;
   value?: DailyJournal;
   onChange?: (journal: DailyJournal) => void;
@@ -18,7 +20,7 @@ interface Props {
   onSave: (journal: DailyJournal) => Promise<void>;
 }
 
-export default function DailyReview({ date, existing, trades, onSave, value, onChange, psychologyElsewhere = false, saveLabel = 'Enregistrer le bilan' }: Props) {
+export default function DailyReview({ date, existing, trades, onSave, currency = 'USD', value, onChange, psychologyElsewhere = false, saveLabel = 'Enregistrer le bilan' }: Props) {
   const [internalDraft, setInternalDraft] = useState<DailyJournal>(() => existing || {
     date, strategyRespected: true, productive: false, mood: 'neutral', discipline: 3, confidence: 3,
     notes: '', lessonsLearned: '', mistakes: [], goals: '', event: null,
@@ -34,7 +36,10 @@ export default function DailyReview({ date, existing, trades, onSave, value, onC
     setSaved(false); setError('');
   };
   const pnl = trades.reduce((sum, trade) => sum + getNetResult(trade), 0);
-  const money = (value: number) => `${value > 0 ? '+' : value < 0 ? '-' : ''}$${Math.abs(value).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const money = (value: number) => {
+    try { return new Intl.NumberFormat('fr-FR', {style:'currency', currency, signDisplay:'exceptZero', minimumFractionDigits:2, maximumFractionDigits:2}).format(value); }
+    catch { return value.toLocaleString('fr-FR', {signDisplay:'exceptZero', minimumFractionDigits:2, maximumFractionDigits:2}); }
+  };
 
   return (
     <form onSubmit={async event => {
@@ -52,7 +57,7 @@ export default function DailyReview({ date, existing, trades, onSave, value, onC
         <div className={`grid gap-5 ${psychologyElsewhere ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
           <div className="space-y-2"><Label id="review-plan">Plan respecté</Label><div role="group" aria-labelledby="review-plan" className="flex gap-1 rounded-xl bg-secondary/50 p-1">{[true, false].map(value => <button key={String(value)} type="button" aria-pressed={draft.strategyRespected === value} onClick={() => set('strategyRespected', value)} className={`h-9 flex-1 rounded-lg text-sm transition-colors ${draft.strategyRespected === value ? 'selected-tab font-medium' : 'text-muted-foreground'}`}>{value ? 'Oui' : 'Non'}</button>)}</div></div>
           {!psychologyElsewhere && (<div className="space-y-2"><Label htmlFor="review-mood">État d’esprit</Label><select id="review-mood" value={draft.mood} onChange={event => set('mood', event.target.value as DailyJournal['mood'])} className="h-11 w-full rounded-xl border border-border/60 bg-secondary/40 px-3 text-sm"><option value="excellent">Excellent</option><option value="good">Bien</option><option value="neutral">Neutre</option><option value="bad">Difficile</option><option value="terrible">Très difficile</option></select></div>)}
-          <div className="space-y-2"><Label htmlFor="review-event">Événement</Label><select id="review-event" value={draft.event || ''} onChange={event => set('event', event.target.value as DailyJournal['event'] || null)} className="h-11 w-full rounded-xl border border-border/60 bg-secondary/40 px-3 text-sm"><option value="">Aucun</option><option value="challenge_realise">Challenge réussi</option><option value="challenge_echoue">Challenge échoué</option><option value="perte_compte">Compte perdu</option></select></div>
+          <DashboardFilter label="Événement" ariaLabel="Événement du bilan" value={draft.event || 'none'} onChange={value => set('event', value === 'none' ? null : value as DailyJournal['event'])} options={[{value:'none', label:'Aucun'}, {value:'challenge_realise', label:'Challenge réussi'}, {value:'challenge_echoue', label:'Challenge échoué'}, {value:'perte_compte', label:'Compte perdu'}]} />
         </div>
         <div className="grid gap-5 md:grid-cols-2">
           <div className="space-y-2 md:row-span-2"><Label htmlFor="review-notes">Notes du jour</Label><Textarea id="review-notes" value={draft.notes} onChange={event => set('notes', event.target.value)} className="min-h-[220px] resize-y rounded-xl border-border/60 bg-secondary/30" /></div>

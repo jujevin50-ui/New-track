@@ -1072,3 +1072,14 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
   .dashboard-bottom-grid > section:first-child > dl { margin-top: auto; padding-top: 16px; }
   .dashboard-bottom-grid > section:last-child > .divide-y { display: flex; flex-direction: column; flex: 1; justify-content: space-between; }
 }
+
+/* Discipline follows the dashboard's continuous, quiet layout. */
+.discipline-date-control > button { height: 40px; border-radius: 10px; }
+.discipline-page .discipline-mission { min-height: 64px; }
+.discipline-page .discipline-mission > span:nth-child(2) { font-size: 12px; line-height: 1.6; }
+.discipline-page .discipline-review label { font-size: 11px; color: hsl(var(--muted-foreground)); font-weight: 400; }
+.discipline-page .discipline-review :is(textarea, select) { background: transparent; border-radius: 10px; font-size: 12px; }
+.discipline-page .discipline-review textarea:focus { border-color: hsl(var(--primary) / 0.65); }
+.discipline-page .discipline-review button[type=submit] { min-height: 40px; border-radius: 10px; font-size: 12px; }
+@media (prefers-reduced-motion: no-preference) { .discipline-page .discipline-mission { transition: background 180ms ease, border-color 180ms ease; } }
+.discipline-page .discipline-review .dashboard-filter-field { width: 100%; }

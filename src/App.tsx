@@ -128,7 +128,7 @@ const AppContent = () => {
           <ErrorBoundary resetKey={location.pathname}>
             <Suspense fallback={<PageLoader />}>
               <Routes>
-                <Route path="/discipline" element={<Discipline activeAccount={displayAccount} />} />
+                <Route path="/discipline" element={<Discipline activeAccount={displayAccount} accounts={accounts} onSelectAccount={setActiveAccountId} />} />
                 <Route path="/strategy" element={<Strategy />} />
                 <Route path="/tasks" element={<Navigate to="/" replace />} />
                 <Route path="/" element={<Dashboard activeAccount={displayAccount} accounts={accounts} onSelectAccount={setActiveAccountId} />} />
