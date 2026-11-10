@@ -1093,3 +1093,10 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 .discipline-review .review-writing-grid label { display: block; line-height: 16px; }
 .discipline-review .review-writing-grid textarea { height: 140px; min-height: 140px; width: 100%; }
 @media (min-width: 768px) { .discipline-review .review-writing-grid > div:not(:first-child) label { min-height: 32px; } }
+
+@media (min-width: 1280px) {
+  .discipline-session > fieldset { display: flex; flex-direction: column; }
+  .discipline-session > fieldset > section { display: flex; flex-direction: column; flex: 1; }
+  .discipline-session > fieldset > section > div:last-child { display: flex; flex-direction: column; flex: 1; justify-content: space-between; gap: 12px; }
+  .discipline-session .discipline-mission { margin-top: 0; }
+}
