@@ -134,7 +134,7 @@ const AppContent = () => {
                 <Route path="/" element={<Dashboard activeAccount={displayAccount} accounts={accounts} onSelectAccount={setActiveAccountId} />} />
                 <Route path="/calendar" element={<CalendarView activeAccount={displayAccount} accounts={accounts} onSelectAccount={setActiveAccountId} />} />
                 <Route path="/trades" element={<Trades activeAccount={displayAccount} accounts={accounts} onSelectAccount={setActiveAccountId} onAddAccount={addAccount} onUpdateAccount={updateAccount} />} />
-                <Route path="/reports" element={<Reports activeAccount={displayAccount} accounts={accounts} />} />
+                <Route path="/reports" element={<Reports activeAccount={displayAccount} accounts={accounts} onSelectAccount={setActiveAccountId} />} />
                 <Route path="/weekly-report" element={<Navigate to="/reports" replace />} />
                 <Route path="/daily-report" element={<Navigate to="/calendar#daily-review" replace />} />
                 <Route path="/ai-assistant" element={<AiAssistant activeAccount={displayAccount} accounts={accounts} />} />

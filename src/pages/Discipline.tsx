@@ -1,3 +1,4 @@
+import { accountScope } from '@/lib/accountScope';
 import DashboardFilter from '@/components/trading/DashboardFilter';
 import { useRef, useState } from 'react';
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -16,7 +17,11 @@ import { completedMissions, disciplineStats, DISCIPLINE_MISSIONS, localDay, newD
 export default function Discipline({ activeAccount, accounts, onSelectAccount }: { activeAccount: Account | null; accounts: Account[]; onSelectAccount: (id: string) => void }) {
   const { journals, getJournal, saveJournal } = useDailyJournal();
   const selectedAccount = accounts.find(account => account.id === activeAccount?.id) ?? accounts[0];
-  const { trades } = useTrades(selectedAccount?.id ?? null, selectedAccount?.initialBalance ?? 0);
+  const { allTrades } = useTrades(selectedAccount?.id ?? null, selectedAccount?.initialBalance ?? 0);
+  const [preferredCurrency, setPreferredCurrency] = useState('');
+  const selectedId = activeAccount?.id === 'all' ? 'all' : selectedAccount?.id;
+  const scope = accountScope(accounts, selectedId, preferredCurrency || selectedAccount?.currency);
+  const trades = allTrades.filter(trade => scope.accounts.some(account => account.id === trade.accountId));
   const today = localDay();
   const [date, setDate] = useState(previousTradingDay(today));
   const [chartPeriod, setChartPeriod] = useState<'month' | 'year'>('year');
@@ -34,7 +39,7 @@ export default function Discipline({ activeAccount, accounts, onSelectAccount }:
     <header className="flex flex-wrap items-center justify-between gap-4">
       <div><h1 className="text-2xl font-semibold tracking-tight">Discipline</h1></div>
     </header>
-    <div className="dashboard-filters"><div className="dashboard-filter-controls"><DashboardFilter label="Compte" ariaLabel="Compte du bilan" value={selectedAccount?.id ?? ''} onChange={onSelectAccount} disabled={!accounts.length} options={accounts.map(account => ({value:account.id, label:account.name}))} /><div><span className="dashboard-filter-caption">Journée</span>      <div className="discipline-date-control flex flex-wrap items-center gap-2">
+    <div className="dashboard-filters"><div className="dashboard-filter-controls"><DashboardFilter label="Compte" ariaLabel="Compte du bilan" value={selectedId ?? ''} onChange={onSelectAccount} disabled={!accounts.length} options={[{value:'all',label:'Tous les comptes'},...accounts.map(account => ({value:account.id, label:account.name}))]} />{scope.groups.length > 1 && <DashboardFilter label="Devise" ariaLabel="Devise du bilan" value={scope.currency || 'UNKNOWN'} onChange={setPreferredCurrency} options={scope.groups.map(group => ({value:group.currency,label:group.currency}))}/>}<div><span className="dashboard-filter-caption">Journée</span>      <div className="discipline-date-control flex flex-wrap items-center gap-2">
         <Button variant="outline" size="icon" aria-label="Jour précédent" onClick={() => chooseDate(shiftTradingDay(date, -1))}><ChevronLeft /></Button>
         <Input aria-label="Date de discipline" type="date" max={today} value={date} onChange={event => chooseDate(event.target.value)} className="h-10 w-auto max-w-full rounded-[10px] bg-transparent text-xs" />
         <Button variant="outline" size="icon" aria-label="Jour suivant" disabled={shiftTradingDay(date, 1) > today} onClick={() => chooseDate(shiftTradingDay(date, 1))}><ChevronRight /></Button>
@@ -44,7 +49,7 @@ export default function Discipline({ activeAccount, accounts, onSelectAccount }:
     <div className="grid grid-cols-3 gap-4 py-4">
       {[{label: 'Série en cours', value: stats.streak, unit: stats.streak === 1 ? 'jour' : 'jours'}, {label: 'Séances suivies', value: stats.days, unit: stats.days === 1 ? 'séance' : 'séances'}, {label: 'Expérience', value: stats.xp, unit: 'XP'}].map(metric => <div key={metric.label} className="min-w-0 text-center"><p className="text-xs text-muted-foreground">{metric.label}</p><p className="mt-5 text-2xl font-semibold tracking-tight tabular-nums sm:text-[27px]">{metric.value}<span className="ml-2 text-[11px] font-normal text-muted-foreground">{metric.unit}</span></p></div>)}
     </div>
-    <DisciplineSession key={date} date={date} existing={getJournal(date)} trades={trades.filter(trade => trade.endDate?.slice(0, 10) === date)} currency={selectedAccount?.currency ?? ''} onDirty={value => { dirty.current = value; }} onSaving={value => { saving.current = value; }} onSave={saveJournal} />
+    <DisciplineSession key={date} date={date} existing={getJournal(date)} trades={trades.filter(trade => trade.endDate?.slice(0, 10) === date)} currency={scope.currency} onDirty={value => { dirty.current = value; }} onSaving={value => { saving.current = value; }} onSave={saveJournal} />
     <DisciplineYearChart hideSummary period={chartPeriod} onPeriodChange={setChartPeriod} journals={journals} selectedDate={date} today={today} onSelectDate={chooseDate} />
   </div>;
 }

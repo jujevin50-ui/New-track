@@ -40,7 +40,7 @@ export function AppLayout({ children, accounts, activeAccountId, onSelectAccount
       <WorkspaceRail><TopNav sidebar /></WorkspaceRail>
 
       {/* Filtres de comptes : descendus sous le menu, alignés à droite */}
-      {accounts.length > 0 && location.pathname !== '/' && location.pathname !== '/discipline' && location.pathname !== '/calendar' && location.pathname !== '/trades' && (
+      {accounts.length > 0 && location.pathname !== '/' && location.pathname !== '/discipline' && location.pathname !== '/calendar' && location.pathname !== '/trades' && location.pathname !== '/reports' && (
         <div className="relative z-40 px-3 md:px-5 pt-3 pb-1 max-w-[1800px] w-full mx-auto flex justify-end">
           <div className="flex flex-wrap items-center justify-end gap-1 min-h-9 px-1.5 py-1 rounded-xl bg-background/90 border border-border/70">
             <div className="flex flex-wrap items-center gap-0.5">
@@ -55,13 +55,13 @@ export function AppLayout({ children, accounts, activeAccountId, onSelectAccount
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
                 <Input value={search} onChange={e => { setSearch(e.target.value); setDropdownOpen(true); }} onFocus={() => setDropdownOpen(true)}
-                  placeholder={activeAccount ? activeAccount.name : 'All accounts'}
+                  placeholder={activeAccount ? activeAccount.name : 'Tous les comptes'}
                   className="h-7 w-[140px] 2xl:w-[200px] pl-8 text-[11px] bg-secondary border-transparent rounded-full" />
               </div>
               {dropdownOpen && (
-                <div className="absolute top-full mt-2 right-0 w-[300px] max-h-[320px] overflow-auto rounded-2xl border border-border bg-popover shadow-[var(--shadow-pop)] z-50 p-1">
+                <div className="absolute top-full mt-2 right-0 w-[400px] max-w-[calc(100vw-32px)] max-h-[440px] overflow-auto rounded-2xl border border-border bg-popover shadow-[var(--shadow-pop)] z-50 p-1">
                   <button onClick={() => handleSelect('all')} className={`w-full flex items-center gap-2 px-3 py-2 text-xs rounded-xl hover:bg-secondary transition-colors ${activeAccountId === 'all' || !activeAccountId ? 'text-primary font-medium' : 'text-foreground'}`}>
-                    {(!activeAccountId || activeAccountId === 'all') && <CheckCircle2 className="h-3 w-3 text-primary shrink-0" />}All accounts
+                    {(!activeAccountId || activeAccountId === 'all') && <CheckCircle2 className="h-3 w-3 text-primary shrink-0" />}Tous les comptes
                   </button>
                   {filteredAccounts.map(a => (
                     <button key={a.id} onClick={() => handleSelect(a.id)} className={`w-full flex items-center gap-2 px-3 py-2 text-xs rounded-xl hover:bg-secondary transition-colors ${a.id === activeAccountId ? 'text-primary font-medium' : 'text-foreground'}`}>
@@ -72,7 +72,7 @@ export function AppLayout({ children, accounts, activeAccountId, onSelectAccount
                       <span className="text-muted-foreground ml-auto text-[10px] shrink-0">{a.broker}</span>
                     </button>
                   ))}
-                  {filteredAccounts.length === 0 && <p className="px-3 py-4 text-xs text-muted-foreground text-center">No accounts found</p>}
+                  {filteredAccounts.length === 0 && <p className="px-3 py-4 text-xs text-muted-foreground text-center">Aucun compte trouvé</p>}
                 </div>
               )}
             </div>

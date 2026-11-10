@@ -1,3 +1,4 @@
+import { accountScope } from '@/lib/accountScope';
 import { useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
@@ -31,19 +32,22 @@ export default function CalendarView({ activeAccount, accounts, onSelectAccount 
   const [date, setDate] = useState(previousTradingDay(today));
   const [month, setMonth] = useState(() => target?.year !== undefined && target?.month !== undefined ? localDay(new Date(target.year, target.month, 1)).slice(0,7) : previousTradingDay(today).slice(0,7));
   const [status, setStatus] = useState('all');
+  const [preferredCurrency, setPreferredCurrency] = useState('');
   const [draft, setDraft] = useState(() => getJournal(previousTradingDay(today)) ?? newDailyJournal(previousTradingDay(today)));
   const dirty = useRef(false);
   const saving = useRef(false);
   const filteredAccounts = status === 'all' ? accounts : accounts.filter(account => account.status === status);
   const selectedAccount = filteredAccounts.find(account => account.id === activeAccount?.id) ?? filteredAccounts[0];
   const { allTrades } = useTrades(selectedAccount?.id ?? null, selectedAccount?.initialBalance ?? 0);
-  const currency = selectedAccount?.currency ?? '';
-  const capital = selectedAccount?.initialBalance ?? 0;
+  const selectedId = activeAccount?.id === 'all' ? 'all' : selectedAccount?.id;
+  const scope = accountScope(filteredAccounts, selectedId, preferredCurrency || selectedAccount?.currency);
+  const currency = scope.currency;
+  const capital = scope.capital;
   const year = Number(month.slice(0,4)), monthIndex = Number(month.slice(5,7)) - 1;
   const lastDay = localDay(new Date(year, monthIndex + 1, 0));
-  const stats = dashboardAnalytics(allTrades.filter(trade => !trade.endDate || isTradingDay(trade.endDate)), {accountIds:selectedAccount ? [selectedAccount.id] : [], from:`${month}-01`, to:lastDay < today ? lastDay : today, startingCapital:capital});
+  const stats = dashboardAnalytics(allTrades.filter(trade => !trade.endDate || isTradingDay(trade.endDate)), {accountIds:scope.accounts.map(account => account.id), from:`${month}-01`, to:lastDay < today ? lastDay : today, startingCapital:capital});
   const daily = new Map(stats.daily.map(day => [day.date, day]));
-  const dayTrades = dashboardAnalytics(allTrades.filter(trade => !trade.endDate || isTradingDay(trade.endDate)), {accountIds:selectedAccount ? [selectedAccount.id] : [], from:date, to:date}).closedTrades;
+  const dayTrades = dashboardAnalytics(allTrades.filter(trade => !trade.endDate || isTradingDay(trade.endDate)), {accountIds:scope.accounts.map(account => account.id), from:date, to:date}).closedTrades;
   const offset = (new Date(year, monthIndex, 1).getDay() + 6) % 7;
   const days = new Date(year, monthIndex + 1, 0).getDate();
   const rows = Math.ceil((offset + days) / 7);
@@ -59,10 +63,11 @@ export default function CalendarView({ activeAccount, accounts, onSelectAccount 
   return <div className="calendar-page discipline-page w-full space-y-8 pb-10">
     <header><h1 className="text-2xl font-semibold tracking-tight">Calendrier</h1></header>
     <div className="dashboard-filters"><div className="dashboard-filter-controls">
-      <DashboardFilter label="Statut" ariaLabel="Statut des comptes" value={status} onChange={value => { setStatus(value); const matching = accounts.filter(account => value === 'all' || account.status === value); if (matching.length && !matching.some(account => account.id === activeAccount?.id)) onSelectAccount(matching[0].id); }} options={[{value:'all',label:'Tous les comptes'}, {value:'active',label:'Actifs'}, {value:'pending',label:'En attente'}, {value:'terminated',label:'Terminés'}, {value:'paid_out',label:'Payout effectué'}]} />
-      <DashboardFilter label="Compte" ariaLabel="Compte du calendrier" value={selectedAccount?.id ?? ''} onChange={onSelectAccount} disabled={!filteredAccounts.length} options={filteredAccounts.map(account => ({value:account.id,label:account.name}))} />
+      <DashboardFilter label="Statut" ariaLabel="Statut des comptes" value={status} onChange={value => { setStatus(value); const matching = accounts.filter(account => value === 'all' || account.status === value); if (matching.length && activeAccount?.id !== 'all' && !matching.some(account => account.id === activeAccount?.id)) onSelectAccount(matching[0].id); }} options={[{value:'all',label:'Tous les comptes'}, {value:'active',label:'Actifs'}, {value:'pending',label:'En attente'}, {value:'terminated',label:'Terminés'}, {value:'paid_out',label:'Payout effectué'}]} />
+      <DashboardFilter label="Compte" ariaLabel="Compte du calendrier" value={selectedId ?? ''} onChange={onSelectAccount} disabled={!filteredAccounts.length} options={[{value:'all',label:'Tous les comptes'},...filteredAccounts.map(account => ({value:account.id,label:account.name}))]} />
+      {scope.groups.length > 1 && <DashboardFilter label="Devise" ariaLabel="Devise du calendrier" value={scope.currency || 'UNKNOWN'} onChange={setPreferredCurrency} options={scope.groups.map(group => ({value:group.currency,label:group.currency}))}/>}
     </div></div>
-    {!selectedAccount ? <div className="py-16 text-center text-sm text-muted-foreground"><p>{accounts.length ? 'Aucun compte dans cette sélection.' : 'Ajoute un compte pour suivre tes séances.'}</p><Link to="/accounts" className="dashboard-text-link mt-4 inline-block">Gérer mes comptes →</Link></div> : <>
+    {!scope.accounts.length ? <div className="py-16 text-center text-sm text-muted-foreground"><p>{accounts.length ? 'Aucun compte dans cette sélection.' : 'Ajoute un compte pour suivre tes séances.'}</p><Link to="/accounts" className="dashboard-text-link mt-4 inline-block">Gérer mes comptes →</Link></div> : <>
       <div className="grid grid-cols-3 gap-4 py-3">
         {[{label:'Résultat net du mois',value:money(stats.netProfit,currency),color:tone(stats.netProfit)}, {label:'Trades clôturés',value:String(stats.totalTrades),color:''}, {label:'Win rate',value:percent(stats.winRate),color:''}].map(metric => <div key={metric.label} className="min-w-0 text-center"><p className="text-xs text-muted-foreground">{metric.label}</p><p className={`mt-5 break-words text-lg font-semibold tracking-tight tabular-nums sm:text-[27px] ${metric.color}`}>{metric.value}</p></div>)}
       </div>

@@ -1158,3 +1158,24 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
   .trades-actions .trades-action-secondary { width: 36px; padding-inline: 0; }
   .trades-actions .dashboard-switch button { padding-inline: 10px; }
 }
+
+.reports-browser .dashboard-filter-field { width: 100%; }
+.reports-period-switch { display: flex; width: 100%; }
+.reports-period-switch button { flex: 1; padding-inline: 8px; }
+.reports-period-list { display: flex; flex-direction: column; gap: 6px; max-height: 55vh; overflow-y: auto; padding-right: 4px; overscroll-behavior: contain; }
+.reports-period-item { width: 100%; padding: 14px 12px; border-radius: 10px; text-align: left; transition: background 160ms ease; }
+.reports-period-item:hover { background: hsl(var(--secondary) / 0.5); }
+.reports-period-item[aria-pressed=true] { background: hsl(var(--primary) / 0.09); box-shadow: inset 3px 0 hsl(var(--primary)); }
+.reports-period-item:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: -2px; }
+.reports-page .report-paper { padding-top: 0 !important; border: 0; box-shadow: none; }
+.reports-page .report-paper > div { padding: 0 0 28px; }
+.reports-page .report-paper :is(.rounded-xl,.rounded-2xl) { background: transparent; border-color: transparent; box-shadow: none; }
+.reports-page .report-paper :is(input,textarea) { background: transparent; border-color: hsl(var(--border)); border-radius: 10px; }
+.reports-page .report-paper .font-mono { font-family: inherit; font-variant-numeric: tabular-nums; }
+.reports-page .report-paper dl > div { text-align: center; }
+.reports-page .report-paper button { border-radius: 10px; }
+.reports-page .report-paper h3 { font-size: 14px; }
+.reports-page .report-reading { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.9; }
+@media (min-width: 1024px) { .reports-browser { position: sticky; top: 24px; } }
+@media (max-width: 1023px) { .reports-period-list { max-height: 240px; } }
+@media (prefers-reduced-motion: reduce) { .reports-period-item { transition: none; } }

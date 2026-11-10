@@ -1,4 +1,7 @@
-import { useEffect, useMemo, useState, useCallback, type ReactNode } from 'react';
+import DashboardFilter from '@/components/trading/DashboardFilter';
+import { accountScope } from '@/lib/accountScope';
+import { localDay } from '@/lib/discipline';
+import { useEffect, useMemo, useState, useCallback, useRef, type ReactNode } from 'react';
 import { Account } from '@/types/account';
 import { Trade, getNetResult, getTradeScreenshots } from '@/types/trade';
 import { useTrades } from '@/hooks/useTrades';
@@ -6,7 +9,6 @@ import {
   PeriodReportData,
   PeriodType,
   getPeriodKey,
-  getPeriodLabel,
   getPeriodRange,
   getTradeReportDate,
   listPeriodKeys,
@@ -15,13 +17,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import {
   CalendarDays,
   CalendarRange,
-  ChevronLeft,
-  ChevronRight,
   Download,
   Edit3,
   Eye,
@@ -36,6 +35,7 @@ import jsPDF from 'jspdf';
 interface ReportsProps {
   activeAccount: Account | null;
   accounts: Account[];
+  onSelectAccount: (id: string) => void;
 }
 
 interface PeriodEntry {
@@ -47,8 +47,12 @@ interface PeriodEntry {
   wins: number;
 }
 
-const EMOTIONS = ['Excellent', 'Good', 'Neutral', 'Bad', 'Very Bad'];
-const fmt = (n: number) => `${n >= 0 ? '+' : ''}${n.toFixed(2)}`;
+const reportLabel = (type: PeriodType, key: string) => {
+  const range=getPeriodRange(type,key);
+  if(type==='yearly') return key;
+  if(type==='monthly') return range.start.toLocaleDateString('fr-FR',{month:'long',year:'numeric',timeZone:'UTC'});
+  return `${range.start.toLocaleDateString('fr-FR',{day:'numeric',month:'short',timeZone:'UTC'})} – ${range.end.toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'})}`;
+};
 
 const SECTION_META: Record<PeriodType, { title: string; icon: typeof CalendarDays }> = {
   weekly: { title: 'Semaine', icon: CalendarDays },
@@ -56,16 +60,12 @@ const SECTION_META: Record<PeriodType, { title: string; icon: typeof CalendarDay
   yearly: { title: 'Année', icon: CalendarRange },
 };
 
-const periodWord = (type: PeriodType) => (
-  type === 'weekly' ? 'week' : type === 'monthly' ? 'month' : 'year'
-);
-
 const periodStorageTitle = (type: PeriodType) => (
-  type === 'weekly' ? 'Weekly Trading Report' : type === 'monthly' ? 'Monthly Trading Report' : 'Yearly Trading Report'
+  type === 'weekly' ? 'Rapport hebdomadaire' : type === 'monthly' ? 'Rapport mensuel' : 'Rapport annuel'
 );
 
 const formatDate = (d: Date) =>
-  d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+  d.toLocaleDateString('fr-FR', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 
 const compressImage = (img: HTMLImageElement): string => {
   let w = img.naturalWidth;
@@ -110,10 +110,20 @@ const Question = ({
   </div>
 );
 
-const Reports = ({ activeAccount, accounts }: ReportsProps) => {
-  const { allTrades } = useTrades(activeAccount?.id || null, activeAccount?.initialBalance || 0);
+const Reports = ({ activeAccount, accounts, onSelectAccount }: ReportsProps) => {
+  const { allTrades: rawTrades } = useTrades(activeAccount?.id || null, activeAccount?.initialBalance || 0);
   const { reports, getReport, saveReport } = usePeriodReports();
 
+  const [preferredCurrency, setPreferredCurrency] = useState('');
+  const scope = useMemo(() => accountScope(accounts, activeAccount?.id ?? 'all', preferredCurrency || (activeAccount?.id === 'all' ? accounts[0]?.currency : activeAccount?.currency)), [accounts,activeAccount?.id,activeAccount?.currency,preferredCurrency]);
+  const allTrades = useMemo(() => rawTrades.filter(trade => scope.accounts.some(account => account.id === trade.accountId) && Boolean(trade.endDate) && trade.endDate!.slice(0,10) <= localDay()), [rawTrades, scope.accounts]);
+  const [query, setQuery] = useState('');
+  const [visibility, setVisibility] = useState('all');
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const loadedForm = useRef<PeriodReportData | null>(null);
+  const formatMoney = (value: number, currency = scope.currency) => { try { return new Intl.NumberFormat('fr-FR', {style:'currency',currency,signDisplay:'exceptZero',maximumFractionDigits:2}).format(value); } catch {return value.toLocaleString('fr-FR',{signDisplay:'exceptZero',maximumFractionDigits:2});} };
+  const pdfMoney = (value: number, currency = scope.currency) => `${value >= 0 ? '+' : ''}${value.toFixed(2)} ${currency}`;
   const [browseType, setBrowseType] = useState<PeriodType>('weekly');
   const [selected, setSelected] = useState<{ type: PeriodType; key: string } | null>(null);
   const [formData, setFormData] = useState<PeriodReportData>({
@@ -154,7 +164,7 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
       const tradesInPeriod = allTrades.filter(t => { const d = getTradeReportDate(t); return d >= start && d <= end; });
       return {
         key,
-        label: getPeriodLabel(type, key),
+        label: reportLabel(type, key),
         tradeCount: tradesInPeriod.length,
         hasReport: !!reports[type][key],
         pnl: tradesInPeriod.reduce((sum, t) => sum + getNetResult(t), 0),
@@ -176,7 +186,7 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
   }, [reportEntries, selected, browseType]);
 
   useEffect(() => {
-    if (!selected) return;
+    if (!selected || dirty) return;
     const next = getReport(selected.type, selected.key);
     // Un trade peut avoir changé de semaine (rangé par date de fin) : on retrouve ses notes saisies
     // dans un autre compte rendu de même type, sans écraser ce qui est déjà noté ici.
@@ -195,7 +205,7 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
       }
       tradeNotes = { ...inherited, ...tradeNotes };
     }
-    setFormData({
+    const loaded = {
       emotionGenerale: next.emotionGenerale,
       tradesEmotionnels: next.tradesEmotionnels,
       tradeNotes,
@@ -204,8 +214,10 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
       objectifsSecondaires: next.objectifsSecondaires,
       pointsPsychologiques: next.pointsPsychologiques,
       solutions: next.solutions,
-    });
-  }, [selected?.type, selected?.key, getReport]);
+    };
+    loadedForm.current = loaded;
+    setFormData(loaded);
+  }, [selected, getReport, allTrades, reports, dirty]);
 
   const selectedTrades = useMemo(() => {
     if (!selected) return [] as Trade[];
@@ -220,7 +232,7 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
   const stats = useMemo(() => {
     const total = selectedTrades.length;
     const wins = selectedTrades.filter(t => getNetResult(t) > 0).length;
-    const losses = selectedTrades.filter(t => getNetResult(t) <= 0).length;
+    const losses = selectedTrades.filter(t => getNetResult(t) < 0).length;
     const pnl = selectedTrades.reduce((sum, t) => sum + getNetResult(t), 0);
     const strategy = total ? Math.round((selectedTrades.filter(t => t.strategyRespected).length / total) * 100) : 0;
     const winRate = total ? Math.round((wins / total) * 100) : 0;
@@ -235,32 +247,29 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
     return { total, wins, losses, pnl, strategy, winRate, profitFactor, best, worst, avgWin, avgLoss };
   }, [selectedTrades]);
 
-  const getAccountBalance = (accountId: string) =>
-    accounts.find(a => a.id === accountId)?.initialBalance || activeAccount?.initialBalance || 1;
+  const updateField = <K extends keyof PeriodReportData>(field: K, value: PeriodReportData[K]) => { setDirty(true); setFormData(prev => ({ ...prev, [field]: value })); };
 
-  const updateField = (field: keyof PeriodReportData, value: any) =>
-    setFormData(prev => ({ ...prev, [field]: value }));
-
-  const updateTradeNote = (tradeId: string, note: string) =>
-    setFormData(prev => ({ ...prev, tradeNotes: { ...prev.tradeNotes, [tradeId]: note } }));
+  const updateTradeNote = (tradeId: string, note: string) => { setDirty(true); setFormData(prev => ({ ...prev, tradeNotes: { ...prev.tradeNotes, [tradeId]: note } })); };
 
   const selectPeriod = (type: PeriodType, key: string) => {
+    if (saving || dirty && !window.confirm('Changer de rapport sans enregistrer les modifications ?')) return false;
+    setDirty(false);
     setSelected({ type, key });
     setIsEditing(false);
     setBrowseType(type);
+    return true;
   };
 
   const createCurrent = (type: PeriodType) => {
     const key = getPeriodKey(type, new Date());
-    selectPeriod(type, key);
-    setIsEditing(true);
+    if (selectPeriod(type, key)) setIsEditing(true);
   };
 
   const handleSave = async () => {
     if (!selected) return;
-    await saveReport(selected.type, selected.key, formData);
-    toast.success('Report saved');
-    setIsEditing(false);
+    if (saving) return;
+    setSaving(true);
+    try { await saveReport(selected.type, selected.key, formData); loadedForm.current = formData; setDirty(false); toast.success('Rapport enregistré'); setIsEditing(false); } catch { toast.error('Impossible d’enregistrer le rapport.'); } finally { setSaving(false); }
   };
 
   const handleDownloadPDF = async (mode: 'download' | 'view' | 'blob' = 'download'): Promise<string | undefined> => {
@@ -283,7 +292,7 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
 
     const winRate = stats.total ? Math.round((stats.wins / stats.total) * 100) : 0;
     const kpis = [
-      ['TOTAL P&L', `${fmt(stats.pnl)}$`],
+      ['RESULTAT NET', pdfMoney(stats.pnl)],
       ['TRADES', String(stats.total)],
       ['WIN RATE', `${winRate}%`],
       ['STRATEGY', `${stats.strategy}%`],
@@ -322,15 +331,13 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
 
     pdf.setFontSize(13);
     pdf.setFont('helvetica', 'bold');
-    pdf.text(`1 - ${selected.type === 'weekly' ? 'Week' : selected.type === 'monthly' ? 'Month' : 'Year'} Summary`, margin, y);
+    pdf.text(`1 - Synthèse de la période`, margin, y);
     y += 8;
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
     for (const line of [
-      `Winning trades: ${stats.wins}`,
-      `Losing trades: ${stats.losses}`,
-      `Overall emotion: ${formData.emotionGenerale || 'Not specified'}`,
-      `Emotional trades: ${formData.tradesEmotionnels}`,
+      `Trades gagnants: ${stats.wins}`,
+      `Trades perdants: ${stats.losses}`,
     ]) {
       checkPage(6);
       pdf.text(line, margin + 4, y);
@@ -340,7 +347,7 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
 
     pdf.setFontSize(13);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('2 - Trade Analysis', margin, y);
+    pdf.text('2 - Analyse des trades', margin, y);
     y += 8;
 
     for (let i = 0; i < selectedTrades.length; i++) {
@@ -353,17 +360,16 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
       y += 6;
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
-      pdf.text(`Pair: ${trade.pair}  ${net >= 0 ? '+' : ''}${net.toFixed(2)}$`, margin + 8, y);
+      pdf.text(`Paire: ${trade.pair}  ${pdfMoney(net,accounts.find(account=>account.id===trade.accountId)?.currency)}`, margin + 8, y);
       y += 5;
-      pdf.text(`Strategy respected: ${trade.strategyRespected ? 'yes' : 'no'}`, margin + 8, y);
+      pdf.text(`Strategie respectee: ${trade.strategyRespected ? 'oui' : 'non'}`, margin + 8, y);
       y += 5;
 
-      const note = formData.tradeNotes[trade.id] || trade.notes;
+      const note = formData.tradeNotes[trade.id] ?? trade.notes;
       if (note) {
         const noteLines = pdf.splitTextToSize(`Note: ${note}`, contentW - 12);
         checkPage(noteLines.length * 5);
-        pdf.text(noteLines, margin + 8, y);
-        y += noteLines.length * 5;
+        for (const line of noteLines) { checkPage(5); pdf.text(line, margin + 8, y); y += 5; }
       }
 
       for (const src of getTradeScreenshots(trade)) {
@@ -388,33 +394,30 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
     if (selectedTrades.length === 0) {
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'italic');
-      pdf.text('No trades in this period.', margin + 4, y);
+      pdf.text('Aucun trade clôturé sur cette période.', margin + 4, y);
       y += 8;
     }
 
-    const noun = periodWord(selected.type);
     pdf.setFontSize(13);
     pdf.setFont('helvetica', 'bold');
     checkPage(20);
-    pdf.text('3 - Reflection', margin, y);
+    pdf.text('3 - Bilan de la période', margin, y);
     y += 8;
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
     const reflection = pdf.splitTextToSize(formData.conclusion || '(Not specified)', contentW - 8);
-    pdf.text(reflection, margin + 4, y);
-    y += reflection.length * 5 + 8;
+    for (const line of reflection) { checkPage(5); pdf.text(line, margin + 4, y); y += 5; }
+    y += 8;
 
     pdf.setFontSize(13);
     pdf.setFont('helvetica', 'bold');
     checkPage(20);
-    pdf.text(`4 - Next ${noun} Plan`, margin, y);
+    pdf.text('4 - Objectifs', margin, y);
     y += 8;
     pdf.setFontSize(10);
     for (const field of [
-      ['Main objective', formData.objectifPrincipal],
-      ['Secondary objectives', formData.objectifsSecondaires],
-      ['Psychological points', formData.pointsPsychologiques],
-      ['Solutions', formData.solutions],
+      ['Objectif principal', formData.objectifPrincipal],
+      ['Objectifs secondaires', formData.objectifsSecondaires],
     ] as [string, string][]) {
       checkPage(14);
       pdf.setFont('helvetica', 'bold');
@@ -422,8 +425,8 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
       y += 5;
       pdf.setFont('helvetica', 'normal');
       const lines = pdf.splitTextToSize(field[1] || '(Not specified)', contentW - 12);
-      pdf.text(lines, margin + 8, y);
-      y += lines.length * 5 + 4;
+      for (const line of lines) { checkPage(5); pdf.text(line, margin + 8, y); y += 5; }
+      y += 4;
     }
 
     if (mode === 'blob') {
@@ -436,14 +439,14 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
     }
 
     pdf.save(`${selected.type}-report-${selected.key}.pdf`);
-    toast.success('PDF downloaded');
+    toast.success('PDF téléchargé');
     return undefined;
   };
 
   if (!activeAccount) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
-        <p className="text-muted-foreground">No account selected.</p>
+        <p className="text-muted-foreground">Aucun compte sélectionné.</p>
       </div>
     );
   }
@@ -454,30 +457,21 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
     ? reportEntries[selected.type].find(e => e.key === selected.key)
     : undefined;
 
+  const normalize = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const visibleEntries = reportEntries[browseType].filter(entry => (visibility === 'all' || (visibility === 'saved' ? entry.hasReport : !entry.hasReport)) && normalize(`${entry.label} ${entry.key}`).includes(normalize(query)));
   return (
-    <div className="w-full max-w-[1040px] mx-auto pb-16">
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Rapports</h1>
-        <div role="group" aria-label="Périodicité des rapports" className="page-segments">
-          {(['weekly', 'monthly', 'yearly'] as PeriodType[]).map(type => {
-            const Icon = SECTION_META[type].icon;
-            return <button key={type} type="button" aria-pressed={browseType === type} onClick={() => {
-              setBrowseType(type);
-              const first = reportEntries[type][0];
-              if (first) selectPeriod(type, first.key);
-              else { setSelected(null); setIsEditing(false); }
-            }} className={`inline-flex h-10 items-center gap-2 rounded-xl px-3 sm:px-4 text-sm transition-colors ${browseType === type ? 'selected-tab font-semibold' : 'text-muted-foreground hover:text-foreground'}`}><Icon className="h-3.5 w-3.5" />{SECTION_META[type].title}</button>;
-          })}
-        </div>
-      </div>
-      <div className="mx-auto mb-6 flex max-w-[900px] flex-wrap items-center justify-between gap-3">
-        <Select value={selected?.type === browseType ? selected.key : ''} onValueChange={key => selectPeriod(browseType, key)}>
-          <SelectTrigger aria-label="Période" className="h-10 w-full sm:w-[280px] rounded-xl bg-card border-border/60"><SelectValue placeholder="Choisir une période" /></SelectTrigger>
-          <SelectContent>{reportEntries[browseType].map(entry => <SelectItem key={entry.key} value={entry.key}>{entry.label}{entry.hasReport ? ' · Enregistré' : ''}</SelectItem>)}</SelectContent>
-        </Select>
-        <Button onClick={() => createCurrent(browseType)} className="rounded-xl" variant="outline">+ Nouveau rapport</Button>
-      </div>
-      <div className="mx-auto max-w-[900px]">
+    <div className="reports-page w-full space-y-8 pb-10">
+      <h1 className="text-2xl font-semibold tracking-tight">Rapports</h1>
+      <div className="dashboard-filter-controls"><DashboardFilter label="Compte" ariaLabel="Compte des rapports" value={activeAccount?.id ?? 'all'} onChange={id => {if (!dirty || window.confirm('Changer de compte sans enregistrer les modifications ?')) {setDirty(false); setIsEditing(false); onSelectAccount(id);}}} options={[{value:'all',label:'Tous les comptes'},...accounts.map(account => ({value:account.id,label:account.name}))]}/>{scope.groups.length>1 && <DashboardFilter label="Devise" ariaLabel="Devise des rapports" value={scope.currency || 'UNKNOWN'} onChange={value => {if (!dirty || window.confirm('Changer de devise sans enregistrer les modifications ?')) {setDirty(false); setIsEditing(false); setPreferredCurrency(value);}}} options={scope.groups.map(group=>({value:group.currency,label:group.currency}))}/>}</div>
+      <div className="reports-layout grid items-start gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <aside className="reports-browser min-w-0 space-y-4" aria-label="Liste des rapports">
+          <div role="group" aria-label="Périodicité des rapports" className="dashboard-switch reports-period-switch">{(['weekly','monthly','yearly'] as PeriodType[]).map(type => <button key={type} type="button" aria-pressed={browseType===type} onClick={()=>{const first=reportEntries[type][0]; if(first && selectPeriod(type,first.key)) setQuery('');}}>{type==='weekly' ? 'Semaines' : type==='monthly' ? 'Mois' : 'Années'}</button>)}</div>
+          <Input type="search" aria-label="Rechercher un rapport" placeholder="Rechercher une période…" value={query} onChange={event=>setQuery(event.target.value)} className="h-10 rounded-[10px] bg-transparent text-xs"/>
+          <DashboardFilter label="Afficher" ariaLabel="État des rapports" value={visibility} onChange={setVisibility} options={[{value:'all',label:'Toutes les périodes'},{value:'saved',label:'Enregistrés'},{value:'draft',label:'À rédiger'}]}/>
+          <Button variant="outline" className="h-10 w-full rounded-[10px] text-xs" disabled={saving} onClick={()=>createCurrent(browseType)}>Nouveau rapport</Button>
+          <nav className="reports-period-list" aria-label="Périodes disponibles">{visibleEntries.length ? visibleEntries.map(entry=><button key={entry.key} type="button" aria-label={`Ouvrir le rapport ${entry.label}`} aria-pressed={selected?.type===browseType && selected.key===entry.key} onClick={()=>selectPeriod(browseType,entry.key)} className="reports-period-item"><span className="block text-xs font-medium capitalize">{entry.label}</span><span className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[10px] text-muted-foreground"><span className={entry.hasReport ? 'text-primary' : ''}>{entry.hasReport ? 'Enregistré' : 'À rédiger'}</span><span>{entry.tradeCount} trade{entry.tradeCount>1 ? 's' : ''}</span></span></button>) : <p className="py-8 text-center text-xs text-muted-foreground">Aucune période trouvée.</p>}</nav>
+        </aside>
+        <div className="min-w-0">
         {/* Right detail */}
         <section className="report-paper min-w-0 rounded-xl border border-border/60 shadow-[var(--shadow-card)] overflow-hidden">
           {!selected ? (
@@ -495,8 +489,8 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
                     {selectedSaved && <span className="text-[9px] px-1.5 py-0.5 rounded bg-profit/10 text-profit">Enregistré</span>}
                     {!selectedSaved && <span className="text-[9px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">Brouillon</span>}
                   </div>
-                  <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">{selectedEntry?.label || getPeriodLabel(selected.type, selected.key)}</h2>
-                  <p className="mt-3 text-sm text-muted-foreground">{activeAccount.name}</p>
+                  <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">{selectedEntry?.label || reportLabel(selected.type, selected.key)}</h2>
+                  <p className="mt-3 text-sm text-muted-foreground">{activeAccount.id === 'all' ? `Tous les comptes${scope.currency ? ` · ${scope.currency}` : ''}` : activeAccount.name}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5 max-w-full">
                   {!isEditing ? (
@@ -511,10 +505,10 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
                     </>
                   ) : (
                     <>
-                      <Button variant="outline" size="sm" onClick={() => { setIsEditing(false); }} className="gap-1.5 text-xs">
+                      <Button variant="outline" size="sm" disabled={saving} onClick={() => { if(loadedForm.current) setFormData(loadedForm.current); setDirty(false); setIsEditing(false); }} className="gap-1.5 text-xs">
                         Annuler
                       </Button>
-                      <Button size="sm" onClick={handleSave} className="gap-1.5 text-xs">
+                      <Button size="sm" disabled={saving} onClick={handleSave} className="gap-1.5 text-xs">
                         <Save className="h-3.5 w-3.5" />Enregistrer
                       </Button>
                     </>
@@ -526,10 +520,10 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
               <div className="p-6 sm:p-12 space-y-10">
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                   {[
-                    { label: 'P&L', value: `${fmt(stats.pnl)}$`, color: stats.pnl >= 0 ? 'text-profit' : 'text-loss' },
+                    { label: 'P&L', value: formatMoney(stats.pnl), color: stats.pnl >= 0 ? 'text-profit' : 'text-loss' },
                     { label: 'Trades', value: String(stats.total), color: 'text-foreground' },
-                    { label: 'Win Rate', value: `${stats.winRate}%`, color: stats.winRate >= 50 ? 'text-profit' : 'text-loss' },
-                    { label: 'Strategy', value: `${stats.strategy}%`, color: stats.strategy >= 70 ? 'text-profit' : 'text-loss' },
+                    { label: 'Win rate', value: stats.total ? `${stats.winRate} %` : '—', color: stats.winRate >= 50 ? 'text-profit' : 'text-loss' },
+                    { label: 'Stratégie respectée', value: stats.total ? `${stats.strategy} %` : '—', color: stats.strategy >= 70 ? 'text-profit' : 'text-loss' },
                   ].map(s => (
                     <div key={s.label} className="rounded-xl border border-border/60 bg-background/30 p-4">
                       <p className="text-[9px] uppercase tracking-widest text-muted-foreground">{s.label}</p>
@@ -540,10 +534,10 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
 
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                   {[
-                    ['Profit Factor', stats.profitFactor === Infinity ? '∞' : stats.profitFactor.toFixed(2)],
-                    ['Avg Win', `${stats.avgWin >= 0 ? '+' : ''}${stats.avgWin.toFixed(2)}$`],
-                    ['Avg Loss', `${stats.avgLoss.toFixed(2)}$`],
-                    ['Best / Worst', `${stats.best.toFixed(2)} / ${stats.worst.toFixed(2)}$`],
+                    ['Profit Factor', !stats.total ? '—' : stats.profitFactor === Infinity ? '∞' : stats.profitFactor.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})],
+                    ['Gain moyen', formatMoney(stats.avgWin)],
+                    ['Perte moyenne', formatMoney(stats.avgLoss)],
+                    ['Meilleur / pire', `${formatMoney(stats.best)} / ${formatMoney(stats.worst)}`],
                   ].map(([label, value]) => (
                     <div key={label} className="rounded-xl border border-border/50 px-3 py-3">
                       <p className="text-[9px] uppercase tracking-widest text-muted-foreground">{label}</p>
@@ -553,82 +547,46 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
                 </div>
 
                 <div className="space-y-7 max-w-3xl">
-                  <Question n={1} q={`How did you feel overall this ${periodWord(selected.type)}?`}>
-                    <Select value={formData.emotionGenerale} onValueChange={v => updateField('emotionGenerale', v)}>
-                      <SelectTrigger className="h-10 text-sm bg-secondary border-border">
-                        <SelectValue placeholder="Select an emotion..." />
-                      </SelectTrigger>
-                      <SelectContent>{EMOTIONS.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </Question>
-
-                  <Question n={2} q={`How many emotional trades did you take this ${periodWord(selected.type)}?`}>
-                    <Input
-                      type="number"
-                      min={0}
-                      className="h-10 text-sm bg-secondary border-border max-w-[140px]"
-                      value={formData.tradesEmotionnels}
-                      onChange={e => updateField('tradesEmotionnels', parseInt(e.target.value) || 0)}
-                    />
-                  </Question>
-
-                  <Question n={3} q={`What did you learn this ${periodWord(selected.type)}? What should you have done differently?`}>
+                  <Question n={1} q="Bilan de la période">
                     <Textarea
-                      placeholder="Your reflection..."
+                      aria-label="Bilan de la période" placeholder="Ton bilan…"
                       className="h-28 text-sm resize-none bg-secondary border-border"
                       value={formData.conclusion}
                       onChange={e => updateField('conclusion', e.target.value)}
                     />
                   </Question>
 
-                  <Question n={4} q={`What is your main objective for next ${periodWord(selected.type)}?`}>
+                  <Question n={2} q="Objectif principal">
                     <Textarea
-                      placeholder="Main objective..."
+                      aria-label="Objectif principal" placeholder="Ton objectif…"
                       className="h-20 text-sm resize-none bg-secondary border-border"
                       value={formData.objectifPrincipal}
                       onChange={e => updateField('objectifPrincipal', e.target.value)}
                     />
                   </Question>
 
-                  <Question n={5} q="What are your secondary objectives?">
+                  <Question n={3} q="Objectifs secondaires">
                     <Textarea
-                      placeholder="Secondary objectives..."
+                      aria-label="Objectifs secondaires" placeholder="Tes objectifs secondaires…"
                       className="h-20 text-sm resize-none bg-secondary border-border"
                       value={formData.objectifsSecondaires}
                       onChange={e => updateField('objectifsSecondaires', e.target.value)}
                     />
                   </Question>
 
-                  <Question n={6} q="Which psychological points do you want to work on?">
-                    <Textarea
-                      placeholder="Psychological points..."
-                      className="h-20 text-sm resize-none bg-secondary border-border"
-                      value={formData.pointsPsychologiques}
-                      onChange={e => updateField('pointsPsychologiques', e.target.value)}
-                    />
-                  </Question>
-
-                  <Question n={7} q="What concrete solutions will you apply?">
-                    <Textarea
-                      placeholder="Concrete actions and solutions..."
-                      className="h-20 text-sm resize-none bg-secondary border-border"
-                      value={formData.solutions}
-                      onChange={e => updateField('solutions', e.target.value)}
-                    />
-                  </Question>
                 </div>
 
                 <div className="rounded-2xl border border-border/60 bg-background/20 overflow-hidden">
                   <div className="px-4 py-3 border-b border-border/50 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <List className="h-3.5 w-3.5 text-primary" />
-                      <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Trades & Notes</span>
+                      <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Trades et notes</span>
                     </div>
                     <span className="text-[10px] font-mono text-muted-foreground">{selectedTrades.length} total</span>
                   </div>
 
                   {selectedTrades.length === 0 ? (
-                    <div className="p-8 text-center text-xs text-muted-foreground">No trades in this period.</div>
+                    <div className="p-8 text-center text-xs text-muted-foreground">Aucun trade clôturé sur cette période.</div>
                   ) : (
                     <div className="divide-y divide-border/40">
                       {selectedTrades.map((trade, index) => {
@@ -639,7 +597,7 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
                           <div key={trade.id} className="px-4 py-3 hover:bg-accent/20 transition-colors">
                             <div className="flex items-center gap-2 mb-1">
                               <span className={`text-sm font-bold font-mono tabular-nums ${net >= 0 ? 'text-profit' : 'text-loss'}`}>
-                                {fmt(net)}$
+                                {formatMoney(net,accounts.find(account=>account.id===trade.accountId)?.currency)}
                               </span>
                               <span className="text-[9px] font-mono text-muted-foreground/50">#{index + 1}</span>
                               <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${trade.type === 'Buy' ? 'bg-profit/12 text-profit' : 'bg-loss/12 text-loss'}`}>
@@ -652,7 +610,7 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
                             <div className="flex items-start gap-2 mt-2">
                               <Textarea
                                 className="min-h-16 text-xs resize-none bg-secondary border-border"
-                                placeholder="Analysis note..."
+                                aria-label={`Note du trade ${trade.tradeNumber}`} placeholder="Analyse du trade…"
                                 value={note}
                                 onChange={e => updateTradeNote(trade.id, e.target.value)}
                               />
@@ -674,11 +632,11 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
                 </div>
 
                 <div className="flex items-center gap-2 pt-1">
-                  <Button onClick={handleSave} className="gap-1.5 text-xs">
-                    <Save className="h-3.5 w-3.5" />Save Report
+                  <Button disabled={saving} onClick={handleSave} className="gap-1.5 text-xs">
+                    <Save className="h-3.5 w-3.5" />Enregistrer le rapport
                   </Button>
                   <Button variant="outline" onClick={() => handleDownloadPDF('view')} className="gap-1.5 text-xs">
-                    <Eye className="h-3.5 w-3.5" />View PDF
+                    <Eye className="h-3.5 w-3.5" />Voir PDF
                   </Button>
                 </div>
               </div>
@@ -686,29 +644,26 @@ const Reports = ({ activeAccount, accounts }: ReportsProps) => {
                 <div className="px-6 py-8 sm:px-12 sm:py-10">
                   <dl className="grid grid-cols-2 gap-x-6 gap-y-7 border-b border-border/60 pb-8 sm:grid-cols-4">
                     {[
-                      { label: 'Résultat net', value: `${fmt(stats.pnl)}$`, color: stats.pnl >= 0 ? 'text-profit' : 'text-loss' },
+                      { label: 'Résultat net', value: formatMoney(stats.pnl), color: stats.pnl >= 0 ? 'text-profit' : 'text-loss' },
                       { label: 'Trades', value: String(stats.total), color: 'text-foreground' },
-                      { label: 'Win rate', value: `${stats.winRate}%`, color: 'text-foreground' },
-                      { label: 'Plan respecté', value: `${stats.strategy}%`, color: 'text-foreground' },
+                      { label: 'Win rate', value: stats.total ? `${stats.winRate} %` : '—', color: 'text-foreground' },
+                      { label: 'Stratégie respectée', value: stats.total ? `${stats.strategy} %` : '—', color: 'text-foreground' },
                     ].map(item => <div key={item.label} className="min-w-0"><dt className="text-xs text-muted-foreground">{item.label}</dt><dd className={`mt-2 break-words font-mono text-xl sm:text-2xl font-semibold tracking-tight ${item.color}`}>{item.value}</dd></div>)}
                   </dl>
                   <div className="mt-7 flex flex-wrap gap-x-6 gap-y-3 text-xs text-muted-foreground">
-                    <span>Profit factor <strong className="ml-2 font-mono font-medium text-foreground">{stats.profitFactor === Infinity ? '∞' : stats.profitFactor.toFixed(2)}</strong></span>
-                    {formData.emotionGenerale && <span>État d’esprit <strong className="ml-2 font-medium text-foreground">{formData.emotionGenerale}</strong></span>}
-                    <span>Trades émotionnels <strong className="ml-2 font-mono font-medium text-foreground">{formData.tradesEmotionnels}</strong></span>
+                    <span>Profit factor <strong className="ml-2 font-mono font-medium text-foreground">{!stats.total ? '—' : stats.profitFactor === Infinity ? '∞' : stats.profitFactor.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></span>
                   </div>
                   <div className="my-12 space-y-12 sm:my-14 sm:space-y-14">
                     <article><h3 className="mb-4 text-lg font-semibold">Bilan de la période</h3><p className="report-reading text-[15px] text-foreground/80">{formData.conclusion || '—'}</p></article>
                     <article><h3 className="mb-4 text-lg font-semibold">Objectifs</h3><p className="report-reading text-[15px] text-foreground/80">{formData.objectifPrincipal || '—'}</p>{formData.objectifsSecondaires && <p className="report-reading mt-5 text-[15px] text-muted-foreground">{formData.objectifsSecondaires}</p>}</article>
-                    <article><h3 className="mb-4 text-lg font-semibold">Psychologie</h3><p className="report-reading text-[15px] text-foreground/80">{formData.pointsPsychologiques || '—'}</p></article>
-                    <article><h3 className="mb-4 text-lg font-semibold">Plan d’action</h3><p className="report-reading text-[15px] text-foreground/80">{formData.solutions || '—'}</p></article>
                   </div>
-                  {selectedTrades.length > 0 && <section className="border-t border-border/60 pt-6"><h3 className="mb-3 text-base font-semibold">Trades de la période</h3><div className="divide-y divide-border/50">{selectedTrades.map(trade => <div key={trade.id} className="py-4"><div className="flex flex-wrap items-center justify-between gap-2"><span className="font-medium">{trade.pair} <span className="ml-2 text-xs text-muted-foreground">{trade.type === 'Buy' ? 'Long' : 'Short'} · {getTradeReportDate(trade)}</span></span><span className={`font-mono text-sm font-semibold ${getNetResult(trade) >= 0 ? 'text-profit' : 'text-loss'}`}>{fmt(getNetResult(trade))}$</span></div>{(formData.tradeNotes[trade.id] ?? trade.notes) && <p className="report-reading mt-2 text-sm text-muted-foreground">{formData.tradeNotes[trade.id] ?? trade.notes}</p>}{getTradeScreenshots(trade).length > 0 && <button onClick={() => setPreviewImgs(getTradeScreenshots(trade))} className="mt-2 inline-flex items-center gap-1.5 text-xs text-primary"><Image className="h-3.5 w-3.5" />Captures</button>}</div>)}</div></section>}
+                  {selectedTrades.length > 0 && <section className="border-t border-border/60 pt-6"><h3 className="mb-3 text-base font-semibold">Trades de la période</h3><div className="divide-y divide-border/50">{selectedTrades.map(trade => <div key={trade.id} className="py-4"><div className="flex flex-wrap items-center justify-between gap-2"><span className="font-medium">{trade.pair} <span className="ml-2 text-xs text-muted-foreground">{trade.type === 'Buy' ? 'Long' : 'Short'} · {getTradeReportDate(trade)}</span></span><span className={`font-mono text-sm font-semibold ${getNetResult(trade) >= 0 ? 'text-profit' : 'text-loss'}`}>{formatMoney(getNetResult(trade),accounts.find(account=>account.id===trade.accountId)?.currency)}</span></div>{(formData.tradeNotes[trade.id] ?? trade.notes) && <p className="report-reading mt-2 text-sm text-muted-foreground">{formData.tradeNotes[trade.id] ?? trade.notes}</p>}{getTradeScreenshots(trade).length > 0 && <button onClick={() => setPreviewImgs(getTradeScreenshots(trade))} className="mt-2 inline-flex items-center gap-1.5 text-xs text-primary"><Image className="h-3.5 w-3.5" />Captures</button>}</div>)}</div></section>}
                 </div>
               )}
             </>
           )}
         </section>
+      </div>
       </div>
 
       <Dialog open={!!previewImgs} onOpenChange={() => setPreviewImgs(null)}>
