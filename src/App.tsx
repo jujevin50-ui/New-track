@@ -131,7 +131,7 @@ const AppContent = () => {
                 <Route path="/discipline" element={<Discipline activeAccount={displayAccount} />} />
                 <Route path="/strategy" element={<Strategy />} />
                 <Route path="/tasks" element={<Navigate to="/" replace />} />
-                <Route path="/" element={<Dashboard activeAccount={displayAccount} accounts={accounts} />} />
+                <Route path="/" element={<Dashboard activeAccount={displayAccount} accounts={accounts} onSelectAccount={setActiveAccountId} />} />
                 <Route path="/calendar" element={<CalendarView activeAccount={displayAccount} accounts={accounts} />} />
                 <Route path="/trades" element={<Trades activeAccount={displayAccount} accounts={accounts} onAddAccount={addAccount} onUpdateAccount={updateAccount} />} />
                 <Route path="/reports" element={<Reports activeAccount={displayAccount} accounts={accounts} />} />
