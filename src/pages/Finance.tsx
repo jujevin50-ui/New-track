@@ -1,8 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { HeaderNavLinks } from '@/components/trading/HeaderNavLinks';
-import { LogoSwitch } from '@/components/trading/LogoSwitch';
-import { HEADER_BAR, HEADER_GRID, NAV_PILL, navItemClass } from '@/components/trading/navStyles';
+import WorkspaceRail from '@/components/trading/WorkspaceRail';
+import { TopNav } from '@/components/trading/TopNav';
 import { InvestmentView } from '@/components/finance/InvestmentView';
 import { type FinanceStatement } from '@/components/finance/StatementsView';
 import { useData } from '@/contexts/DataContext';
@@ -185,23 +184,8 @@ export default function Finance() {
   const expenseTotal = categoryData.reduce((s, c) => s + c.value, 0);
 
   return (
-    <div className="min-h-screen text-foreground relative z-10">
-      {/* Barre du haut : logo | menu CENTRÉ | colonne symétrique (aucun élément ne peut se superposer au menu) */}
-      <header className={HEADER_BAR}>
-        <div className={HEADER_GRID}>
-          <LogoSwitch className="pointer-events-auto shrink-0" />
-          <div className="flex justify-center min-w-0">
-            <nav className={NAV_PILL} aria-label="Navigation My Finance">
-              <HeaderNavLinks activeKey={tab}>
-                {TABS.map(([value, label, Icon]) => (
-                  <button key={value} onClick={() => { setTab(value); if (value === 'invest') setStatementsAccountId(undefined); }} aria-current={tab === value ? 'page' : undefined} className={navItemClass(tab === value)}><Icon className="header-nav-icon" aria-hidden="true" strokeWidth={1.8} /><span>{label}</span></button>
-                ))}
-              </HeaderNavLinks>
-            </nav>
-          </div>
-          <div aria-hidden />
-        </div>
-      </header>
+    <div className="workspace-shell min-h-screen text-foreground relative z-10">
+      <WorkspaceRail><nav className="rail-nav" aria-label="Navigation My Finance"><div className="rail-links">{TABS.map(([value, label, Icon]) => <button type="button" key={value} data-rail-link aria-current={tab === value ? 'page' : undefined} onClick={() => { setTab(value); if (value === 'invest') setStatementsAccountId(undefined); }} className={`rail-link${tab === value ? ' is-current' : ''}`}><Icon className="header-nav-icon" aria-hidden="true" strokeWidth={1.8} /><span>{label}</span></button>)}</div></nav><TopNav sidebar utilitiesOnly /></WorkspaceRail>
 
       {/* Barre d'outils : période à gauche (Mois / Année), actions à droite — fond carte pour rester lisible sur le noir */}
       {tab !== 'invest' && <div className="relative z-40">

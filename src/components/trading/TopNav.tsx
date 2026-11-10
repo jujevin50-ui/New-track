@@ -23,7 +23,7 @@ const NAV_ITEMS = [
   { id: 'accounts', title: 'Accounts', url: '/accounts', Icon: Wallet },
 ];
 
-export function TopNav() {
+export function TopNav({ sidebar = false, utilitiesOnly = false }: { sidebar?: boolean; utilitiesOnly?: boolean } = {}) {
   const location = useLocation();
   const { disconnect } = useData();
   const { theme, mode, setColor, toggleMode, presets } = useTheme();
@@ -39,28 +39,26 @@ export function TopNav() {
     .map(cfg => NAV_ITEMS.find(n => n.id === cfg.id))
     .filter((x): x is NonNullable<typeof x> => x !== undefined);
 
-  return (
-    <>
-      <nav className={NAV_PILL} aria-label="Navigation principale">
-        <HeaderNavLinks activeKey={location.pathname}>
-          {navEntries.map(entry => (
+  const links = (navEntries.map(entry => (
             <NavLink
               key={entry.id}
               to={entry.url}
               end={entry.url === '/'}
-              className={({ isActive }) => navItemClass(isActive)}
+              className={({ isActive }) => sidebar ? `rail-link${isActive ? ' is-current' : ''}` : navItemClass(isActive)}
             >
               <entry.Icon className="header-nav-icon" aria-hidden="true" strokeWidth={1.8} /><span>{entry.title}</span>
             </NavLink>
-          ))}
-        </HeaderNavLinks>
-
-        <div className="header-nav-actions">
-          <button onClick={() => setSettingsOpen(true)} className="header-action" aria-label="Settings">
-            <Settings className="h-3.5 w-3.5" />
+          )));
+  return (
+    <>
+      <nav className={sidebar ? `rail-nav${utilitiesOnly ? ' rail-nav-utilities' : ''}` : NAV_PILL} aria-label={utilitiesOnly ? 'Actions de l’espace' : 'Navigation principale'}>
+        {!utilitiesOnly && (sidebar ? <div className="rail-links">{links}</div> : <HeaderNavLinks activeKey={location.pathname}>{links}</HeaderNavLinks>)}
+        <div className={sidebar ? 'rail-actions' : 'header-nav-actions'}>
+          <button onClick={() => setSettingsOpen(true)} className={sidebar ? 'rail-utility' : 'header-action'} aria-label="Settings">
+            <Settings className="h-4 w-4" />{sidebar && <span>Paramètres</span>}
           </button>
-          <button onClick={disconnect} className="header-action hover:!text-loss" aria-label="Changer de fichier">
-            <LogOut className="h-3.5 w-3.5" />
+          <button onClick={disconnect} className={sidebar ? 'rail-utility hover:!text-loss' : 'header-action hover:!text-loss'} aria-label="Changer de fichier">
+            <LogOut className="h-4 w-4" />{sidebar && <span>Changer de fichier</span>}
           </button>
         </div>
       </nav>

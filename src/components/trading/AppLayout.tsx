@@ -2,8 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { TopNav } from './TopNav';
-import { LogoSwitch } from './LogoSwitch';
-import { HEADER_BAR, HEADER_GRID } from './navStyles';
+import WorkspaceRail from './WorkspaceRail';
 import { Account, AccountStatus } from '@/types/account';
 import { Input } from '@/components/ui/input';
 import { Search, CheckCircle2 } from 'lucide-react';
@@ -37,15 +36,8 @@ export function AppLayout({ children, accounts, activeAccountId, onSelectAccount
   const handleSelect = (id: string) => { onSelectAccount(id); setSearch(''); setDropdownOpen(false); };
 
   return (
-    <div className="min-h-screen flex flex-col w-full relative z-10">
-      {/* Barre du haut : logo | menu centré | colonne vide symétrique → le menu ne peut plus chevaucher les filtres */}
-      <header className={HEADER_BAR}>
-        <div className={HEADER_GRID}>
-          <LogoSwitch className="pointer-events-auto shrink-0" />
-          <div className="flex justify-center min-w-0"><TopNav /></div>
-          <div aria-hidden />
-        </div>
-      </header>
+    <div className="workspace-shell min-h-screen flex flex-col w-full relative z-10">
+      <WorkspaceRail><TopNav sidebar /></WorkspaceRail>
 
       {/* Filtres de comptes : descendus sous le menu, alignés à droite */}
       {accounts.length > 0 && (
