@@ -1083,3 +1083,13 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 .discipline-page .discipline-review button[type=submit] { min-height: 40px; border-radius: 10px; font-size: 12px; }
 @media (prefers-reduced-motion: no-preference) { .discipline-page .discipline-mission { transition: background 180ms ease, border-color 180ms ease; } }
 .discipline-page .discipline-review .dashboard-filter-field { width: 100%; }
+
+.discipline-review .review-options label,
+.discipline-review .review-options .dashboard-filter-caption { display: block; line-height: 16px; }
+.discipline-review .review-options .dashboard-filter-caption { margin-bottom: 8px; }
+.discipline-review .review-options [role=group] { height: 42px; }
+.discipline-review .review-options [role=group] button { height: 34px; }
+.discipline-review .review-writing-grid > div { display: flex; flex-direction: column; min-width: 0; }
+.discipline-review .review-writing-grid label { display: block; line-height: 16px; }
+.discipline-review .review-writing-grid textarea { height: 140px; min-height: 140px; width: 100%; }
+@media (min-width: 768px) { .discipline-review .review-writing-grid > div:not(:first-child) label { min-height: 32px; } }

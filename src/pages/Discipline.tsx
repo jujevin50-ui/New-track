@@ -11,7 +11,7 @@ import type { Account } from '@/types/account';
 import type { Trade } from '@/types/trade';
 import { completedMissions, disciplineStats, DISCIPLINE_MISSIONS, localDay, newDailyJournal, shiftDay } from '@/lib/discipline';
 
-const prettyDay = (date: string) => new Date(`${date}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+
 
 export default function Discipline({ activeAccount, accounts, onSelectAccount }: { activeAccount: Account | null; accounts: Account[]; onSelectAccount: (id: string) => void }) {
   const { journals, getJournal, saveJournal } = useDailyJournal();
@@ -44,12 +44,12 @@ export default function Discipline({ activeAccount, accounts, onSelectAccount }:
     <div className="grid grid-cols-3 gap-4 py-4">
       {[{label: 'Série en cours', value: stats.streak, unit: stats.streak === 1 ? 'jour' : 'jours'}, {label: 'Séances suivies', value: stats.days, unit: stats.days === 1 ? 'séance' : 'séances'}, {label: 'Expérience', value: stats.xp, unit: 'XP'}].map(metric => <div key={metric.label} className="min-w-0 text-center"><p className="text-xs text-muted-foreground">{metric.label}</p><p className="mt-5 text-2xl font-semibold tracking-tight tabular-nums sm:text-[27px]">{metric.value}<span className="ml-2 text-[11px] font-normal text-muted-foreground">{metric.unit}</span></p></div>)}
     </div>
-    <DisciplineSession key={date} date={date} existing={getJournal(date)} trades={trades.filter(trade => trade.endDate?.slice(0, 10) === date)} accountName={selectedAccount?.name} currency={selectedAccount?.currency ?? ''} onDirty={value => { dirty.current = value; }} onSaving={value => { saving.current = value; }} onSave={saveJournal} />
+    <DisciplineSession key={date} date={date} existing={getJournal(date)} trades={trades.filter(trade => trade.endDate?.slice(0, 10) === date)} currency={selectedAccount?.currency ?? ''} onDirty={value => { dirty.current = value; }} onSaving={value => { saving.current = value; }} onSave={saveJournal} />
     <DisciplineYearChart hideSummary period={chartPeriod} onPeriodChange={setChartPeriod} journals={journals} selectedDate={date} today={today} onSelectDate={chooseDate} />
   </div>;
 }
 
-function DisciplineSession({ date, existing, trades, accountName, currency, onDirty, onSaving, onSave }: { date: string; existing: DailyJournal | null; trades: Trade[]; accountName?: string; currency: string; onDirty: (dirty: boolean) => void; onSaving: (saving: boolean) => void; onSave: (journal: DailyJournal) => Promise<void> }) {
+function DisciplineSession({ date, existing, trades, currency, onDirty, onSaving, onSave }: { date: string; existing: DailyJournal | null; trades: Trade[]; currency: string; onDirty: (dirty: boolean) => void; onSaving: (saving: boolean) => void; onSave: (journal: DailyJournal) => Promise<void> }) {
   const [draft, setDraft] = useState(() => existing ?? newDailyJournal(date));
   const [saving, setSaving] = useState(false);
   const busy = useRef(false);
@@ -79,7 +79,7 @@ function DisciplineSession({ date, existing, trades, accountName, currency, onDi
       </section>
     </fieldset>
     <section className="discipline-review min-w-0" aria-labelledby="discipline-review-title">
-      <div className="mb-6"><h2 id="discipline-review-title" className="text-sm font-semibold tracking-tight">Bilan journalier</h2><p className="mt-1 text-xs capitalize text-muted-foreground">{prettyDay(date)}{accountName ? ` · ${accountName}` : ''}</p></div>
+      <div className="mb-6"><h2 id="discipline-review-title" className="text-sm font-semibold tracking-tight">Bilan journalier</h2></div>
       <DailyReview currency={currency} date={date} existing={existing} value={draft} onChange={update} psychologyElsewhere trades={trades} onSave={save} saveLabel="Enregistrer la journée" />
     </section>
   </div>;
