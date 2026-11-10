@@ -52,7 +52,7 @@ export function TopNav({ sidebar = false, utilitiesOnly = false }: { sidebar?: b
   return (
     <>
       <nav className={sidebar ? `rail-nav${utilitiesOnly ? ' rail-nav-utilities' : ''}` : NAV_PILL} aria-label={utilitiesOnly ? 'Actions de l’espace' : 'Navigation principale'}>
-        {!utilitiesOnly && (sidebar ? <div className="rail-links">{links}</div> : <HeaderNavLinks activeKey={location.pathname}>{links}</HeaderNavLinks>)}
+        {!utilitiesOnly && (sidebar ? <div className="rail-links">{navItems.map(item => item.type === 'separator' ? <div key={item.id} role="separator" className="mx-3 my-2 border-t border-border/60" /> : item.visible ? links.find(link => link.key === item.id) : null)}</div> : <HeaderNavLinks activeKey={location.pathname}>{links}</HeaderNavLinks>)}
         <div className={sidebar ? 'rail-actions' : 'header-nav-actions'}>
           <button onClick={() => setSettingsOpen(true)} className={sidebar ? 'rail-utility' : 'header-action'} aria-label="Settings">
             <Settings className="h-4 w-4" />{sidebar && <span>Paramètres</span>}

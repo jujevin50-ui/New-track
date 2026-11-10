@@ -1,7 +1,10 @@
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useEffect, useRef, useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
-import { Palette, LayoutGrid, Eye, EyeOff, Sun, Moon, User, FileText, Flag, GripVertical, Plus, X } from 'lucide-react';
+import { Palette, LayoutGrid, Eye, EyeOff, Sun, Moon, User, FileText, Flag, GripVertical, Plus, X, Sparkles, Settings2, Check, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react';
 import { NavItem } from '@/hooks/useNavConfig';
 import { ThemeMode } from '@/hooks/useTheme';
 import { useEventColors } from '@/hooks/useEventColors';
@@ -30,382 +33,50 @@ interface SettingsDialogProps {
 }
 
 const EVENT_TYPES = [
-  { key: 'challenge_realise' as const, label: 'Challenge Passed' },
-  { key: 'challenge_echoue'  as const, label: 'Challenge Failed' },
-  { key: 'perte_compte'      as const, label: 'Account Blown' },
+  { key: 'challenge_realise' as const, label: 'Challenge réussi' },
+  { key: 'challenge_echoue' as const, label: 'Challenge échoué' },
+  { key: 'perte_compte' as const, label: 'Compte perdu' },
 ];
+const SECTIONS = [
+  { id: 'appearance', title: 'Apparence', description: 'Un espace à ton image', Icon: Palette },
+  { id: 'profile', title: 'Profil', description: 'Ton identité dans l’application', Icon: User },
+  { id: 'background', title: 'Fonds animés', description: 'Couleur et confort de lecture', Icon: Sparkles },
+  { id: 'navigation', title: 'Navigation', description: 'Tes rubriques, dans ton ordre', Icon: LayoutGrid },
+  { id: 'data', title: 'Import de données', description: 'Retrouver tes historiques', Icon: FileText },
+] as const;
+type Section = typeof SECTIONS[number]['id'];
 
-// ── Drag-and-drop nav list ──────────────────────────────────────────────────
-
-function NavOrderList({
-  navItems,
-  onToggle,
-  onReorder,
-  onAddSeparator,
-  onRemoveSeparator,
-}: {
-  navItems: NavItem[];
-  onToggle: (id: string) => void;
-  onReorder: (items: NavItem[]) => void;
-  onAddSeparator: () => void;
-  onRemoveSeparator: (id: string) => void;
-}) {
-  const [dragIdx, setDragIdx] = useState<number | null>(null);
-  const [dropIdx, setDropIdx] = useState<number | null>(null);
-
-  const reset = () => { setDragIdx(null); setDropIdx(null); };
-
-  const handleDrop = (targetIdx: number) => {
-    if (dragIdx === null || dragIdx === targetIdx) { reset(); return; }
-    const newItems = [...navItems];
-    const [moved] = newItems.splice(dragIdx, 1);
-    const newIdx = dragIdx < targetIdx ? targetIdx - 1 : targetIdx;
-    newItems.splice(newIdx, 0, moved);
-    onReorder(newItems);
-    reset();
-  };
-
-  return (
-    <div className="space-y-1">
-      {navItems.map((item, i) => {
-        const isSep = item.type === 'separator';
-        const isDragging = dragIdx === i;
-        const isDropTarget = dropIdx === i && dragIdx !== null && dragIdx !== i;
-
-        return (
-          <div
-            key={item.id}
-            draggable
-            onDragStart={() => setDragIdx(i)}
-            onDragEnd={reset}
-            onDragOver={e => { e.preventDefault(); if (dragIdx !== i) setDropIdx(i); }}
-            onDragLeave={() => setDropIdx(null)}
-            onDrop={() => handleDrop(i)}
-            className={`flex items-center gap-2 px-2 py-1.5 rounded-lg border transition-all cursor-grab active:cursor-grabbing select-none ${
-              isDragging
-                ? 'opacity-40 border-border bg-secondary/30'
-                : isDropTarget
-                ? 'border-primary bg-primary/10'
-                : isSep
-                ? 'border-border/40 bg-secondary/20'
-                : item.visible
-                ? 'border-border bg-secondary/40'
-                : 'border-border/30 bg-transparent'
-            }`}
-          >
-            {/* Drag handle */}
-            <GripVertical className="h-3.5 w-3.5 text-muted-foreground/50 flex-shrink-0" />
-
-            {/* Label */}
-            {isSep ? (
-              <div className="flex-1 flex items-center gap-2">
-                <div className="flex-1 h-px bg-border/60" />
-                <span className="text-[10px] text-muted-foreground/60 font-medium tracking-wide uppercase">sep</span>
-                <div className="flex-1 h-px bg-border/60" />
-              </div>
-            ) : (
-              <span className={`flex-1 text-xs font-medium ${item.visible ? 'text-foreground' : 'text-muted-foreground/50'}`}>
-                {item.title}
-              </span>
-            )}
-
-            {/* Action */}
-            {isSep ? (
-              <button
-                onClick={() => onRemoveSeparator(item.id)}
-                className="p-0.5 rounded hover:bg-destructive/10 text-muted-foreground/50 hover:text-destructive transition-colors"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            ) : (
-              <button
-                onClick={() => onToggle(item.id)}
-                className="p-0.5 rounded hover:bg-secondary transition-colors"
-              >
-                {item.visible
-                  ? <Eye className="h-3.5 w-3.5 text-primary" />
-                  : <EyeOff className="h-3.5 w-3.5 text-muted-foreground/40" />}
-              </button>
-            )}
-          </div>
-        );
-      })}
-
-      {/* Add separator */}
-      <button
-        onClick={onAddSeparator}
-        className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-dashed border-border/50 text-[11px] text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors mt-1"
-      >
-        <Plus className="h-3 w-3" />
-        Add separator
-      </button>
-    </div>
-  );
+function NavOrderList({ navItems, onToggle, onReorder, onAddSeparator, onRemoveSeparator }: { navItems: NavItem[]; onToggle: (id: string) => void; onReorder: (items: NavItem[]) => void; onAddSeparator: () => void; onRemoveSeparator: (id: string) => void }) {
+  const [dragged, setDragged] = useState<number | null>(null);
+  const move = (from: number, to: number) => { if (to < 0 || to >= navItems.length || from === to) return; const next = [...navItems]; const [item] = next.splice(from, 1); next.splice(to, 0, item); onReorder(next); };
+  return <div className="space-y-2">{navItems.map((item, index) => <div key={item.id} draggable onDragStart={() => setDragged(index)} onDragEnd={() => setDragged(null)} onDragOver={event => event.preventDefault()} onDrop={() => { if (dragged !== null) move(dragged, index); setDragged(null); }} className={`flex items-center gap-2 rounded-xl border border-border/60 px-3 py-3 transition-colors ${dragged === index ? 'bg-primary/10 opacity-50' : 'bg-background/50'}`}>
+    <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground/50" aria-hidden="true" /><span className={`min-w-0 flex-1 text-sm ${item.visible ? 'font-medium' : 'text-muted-foreground'}`}>{item.type === 'separator' ? 'Séparateur' : item.title}</span><div className="flex shrink-0 gap-0.5"><Button type="button" variant="ghost" size="icon" className="h-8 w-8" aria-label={`Monter ${item.title}`} disabled={index === 0} onClick={() => move(index, index - 1)}><ChevronUp className="h-3.5 w-3.5" /></Button><Button type="button" variant="ghost" size="icon" className="h-8 w-8" aria-label={`Descendre ${item.title}`} disabled={index === navItems.length - 1} onClick={() => move(index, index + 1)}><ChevronDown className="h-3.5 w-3.5" /></Button>{item.type === 'separator' ? <Button type="button" variant="ghost" size="icon" className="h-8 w-8" aria-label="Supprimer le séparateur" onClick={() => onRemoveSeparator(item.id)}><X className="h-4 w-4" /></Button> : <Button type="button" variant="ghost" size="icon" className="h-8 w-8" aria-label={`${item.visible ? 'Masquer' : 'Afficher'} ${item.title}`} aria-pressed={item.visible} onClick={() => onToggle(item.id)}>{item.visible ? <Eye className="h-4 w-4 text-primary" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}</Button>}</div>
+  </div>)}<Button type="button" variant="outline" className="w-full gap-2 border-dashed" onClick={onAddSeparator}><Plus className="h-4 w-4" />Ajouter un séparateur</Button></div>;
 }
 
-// ── Dialog ──────────────────────────────────────────────────────────────────
+export function SettingsDialog({ open, onOpenChange, theme, presets, onSetColor, navItems, onToggleNav, onReorderNav, onAddSeparator, onRemoveSeparator, mode, onToggleMode, userName, onSetUserName, onOpenCsvImport, onOpenNotionImport }: SettingsDialogProps) {
+  const { config, presets: backgrounds, setWaveColor, setVeil, setEnabled, applyPreset } = useWaveBackground();
+  const { colors, setEventColor } = useEventColors();
+  const [name, setName] = useState(userName);
+  const [section, setSection] = useState<Section>('appearance');
+  const content = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (content.current) content.current.scrollTop = 0; }, [section]);
+  useEffect(() => { if (open) setName(userName); }, [open, userName]);
+  const current = SECTIONS.find(item => item.id === section)!;
+  const close = (next: boolean) => { if (!next) onSetUserName(name); onOpenChange(next); };
 
-export function SettingsDialog({
-  open, onOpenChange, theme, presets, onSetColor,
-  navItems, onToggleNav, onReorderNav, onAddSeparator, onRemoveSeparator,
-  mode, onToggleMode, userName, onSetUserName, onOpenCsvImport, onOpenNotionImport,
-}: SettingsDialogProps) {
-  const {
-    config: waveCfg,
-    presets: wavePresets,
-    setWaveColor,
-    setVeil,
-    setEnabled,
-    applyPreset,
-  } = useWaveBackground();
-
-  const [nameInput, setNameInput] = useState(userName);
-  const { colors: evtColors, setEventColor } = useEventColors();
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onSetUserName(nameInput); onOpenChange(o); }}>
-      <DialogContent className="sm:max-w-sm bg-card border-border/60 max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <Palette className="h-4 w-4 text-primary" />
-            Settings
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-6">
-
-          {/* Username */}
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <User className="h-3.5 w-3.5 text-primary" />
-              <p className="text-xs text-muted-foreground font-medium">Display Name</p>
-            </div>
-            <Input
-              value={nameInput}
-              onChange={e => setNameInput(e.target.value)}
-              onBlur={() => onSetUserName(nameInput)}
-              placeholder="Your name (e.g. VernantFX)"
-              className="h-9 text-sm bg-secondary border-border"
-            />
-            <p className="text-[10px] text-muted-foreground mt-1">Shown in the sidebar and header</p>
-          </div>
-
-          {/* Mode toggle */}
-          <div>
-            <p className="text-xs text-muted-foreground mb-3 font-medium">Display Mode</p>
-            <div className="flex gap-2">
-              <button
-                onClick={mode === 'dark' ? undefined : onToggleMode}
-                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-xs font-medium transition-colors ${
-                  mode === 'dark' ? 'bg-primary/15 text-primary border-primary/30' : 'bg-secondary/50 border-border text-muted-foreground'
-                }`}
-              >
-                <Moon className="h-3.5 w-3.5" />
-                Dark
-              </button>
-              <button
-                onClick={mode === 'light' ? undefined : onToggleMode}
-                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-xs font-medium transition-colors ${
-                  mode === 'light' ? 'bg-primary/15 text-primary border-primary/30' : 'bg-secondary/50 border-border text-muted-foreground'
-                }`}
-              >
-                <Sun className="h-3.5 w-3.5" />
-                Light
-              </button>
-            </div>
-          </div>
-
-          {/* Accent color */}
-          <div>
-            <p className="text-xs text-muted-foreground mb-3 font-medium">Accent Color</p>
-            <div className="grid grid-cols-7 gap-2.5">
-              {presets.map(p => {
-                const isActive = p.hue === theme.primaryHue && p.sat === theme.primarySat;
-                return (
-                  <button key={p.name} onClick={() => onSetColor(p.hue, p.sat, p.light)} className="group flex flex-col items-center gap-1.5" title={p.name}>
-                    <div
-                      className={`h-9 w-9 rounded-full transition-all duration-200 ${isActive ? 'ring-2 ring-foreground ring-offset-2 ring-offset-card scale-110' : 'hover:scale-110 hover:shadow-lg'}`}
-                      style={{ backgroundColor: `hsl(${p.hue}, ${p.sat}%, ${p.light}%)` }}
-                    />
-                    <span className={`text-[9px] transition-colors ${isActive ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>{p.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Custom hue */}
-          <div>
-            <p className="text-xs text-muted-foreground mb-2.5 font-medium">Custom Hue</p>
-            <input
-              type="range" min={0} max={360} value={theme.primaryHue}
-              onChange={e => onSetColor(Number(e.target.value), theme.primarySat, theme.primaryLight)}
-              className="w-full h-2.5 rounded-full appearance-none cursor-pointer"
-              style={{ background: `linear-gradient(to right, hsl(0,70%,55%), hsl(60,70%,55%), hsl(120,70%,55%), hsl(180,70%,55%), hsl(240,70%,55%), hsl(300,70%,55%), hsl(360,70%,55%))` }}
-            />
-          </div>
-
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-secondary/50 border border-border/50">
-            <div className="h-10 w-10 rounded-xl shadow-lg" style={{ backgroundColor: `hsl(${theme.primaryHue}, ${theme.primarySat}%, ${theme.primaryLight}%)` }} />
-            <div>
-              <p className="text-xs font-medium">Active Color</p>
-              <p className="text-[10px] text-muted-foreground font-mono">hsl({theme.primaryHue}, {theme.primarySat}%, {theme.primaryLight}%)</p>
-            </div>
-          </div>
-
-
-          {/* Fond animé (flux cinétique) */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs text-muted-foreground font-medium">Fond animé</p>
-              <button
-                type="button"
-                onClick={() => setEnabled(!waveCfg.enabled)}
-                className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${
-                  waveCfg.enabled
-                    ? 'bg-primary/15 text-primary border-primary/30'
-                    : 'bg-secondary/50 text-muted-foreground border-border'
-                }`}
-              >
-                {waveCfg.enabled ? 'Activé' : 'Désactivé'}
-              </button>
-            </div>
-
-            {waveCfg.enabled && (
-              <div className="space-y-3">
-                <div className="grid grid-cols-4 gap-2">
-                  {wavePresets.map(p => {
-                    const active = p.waveColor.toLowerCase() === waveCfg.waveColor.toLowerCase();
-                    return (
-                      <button
-                        key={p.name}
-                        type="button"
-                        onClick={() => applyPreset(p.name)}
-                        className="flex flex-col items-center gap-1.5"
-                        title={p.name}
-                      >
-                        <div
-                          className={`h-9 w-9 rounded-full transition-all ${
-                            active
-                              ? 'ring-2 ring-foreground ring-offset-2 ring-offset-card scale-110'
-                              : 'hover:scale-105'
-                          }`}
-                          style={{ backgroundColor: p.waveColor }}
-                        />
-                        <span className={`text-[9px] ${active ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
-                          {p.name}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <p className="text-[11px] text-muted-foreground">Couleur libre</p>
-                    <span className="text-[10px] font-mono text-muted-foreground">{waveCfg.waveColor}</span>
-                  </div>
-                  <input
-                    type="color"
-                    value={waveCfg.waveColor}
-                    onChange={e => setWaveColor(e.target.value)}
-                    className="w-full h-9 rounded-lg border border-border cursor-pointer bg-transparent"
-                  />
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <p className="text-[11px] text-muted-foreground">Transparence du voile</p>
-                    <span className="text-[10px] font-mono text-muted-foreground">
-                      {Math.round(waveCfg.veil * 100)}%
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min={10}
-                    max={85}
-                    value={Math.round(waveCfg.veil * 100)}
-                    onChange={e => setVeil(Number(e.target.value) / 100)}
-                    className="w-full h-2 rounded-full appearance-none cursor-pointer bg-secondary"
-                  />
-                  <div className="flex justify-between text-[9px] text-muted-foreground mt-1">
-                    <span>Animation visible</span>
-                    <span>Lecture prioritaire</span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* CSV Import */}
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <FileText className="h-3.5 w-3.5 text-primary" />
-              <p className="text-xs text-muted-foreground font-medium">Import données</p>
-            </div>
-            <button
-              onClick={() => { onOpenChange(false); onOpenCsvImport(); }}
-              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-secondary/50 text-xs font-medium hover:bg-muted transition-colors"
-            >
-              <FileText className="h-3.5 w-3.5 text-primary" />
-              Importer un fichier CSV
-            </button>
-            <p className="text-[10px] text-muted-foreground mt-1 mb-2">Compatible export Lovable · Détection automatique</p>
-            <button
-              onClick={() => { onOpenChange(false); onOpenNotionImport(); }}
-              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-secondary/50 text-xs font-medium hover:bg-muted transition-colors"
-            >
-              <FileText className="h-3.5 w-3.5 text-primary" />
-              Importer depuis Notion (.md)
-            </button>
-            <p className="text-[10px] text-muted-foreground mt-1">Export Notion en Markdown · Trades ou Comptes</p>
-          </div>
-
-          {/* Event Colors */}
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <Flag className="h-3.5 w-3.5 text-primary" />
-              <p className="text-xs text-muted-foreground font-medium">Event Colors</p>
-            </div>
-            <div className="space-y-3">
-              {EVENT_TYPES.map(e => (
-                <div key={e.key} className="flex items-center justify-between gap-3">
-                  <span className="text-xs font-medium" style={{ color: evtColors[e.key] }}>{e.label}</span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {PRESET_COLORS.filter(c => c.value).map(c => (
-                      <button
-                        key={c.name}
-                        onClick={() => setEventColor(e.key, c.value)}
-                        title={c.name}
-                        className={`w-5 h-5 rounded-full border-2 transition-all hover:scale-110 ${
-                          evtColors[e.key] === c.value ? 'border-foreground ring-1 ring-foreground/30 scale-110' : 'border-border/40'
-                        }`}
-                        style={{ backgroundColor: c.value }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Navigation order */}
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <LayoutGrid className="h-3.5 w-3.5 text-primary" />
-              <p className="text-xs text-muted-foreground font-medium">Navigation</p>
-            </div>
-            <p className="text-[10px] text-muted-foreground mb-2">Drag to reorder · eye to show/hide · add separators</p>
-            <NavOrderList
-              navItems={navItems}
-              onToggle={onToggleNav}
-              onReorder={onReorderNav}
-              onAddSeparator={onAddSeparator}
-              onRemoveSeparator={onRemoveSeparator}
-            />
-          </div>
-
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
+  return <Dialog open={open} onOpenChange={close}><DialogContent className="settings-window gap-0 overflow-hidden border-border/60 p-0 sm:max-w-[900px]">
+    <DialogHeader className="settings-heading"><div className="settings-emblem"><Settings2 className="h-5 w-5" /></div><div><DialogTitle className="text-lg font-semibold tracking-tight">Paramètres</DialogTitle><DialogDescription className="mt-1 text-xs">Personnalise ton espace Trading et Finance.</DialogDescription></div></DialogHeader>
+    <div className="settings-body"><nav className="settings-menu" aria-label="Sections des paramètres">{SECTIONS.map(({ id, title, Icon }) => <button key={id} type="button" aria-current={section === id ? 'page' : undefined} onClick={() => setSection(id)} className={section === id ? 'is-current' : ''}><Icon className="h-4 w-4 shrink-0" aria-hidden="true" /><span>{title}</span></button>)}</nav>
+    <div ref={content} className="settings-content"><div key={section} className="settings-panel"><header className="mb-6"><h2 className="text-xl font-semibold tracking-tight">{current.title}</h2><p className="mt-1 text-sm text-muted-foreground">{current.description}</p></header>
+    {section === 'profile' && <div className="space-y-5"><div className="flex items-center gap-4 rounded-2xl border border-primary/15 bg-primary/5 p-5"><span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-xl font-semibold text-primary">{(name || 'M').slice(0, 1).toLocaleUpperCase('fr-FR')}</span><div><p className="font-semibold">{name || 'Mon espace'}</p><p className="mt-1 text-xs text-muted-foreground">Visible dans ton bandeau latéral</p></div></div><div className="space-y-2"><Label htmlFor="settings-name">Nom affiché</Label><Input id="settings-name" autoComplete="nickname" value={name} onChange={event => setName(event.target.value)} onBlur={() => onSetUserName(name)} placeholder="Comment souhaites-tu être appelé ?" /></div></div>}
+    {section === 'appearance' && <div className="space-y-6"><section className="settings-card"><h3>Mode d’affichage</h3><div className="mt-4 grid grid-cols-2 gap-3">{[{ value: 'light', title: 'Clair', Icon: Sun }, { value: 'dark', title: 'Sombre', Icon: Moon }].map(({ value, title, Icon }) => <button key={value} type="button" aria-pressed={mode === value} onClick={() => { if (mode !== value) onToggleMode(); }} className={`settings-mode ${mode === value ? 'is-current' : ''}`}><div className={`settings-mode-preview ${value}`}><span /><div><i /><i /><i /></div></div><span className="flex items-center justify-between text-xs font-medium"><span className="flex items-center gap-2"><Icon className="h-4 w-4" />{title}</span>{mode === value && <Check className="h-3.5 w-3.5 text-primary" />}</span></button>)}</div></section>
+    <section className="settings-card"><h3>Couleur système</h3><p className="mt-1 text-xs text-muted-foreground">Appliquée aux sélections et aux actions dans les deux espaces.</p><div className="mt-5 grid grid-cols-4 gap-3 sm:grid-cols-6">{presets.map(preset => { const active = preset.hue === theme.primaryHue && preset.sat === theme.primarySat && preset.light === theme.primaryLight; return <button type="button" key={preset.name} aria-pressed={active} aria-label={`Couleur ${preset.name}`} onClick={() => onSetColor(preset.hue, preset.sat, preset.light)} className="flex flex-col items-center gap-2 rounded-lg py-1"><span className={`flex h-8 w-8 items-center justify-center rounded-full border border-foreground/10 ${active ? 'ring-2 ring-primary ring-offset-2 ring-offset-card' : ''}`} style={{ background: `hsl(${preset.hue} ${preset.sat}% ${preset.light}%)` }}>{active && <span className="h-2 w-2 rounded-full bg-white shadow-sm" />}</span><span className="text-[10px] text-muted-foreground">{preset.name}</span></button>; })}</div><label htmlFor="settings-hue" className="mt-5 block text-xs font-medium">Nuance personnalisée</label><input id="settings-hue" type="range" min={0} max={360} value={theme.primaryHue} onChange={event => onSetColor(Number(event.target.value), theme.primarySat, theme.primaryLight)} className="mt-3 h-2 w-full cursor-pointer appearance-none rounded-full" style={{ background: 'linear-gradient(to right,#ef4444,#eab308,#22c55e,#06b6d4,#6366f1,#d946ef,#ef4444)' }} /></section>
+    <section className="settings-card"><h3 className="flex items-center gap-2"><Flag className="h-4 w-4 text-primary" />Événements du calendrier</h3><div className="mt-4 space-y-4">{EVENT_TYPES.map(event => <div key={event.key} className="flex flex-wrap items-center justify-between gap-3"><span className="text-xs font-medium">{event.label}</span><div className="flex flex-wrap gap-1.5">{PRESET_COLORS.filter(color => color.value).map(color => <button type="button" key={color.name} aria-label={`${event.label} : ${color.name}`} aria-pressed={colors[event.key] === color.value} onClick={() => setEventColor(event.key, color.value)} className={`h-6 w-6 rounded-full border-2 ${colors[event.key] === color.value ? 'border-foreground' : 'border-transparent'}`} style={{ background: color.value }} />)}</div></div>)}</div></section></div>}
+    {section === 'background' && <div className="space-y-5"><section className="settings-card"><div className="flex items-center justify-between gap-3"><div><h3>Animation du fond</h3><p className="mt-1 text-xs text-muted-foreground">Vagues dans Trading, Aero Shards dans Finance.</p></div><Switch aria-label="Activer le fond animé" checked={config.enabled} onCheckedChange={setEnabled} /></div></section><section className={`settings-card transition-opacity ${config.enabled ? '' : 'opacity-50'}`}><fieldset disabled={!config.enabled} className="space-y-5"><legend className="text-sm font-semibold">Palette partagée</legend><div className="grid grid-cols-4 gap-3">{backgrounds.map(preset => <button type="button" key={preset.name} aria-label={`Fond ${preset.name}`} aria-pressed={config.waveColor.toLowerCase() === preset.waveColor.toLowerCase()} onClick={() => applyPreset(preset.name)} className="flex flex-col items-center gap-2"><span className={`h-10 w-full rounded-xl border border-foreground/10 ${config.waveColor.toLowerCase() === preset.waveColor.toLowerCase() ? 'ring-2 ring-primary ring-offset-2 ring-offset-card' : ''}`} style={{ background: `linear-gradient(140deg, ${preset.waveColor}, color-mix(in srgb, ${preset.waveColor} 15%, #101018))` }} /><span className="text-[10px] text-muted-foreground">{preset.name}</span></button>)}</div><div className="flex items-center justify-between gap-3"><Label htmlFor="settings-background-color">Couleur personnalisée</Label><input id="settings-background-color" type="color" value={config.waveColor} onChange={event => setWaveColor(event.target.value)} className="h-9 w-16 cursor-pointer rounded-lg border border-border bg-transparent" /></div><div><div className="flex justify-between"><Label htmlFor="settings-veil">Confort de lecture</Label><span className="text-xs text-muted-foreground">{Math.round(config.veil * 100)} %</span></div><input id="settings-veil" type="range" min={10} max={85} value={Math.round(config.veil * 100)} onChange={event => setVeil(Number(event.target.value) / 100)} className="mt-3 w-full accent-primary" /><div className="mt-1 flex justify-between text-[10px] text-muted-foreground"><span>Fond plus visible</span><span>Fond plus discret</span></div></div></fieldset></section></div>}
+    {section === 'navigation' && <section className="settings-card"><h3>Navigation Trading</h3><p className="mb-4 mt-1 text-xs leading-relaxed text-muted-foreground">Déplace les rubriques avec les flèches ou par glisser-déposer. L’œil contrôle leur visibilité.</p><NavOrderList navItems={navItems} onToggle={onToggleNav} onReorder={onReorderNav} onAddSeparator={onAddSeparator} onRemoveSeparator={onRemoveSeparator} /></section>}
+    {section === 'data' && <div className="space-y-3">{[{ title: 'Importer un fichier CSV', subtitle: 'Trades et comptes · détection des colonnes', action: onOpenCsvImport }, { title: 'Importer depuis Notion', subtitle: 'Export Markdown (.md) · trades ou comptes', action: onOpenNotionImport }].map(item => <button key={item.title} type="button" onClick={() => { close(false); item.action(); }} className="settings-import"><span className="rounded-xl bg-primary/10 p-3 text-primary"><FileText className="h-5 w-5" /></span><span className="min-w-0 flex-1 text-left"><span className="block text-sm font-semibold">{item.title}</span><span className="mt-1 block text-xs text-muted-foreground">{item.subtitle}</span></span><ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" /></button>)}</div>}
+    </div></div></div>
+    <footer className="settings-footer"><span className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><Check className="h-3.5 w-3.5 text-primary" />Préférences conservées automatiquement</span><Button type="button" onClick={() => close(false)}>Terminé</Button></footer>
+  </DialogContent></Dialog>;
 }
