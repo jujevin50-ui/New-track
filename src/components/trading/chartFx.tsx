@@ -1,20 +1,12 @@
 import React from 'react';
-import { chartLineCursor } from '@/lib/chartMotion';
+import { chartLineCursor, chartTooltipSurface } from '@/lib/chartMotion';
 
 /* ── Shared "trading terminal" chart effects ─────────────────────────
    Clean, low-noise tooltip and hover cursors — used by every dashboard
    chart. Kept deliberately sober: solid surface, thin border, minimal
    shadow, no neon/glow — closer to a professional analytics terminal. */
 
-export const glassTooltip: React.CSSProperties = {
-  backgroundColor: 'hsl(var(--popover))',
-  border: '1px solid hsl(var(--border))',
-  borderRadius: '12px',
-  fontSize: '12px',
-  boxShadow: 'var(--shadow-pop)',
-  color: 'hsl(var(--popover-foreground))',
-  padding: '10px 14px',
-};
+export const glassTooltip = chartTooltipSurface;
 
 export const tooltipLabelStyle: React.CSSProperties = {
   color: 'hsl(var(--muted-foreground))',

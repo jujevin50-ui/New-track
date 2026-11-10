@@ -1,4 +1,4 @@
-import { chartCurveMotion, chartSeriesMotion, chartTooltipMotion } from '@/lib/chartMotion';
+import { chartCurveMotion, chartSeriesMotion, chartTooltipMotion, chartTooltipSurface } from '@/lib/chartMotion';
 import { useId, useMemo } from 'react';
 import { ComposedChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid, Line } from 'recharts';
 
@@ -9,13 +9,7 @@ interface Props {
   medianLineVisible?: boolean;
 }
 
-const tooltipStyle = {
-  backgroundColor: 'hsla(0, 0%, 8%, 0.9)',
-  border: '1px solid hsla(0, 0%, 20%, 0.5)',
-  borderRadius: '12px',
-  fontSize: '12px',
-  boxShadow: '0 8px 32px hsla(0, 0%, 0%, 0.4)',
-};
+const tooltipStyle = chartTooltipSurface;
 
 const ProfitDistributionChart = ({ data, accentColor, medianLineColor, medianLineVisible }: Props) => {
   const uid = useId();
