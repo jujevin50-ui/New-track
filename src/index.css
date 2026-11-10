@@ -1030,3 +1030,8 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 .dashboard-text-link:hover { color: hsl(var(--foreground)); }
 @media (max-width: 639px) { .dashboard-filter select { max-width: 175px; } .dashboard-filters { gap: 10px; } }
 @media (prefers-reduced-motion: reduce) { .dashboard-switch button, .dashboard-text-link { transition: none; } }
+
+.dashboard-filter { padding: 6px 10px; border: 1px solid hsl(var(--border)); border-radius: 12px; background: hsl(var(--secondary) / 0.25); transition: border-color 160ms ease; }
+.dashboard-filter:focus-within { border-color: hsl(var(--primary)); box-shadow: 0 0 0 2px hsl(var(--primary) / 0.1); }
+.dashboard-filter select { min-height: 30px; background: transparent; cursor: pointer; font-weight: 500; }
+.dashboard-filter select option { background: hsl(var(--background)); color: hsl(var(--foreground)); }
