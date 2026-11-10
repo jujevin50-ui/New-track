@@ -1,4 +1,3 @@
-import { FlowSurface } from '@/components/FlowSurface';
 import { useState } from 'react';
 import { BarChart3, List, Wallet, CalendarDays, ClipboardList, LogOut, Settings, Sparkles } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
@@ -67,7 +66,6 @@ export function AppSidebar() {
         </div>
 
         <SidebarContent className="relative isolate py-2">
-          <FlowSurface variant="panel" />
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
