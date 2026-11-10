@@ -986,3 +986,11 @@ html .workspace-shell main :is(input, textarea, select, button).bg-card { border
 html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px solid hsl(var(--primary)); }
 
 .workspace-rail, .workspace-rail-mobile { color: hsl(var(--foreground)); background: hsl(var(--background)); }
+/* Quiet text navigation and a single profile/settings capsule. */
+.rail-links .header-nav-icon { display: none; }
+.rail-actions { align-items: center; border-top: 0; padding: 20px 6px; }
+.rail-settings-pill { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; max-width: 100%; padding: 10px 20px; border: 1px solid hsl(var(--border)); border-radius: 999px; background: hsl(var(--secondary) / 0.65); font-size: 12px; font-weight: 500; transition: background 180ms ease, border-color 180ms ease; }
+.rail-settings-pill span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rail-settings-pill svg { flex-shrink: 0; color: hsl(var(--primary)); }
+.rail-settings-pill:hover { background: hsl(var(--primary) / 0.1); border-color: hsl(var(--primary) / 0.35); }
+.rail-settings-pill:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }

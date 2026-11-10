@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LogOut, Settings, LayoutDashboard, CalendarDays, ArrowRightLeft, Target, BarChart3, Sparkles, BookOpen, Wallet } from 'lucide-react';
+import { Settings, LayoutDashboard, CalendarDays, ArrowRightLeft, Target, BarChart3, Sparkles, BookOpen, Wallet } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { useNavConfig } from '@/hooks/useNavConfig';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { useData } from '@/contexts/DataContext';
 import { SettingsDialog } from './SettingsDialog';
 import { CsvImportDialog } from './CsvImportDialog';
 import { NotionImportDialog } from './NotionImportDialog';
@@ -25,7 +24,6 @@ const NAV_ITEMS = [
 
 export function TopNav({ sidebar = false, utilitiesOnly = false }: { sidebar?: boolean; utilitiesOnly?: boolean } = {}) {
   const location = useLocation();
-  const { disconnect } = useData();
   const { theme, mode, setColor, toggleMode, presets } = useTheme();
   const { navItems, toggleNav, reorderNav, addSeparator, removeSeparator } = useNavConfig();
   const { userName, setUserName } = useUserProfile();
@@ -54,12 +52,10 @@ export function TopNav({ sidebar = false, utilitiesOnly = false }: { sidebar?: b
       <nav className={sidebar ? `rail-nav${utilitiesOnly ? ' rail-nav-utilities' : ''}` : NAV_PILL} aria-label={utilitiesOnly ? 'Actions de l’espace' : 'Navigation principale'}>
         {!utilitiesOnly && (sidebar ? <div className="rail-links">{navItems.map(item => item.type === 'separator' ? <div key={item.id} role="separator" className="mx-3 my-2 border-t border-border/60" /> : item.visible ? links.find(link => link.key === item.id) : null)}</div> : <HeaderNavLinks activeKey={location.pathname}>{links}</HeaderNavLinks>)}
         <div className={sidebar ? 'rail-actions' : 'header-nav-actions'}>
-          <button onClick={() => setSettingsOpen(true)} className={sidebar ? 'rail-utility' : 'header-action'} aria-label="Settings">
-            <Settings className="h-4 w-4" />{sidebar && <span>Paramètres</span>}
+          <button onClick={() => setSettingsOpen(true)} className={sidebar ? 'rail-settings-pill' : 'header-action'} aria-label="Settings">
+            <Settings className="h-4 w-4" />{sidebar && <span>{userName || 'Paramètres'}</span>}
           </button>
-          <button onClick={disconnect} className={sidebar ? 'rail-utility hover:!text-loss' : 'header-action hover:!text-loss'} aria-label="Changer de fichier">
-            <LogOut className="h-4 w-4" />{sidebar && <span>Changer de fichier</span>}
-          </button>
+
         </div>
       </nav>
 
