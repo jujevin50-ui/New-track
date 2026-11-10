@@ -975,7 +975,7 @@ html .workspace-shell main :is(.surface, .app-panel, .metric-card, .report-paper
 }
 html .workspace-shell main :is(.surface, .app-panel, .metric-card, .report-paper) {
   border: 0;
-  border-top: 1px solid hsl(var(--border) / 0.7);
+  border-top: 0;
 }
 html .workspace-shell main .metric-card:hover { transform: none; box-shadow: none; }
 html .workspace-shell main .rb-lift:hover { transform: none; box-shadow: none; }
@@ -1015,14 +1015,14 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 @media (prefers-reduced-motion: reduce) { .chart-motion-dot, .recharts-pie-sector path { transition: none; } }
 
 /* Minimal dashboard: open sections, quiet controls and one visual priority. */
-.dashboard-section { min-width: 0; border-top: 1px solid hsl(var(--border) / 0.7); padding-top: 24px; }
+.dashboard-section { min-width: 0; border-top: 0; padding-top: 24px; }
 .dashboard-switch { display: inline-flex; align-items: center; gap: 3px; padding: 3px; border: 1px solid hsl(var(--border) / 0.65); border-radius: 11px; }
 .dashboard-switch button { min-height: 34px; padding: 7px 19px; border-radius: 8px; font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground)); transition: color 160ms ease, background 160ms ease; }
 .dashboard-switch button[aria-pressed="true"] { background: hsl(var(--secondary)); color: hsl(var(--foreground)); }
 .dashboard-switch-small button { min-height: 28px; padding: 5px 10px; font-size: 10px; }
 .dashboard-switch button:disabled { opacity: 0.35; cursor: not-allowed; }
 .dashboard-switch button:focus-visible, .dashboard-text-link:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }
-.dashboard-filters { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid hsl(var(--border) / 0.65); border-bottom: 1px solid hsl(var(--border) / 0.65); padding: 15px 0; }
+.dashboard-filters { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; border-top: 0; border-bottom: 0; padding: 15px 0; }
 .dashboard-text-link { color: hsl(var(--muted-foreground)); font-size: 11px; transition: color 160ms ease; }
 .dashboard-text-link:hover { color: hsl(var(--foreground)); }
 @media (max-width: 639px) { .dashboard-filters { gap: 10px; } }
@@ -1059,3 +1059,10 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 .dashboard-metric-body { position: relative; display: flex; align-items: flex-end; justify-content: center; height: 108px; padding: 0 0 13px; margin-top: 12px; }
 .dashboard-metric-value { position: relative; z-index: 1; font-size: clamp(16px, 1.6vw, 26px); line-height: 1.2; font-weight: 600; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .dashboard-metric-gauge { position: absolute; width: 168px; max-width: 100%; height: 98px; bottom: 0; }
+
+/* Page sections are separated by spacing, without gray divider rules. */
+.workspace-shell main .divide-y > :not([hidden]) ~ :not([hidden]),
+.workspace-shell main .divide-x > :not([hidden]) ~ :not([hidden]) { border-width: 0 !important; }
+.workspace-shell main :is(.border-t, .border-b) { border-top-width: 0 !important; border-bottom-width: 0 !important; }
+.workspace-shell main :is(hr, [role=separator]) { display: none; }
+.workspace-rail { border-right: 0; }
