@@ -1,3 +1,4 @@
+import { chartCurveMotion, chartSeriesMotion, chartTooltipMotion } from '@/lib/chartMotion';
 import { useId, useMemo } from 'react';
 import { ComposedChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid, Line } from 'recharts';
 
@@ -46,12 +47,12 @@ const ProfitDistributionChart = ({ data, accentColor, medianLineColor, medianLin
         </defs>
         <CartesianGrid stroke="hsla(215,15%,55%,0.18)" strokeWidth={1} vertical={false} />
         {medianLineVisible !== false && (
-          <Line type="monotone" dataKey="avgLine" stroke={medianLineColor || 'hsl(38,92%,50%)'} strokeWidth={1} dot={false} connectNulls />
+          <Line {...chartCurveMotion} type="monotone" dataKey="avgLine" stroke={medianLineColor || 'hsl(38,92%,50%)'} strokeWidth={1} dot={false} connectNulls />
         )}
         <XAxis dataKey="range" tick={{ fontSize: 9, fill: 'hsla(215, 15%, 55%, 0.7)' }} tickLine={false} axisLine={false} tickFormatter={v => `$${v}`} />
         <YAxis tick={{ fontSize: 10, fill: 'hsla(215, 15%, 55%, 0.7)' }} tickLine={false} axisLine={false} />
-        <Tooltip cursor={false} contentStyle={tooltipStyle} formatter={(value: number) => [value, 'Trades']} labelFormatter={l => `$${l} à $${Number(l) + 50}`} />
-        <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+        <Tooltip {...chartTooltipMotion} cursor={false} contentStyle={tooltipStyle} formatter={(value: number) => [value, 'Trades']} labelFormatter={l => `$${l} à $${Number(l) + 50}`} />
+        <Bar {...chartSeriesMotion} dataKey="count" radius={[6, 6, 0, 0]}>
           {data.map((entry, index) => (
             <Cell key={index} fill={entry.isProfit ? `url(#distProfit-${uid})` : `url(#distLoss-${uid})`} />
           ))}

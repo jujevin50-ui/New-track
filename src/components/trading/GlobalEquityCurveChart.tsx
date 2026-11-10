@@ -1,3 +1,4 @@
+import { chartCurveMotion, chartTooltipMotion } from '@/lib/chartMotion';
 import { useId, useMemo } from 'react';
 import { ComposedChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Line } from 'recharts';
 import { niceTicks, niceDomain } from '@/lib/chartTicks';
@@ -64,23 +65,21 @@ const GlobalEquityCurveChart = ({ data, accentColor, liveColor, medianLineColor,
         </defs>
         <CartesianGrid stroke="hsla(215,15%,55%,0.14)" strokeWidth={1} strokeDasharray="3 6" vertical={false} />
         {medianLineVisible !== false && (
-          <Line type="monotone" dataKey="avgLine" stroke={medianLineColor || 'hsl(38,92%,50%)'} strokeWidth={1} strokeDasharray="5 5" strokeOpacity={0.8} dot={false} connectNulls />
+          <Line {...chartCurveMotion} type="monotone" dataKey="avgLine" stroke={medianLineColor || 'hsl(38,92%,50%)'} strokeWidth={1} strokeDasharray="5 5" strokeOpacity={0.8} dot={false} connectNulls />
         )}
         <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'hsla(215, 15%, 55%, 0.7)' }} tickLine={false} axisLine={false} />
         <YAxis domain={domain} ticks={ticks} tick={{ fontSize: 10, fill: 'hsla(215, 15%, 55%, 0.7)' }} tickLine={false} axisLine={false} tickFormatter={v => `$${v.toLocaleString()}`} />
-        <Tooltip cursor={lineCursor} contentStyle={glassTooltip} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle}
+        <Tooltip {...chartTooltipMotion} cursor={lineCursor} contentStyle={glassTooltip} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle}
           formatter={(value: number, name: string) => [
             `$${value.toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
             name === 'balanceLive' ? 'Balance (Live 🔴)' : 'Global Balance',
           ]}
         />
-        <Area type="linear" dataKey="balanceClosed" stroke={color} fill={`url(#globalGrad-${uid})`} strokeWidth={2.5} filter={`url(#glow-${uid})`}
-          dot={hasLive ? false : makePulseDot(data.length - 1, color)}
-          activeDot={{ r: 4, fill: color, stroke: color, strokeWidth: 2 }} connectNulls={false} />
+        <Area {...chartCurveMotion} type="linear" dataKey="balanceClosed" stroke={color} fill={`url(#globalGrad-${uid})`} strokeWidth={2.5} filter={`url(#glow-${uid})`}
+          dot={hasLive ? false : makePulseDot(data.length - 1, color)} connectNulls={false} />
         {hasLive && (
-          <Area type="linear" dataKey="balanceLive" stroke={live} fill={`url(#globalLiveGrad-${uid})`} strokeWidth={2.5} strokeDasharray="6 3" filter={`url(#glow-${uid})`}
-            dot={makePulseDot(data.length - 1, live)}
-            activeDot={{ r: 4, fill: live, stroke: live, strokeWidth: 2 }} connectNulls={false} />
+          <Area {...chartCurveMotion} type="linear" dataKey="balanceLive" stroke={live} fill={`url(#globalLiveGrad-${uid})`} strokeWidth={2.5} strokeDasharray="6 3" filter={`url(#glow-${uid})`}
+            dot={makePulseDot(data.length - 1, live)} connectNulls={false} />
         )}
       </ComposedChart>
     </ResponsiveContainer>

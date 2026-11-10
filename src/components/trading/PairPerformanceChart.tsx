@@ -1,3 +1,4 @@
+import { chartSeriesMotion, chartTooltipMotion } from '@/lib/chartMotion';
 import { useId, useMemo } from 'react';
 import { ComposedChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid, ReferenceLine, LabelList } from 'recharts';
 import { niceTicks, niceDomain } from '@/lib/chartTicks';
@@ -50,8 +51,8 @@ const PairPerformanceChart = ({ data, accentColor, medianLineColor, medianLineVi
         {medianLineVisible !== false && <ReferenceLine x={data.length > 0 ? data.reduce((s, d) => s + d.percent, 0) / data.length : 0} {...medianLineStyle(medianLineColor)} />}
         <XAxis type="number" domain={domain} ticks={ticks} tick={axisTick} tickLine={false} axisLine={false} tickFormatter={v => `${v.toFixed(v < 1 && v > -1 ? 1 : 0)}%`} />
         <YAxis dataKey="pair" type="category" tick={catAxisTick} tickLine={false} axisLine={false} width={70} />
-        <Tooltip cursor={barCursor} contentStyle={glassTooltip} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} formatter={(value: number) => [`${value >= 0 ? '+' : ''}${value.toFixed(2)}%`, 'Performance']} />
-        <Bar dataKey="percent" radius={[0, 3, 3, 0]} barSize={16}>
+        <Tooltip {...chartTooltipMotion} cursor={barCursor} contentStyle={glassTooltip} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} formatter={(value: number) => [`${value >= 0 ? '+' : ''}${value.toFixed(2)}%`, 'Performance']} />
+        <Bar {...chartSeriesMotion} dataKey="percent" radius={[0, 3, 3, 0]} barSize={16}>
           <LabelList dataKey="percent" position="right"
             formatter={(v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`}
             style={{ ...valueLabelStyle, fontWeight: 400, fill: 'hsl(215, 15%, 65%)' }} />

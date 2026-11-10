@@ -1,3 +1,4 @@
+import { chartCurveMotion, chartSeriesMotion, chartTooltipMotion } from '@/lib/chartMotion';
 import { useId, useMemo } from 'react';
 import { ComposedChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid, Line, ReferenceLine, LabelList } from 'recharts';
 import { Trade, getNetResult } from '@/types/trade';
@@ -62,12 +63,12 @@ const ProfitPerTradeChart = ({ trades, accounts, accentColor, medianLineColor, m
         <CartesianGrid {...gridProps} />
         <ReferenceLine y={0} {...zeroLine} />
         {medianLineVisible !== false && (
-          <Line type="monotone" dataKey="avgLine" {...medianLineStyle(medianLineColor)} dot={false} connectNulls />
+          <Line {...chartCurveMotion} type="monotone" dataKey="avgLine" {...medianLineStyle(medianLineColor)} dot={false} connectNulls />
         )}
         <XAxis dataKey="name" tick={axisTick} tickLine={false} axisLine={false} />
         <YAxis domain={domain} ticks={ticks} tick={axisTick} tickLine={false} axisLine={false} tickFormatter={v => `${v}%`} />
-        <Tooltip cursor={barCursor} contentStyle={glassTooltip} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} formatter={(value: number, name: string, entry: any) => [`${value.toFixed(2)}%`, name === 'avgLine' ? 'Average' : entry.payload.pair]} />
-        <Bar dataKey="profit" radius={[3, 3, 0, 0]} maxBarSize={28}>
+        <Tooltip {...chartTooltipMotion} cursor={barCursor} contentStyle={glassTooltip} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} formatter={(value: number, name: string, entry: any) => [`${value.toFixed(2)}%`, name === 'avgLine' ? 'Average' : entry.payload.pair]} />
+        <Bar {...chartSeriesMotion} dataKey="profit" radius={[3, 3, 0, 0]} maxBarSize={28}>
           <LabelList dataKey="profit" position="top"
             formatter={(v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`}
             style={valueLabelStyle} />

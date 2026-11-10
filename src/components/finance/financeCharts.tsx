@@ -1,3 +1,4 @@
+import { chartCurveMotion, chartSeriesMotion, chartTooltipMotion } from '@/lib/chartMotion';
 import { useId, useMemo } from 'react';
 import {
   ComposedChart, Area, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -79,9 +80,9 @@ export function FlowAreaChart({ data, lastIndex }: { data: { day: string; net: n
         <ReferenceLine y={0} {...zeroLine} />
         <XAxis dataKey="day" {...xAxisProps} interval="preserveStartEnd" minTickGap={14} />
         <YAxis domain={domain} ticks={ticks} {...yAxisProps} />
-        <Tooltip cursor={lineCursor} {...tooltipCommon} labelFormatter={(l: any) => `Jour ${l}`} formatter={(v: number) => [fmtEur(v), 'Net cumulé']} />
-        <Area type="monotone" dataKey="net" stroke={color} fill={`url(#flow-${uid})`} strokeWidth={2.5}
-          dot={makePulseDot(lastIndex, color)} activeDot={{ r: 4, fill: color, stroke: color, strokeWidth: 2 }} connectNulls={false} />
+        <Tooltip {...chartTooltipMotion} cursor={lineCursor} {...tooltipCommon} labelFormatter={(l: any) => `Jour ${l}`} formatter={(v: number) => [fmtEur(v), 'Net cumulé']} />
+        <Area {...chartCurveMotion} type="monotone" dataKey="net" stroke={color} fill={`url(#flow-${uid})`} strokeWidth={2.5}
+          dot={makePulseDot(lastIndex, color)} connectNulls={false} />
         {lastPoint?.net != null && (
           <ReferenceDot x={lastPoint.day} y={lastPoint.net} r={0} label={{ value: tickEur(lastPoint.net), position: 'top', ...valueLabelStyle } as any} />
         )}
@@ -113,10 +114,10 @@ export function YearFlowBars({ data }: { data: { month: string; income: number; 
         <ReferenceLine y={0} {...zeroLine} />
         <XAxis dataKey="month" {...xAxisProps} />
         <YAxis domain={domain} ticks={ticks} {...yAxisProps} />
-        <Tooltip cursor={barCursor} {...tooltipCommon} formatter={(v: number, name: string) => [fmtEur(v), name]} />
+        <Tooltip {...chartTooltipMotion} cursor={barCursor} {...tooltipCommon} formatter={(v: number, name: string) => [fmtEur(v), name]} />
         <Legend wrapperStyle={legendStyle} iconType="circle" iconSize={8} />
-        <Bar dataKey="income" name="Revenus" fill={`url(#inc-${uid})`} radius={[6, 6, 0, 0]} barSize={12} />
-        <Bar dataKey="expenses" name="Dépenses" fill={`url(#exp-${uid})`} radius={[6, 6, 0, 0]} barSize={12} />
+        <Bar {...chartSeriesMotion} dataKey="income" name="Revenus" fill={`url(#inc-${uid})`} radius={[6, 6, 0, 0]} barSize={12} />
+        <Bar {...chartSeriesMotion} dataKey="expenses" name="Dépenses" fill={`url(#exp-${uid})`} radius={[6, 6, 0, 0]} barSize={12} />
       </ComposedChart>
     </ResponsiveContainer>
   );
@@ -140,9 +141,9 @@ export function CashflowChart({ data }: { data: { month: string; cashflow: numbe
         <ReferenceLine y={0} {...zeroLine} />
         <XAxis dataKey="month" {...xAxisProps} />
         <YAxis domain={domain} ticks={ticks} {...yAxisProps} />
-        <Tooltip cursor={lineCursor} {...tooltipCommon} formatter={(v: number) => [fmtEur(v), 'Cash-flow']} />
-        <Area type="monotone" dataKey="cashflow" stroke={color} fill={`url(#cf-${uid})`} strokeWidth={2.5}
-          dot={makeTurningPointDots(data, 'cashflow', color)} activeDot={{ r: 4, fill: color, stroke: color, strokeWidth: 2 }} />
+        <Tooltip {...chartTooltipMotion} cursor={lineCursor} {...tooltipCommon} formatter={(v: number) => [fmtEur(v), 'Cash-flow']} />
+        <Area {...chartCurveMotion} type="monotone" dataKey="cashflow" stroke={color} fill={`url(#cf-${uid})`} strokeWidth={2.5}
+          dot={makeTurningPointDots(data, 'cashflow', color)} />
         {lastPoint && (
           <ReferenceDot x={lastPoint.month} y={lastPoint.cashflow} r={0} label={{ value: tickEur(lastPoint.cashflow), position: 'top', ...valueLabelStyle } as any} />
         )}
@@ -162,7 +163,7 @@ export function Donut({ data, centerLabel, colors = PALETTE }: { data: { name: s
     <ResponsiveContainer width="100%" height="100%">
       <PieChart>
         <defs><Glow id={`glow-${uid}`} strength={4} /></defs>
-        <Pie data={filtered} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius="72%" outerRadius="96%" strokeWidth={0} paddingAngle={filtered.length > 1 ? 3 : 0} cornerRadius={6}>
+        <Pie {...chartSeriesMotion} data={filtered} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius="72%" outerRadius="96%" strokeWidth={0} paddingAngle={filtered.length > 1 ? 3 : 0} cornerRadius={6}>
           {filtered.map((d, i) => <Cell key={i} fill={colors[d._i % colors.length]} />)}
         </Pie>
         <text x="50%" y="47%" textAnchor="middle" dominantBaseline="central" style={{ fontSize: 18, fontWeight: 700, fill: 'hsl(var(--foreground))', fontFamily: 'inherit' }}>
@@ -171,7 +172,7 @@ export function Donut({ data, centerLabel, colors = PALETTE }: { data: { name: s
         <text x="50%" y="58%" textAnchor="middle" dominantBaseline="central" style={{ fontSize: 12, fontWeight: 500, fill: 'hsl(var(--muted-foreground))', fontFamily: 'inherit' }}>
           {centerLabel}
         </text>
-        <Tooltip cursor={false} contentStyle={glassTooltip} itemStyle={tooltipItemStyle}
+        <Tooltip {...chartTooltipMotion} cursor={false} contentStyle={glassTooltip} itemStyle={tooltipItemStyle}
           formatter={(v: number, name: string) => [`${fmtEur(v)} (${total > 0 ? Math.round((v / total) * 100) : 0}%)`, name]} />
       </PieChart>
     </ResponsiveContainer>
@@ -206,8 +207,8 @@ export function AccountBars({ data }: { data: { name: string; balance: number }[
         <ReferenceLine x={0} {...zeroLine} />
         <XAxis type="number" domain={domain} ticks={ticks} {...xAxisProps} tickFormatter={tickEur} />
         <YAxis dataKey="name" type="category" tick={catAxisTick} tickLine={false} axisLine={false} width={100} />
-        <Tooltip cursor={barCursor} {...tooltipCommon} formatter={(v: number) => [fmtEur(v), 'Solde']} />
-        <Bar dataKey="balance" radius={[0, 8, 8, 0]} barSize={14}>
+        <Tooltip {...chartTooltipMotion} cursor={barCursor} {...tooltipCommon} formatter={(v: number) => [fmtEur(v), 'Solde']} />
+        <Bar {...chartSeriesMotion} dataKey="balance" radius={[0, 8, 8, 0]} barSize={14}>
           <LabelList dataKey="balance" position="right" formatter={(v: number) => tickEur(v)} style={valueLabelStyle} />
           {sorted.map((e, i) => (
             <Cell key={i} fill={e.balance >= 0 ? `url(#pos-${uid})` : `url(#neg-${uid})`} />
@@ -245,12 +246,12 @@ export function ValueAreaChart({ data, initialCapital }: {
         )}
         <XAxis dataKey="label" {...xAxisProps} />
         <YAxis domain={domain} ticks={ticks} {...yAxisProps} />
-        <Tooltip cursor={lineCursor} {...tooltipCommon} formatter={(v: number, name: string) => [fmtEur(v), name]} />
+        <Tooltip {...chartTooltipMotion} cursor={lineCursor} {...tooltipCommon} formatter={(v: number, name: string) => [fmtEur(v), name]} />
         {hasDeposits && <Legend wrapperStyle={legendStyle} iconType="circle" iconSize={8} />}
-        <Area type="monotone" dataKey="value" name="Valeur" stroke={color} fill={`url(#val-${uid})`} strokeWidth={2.5}
-          dot={makeTurningPointDots(data, 'value', color)} activeDot={{ r: 4, fill: color, stroke: color, strokeWidth: 2 }} />
+        <Area {...chartCurveMotion} type="monotone" dataKey="value" name="Valeur" stroke={color} fill={`url(#val-${uid})`} strokeWidth={2.5}
+          dot={makeTurningPointDots(data, 'value', color)} />
         {hasDeposits && (
-          <Line type="monotone" dataKey="deposited" name="Capital versé" {...medianLineStyle(BLUE)} strokeOpacity={1} strokeWidth={1.5}
+          <Line {...chartCurveMotion} type="monotone" dataKey="deposited" name="Capital versé" {...medianLineStyle(BLUE)} strokeOpacity={1} strokeWidth={1.5}
             dot={{ r: 2.5, fill: BLUE, stroke: darkRing, strokeWidth: 1.2 }} connectNulls />
         )}
         {lastPoint && (
@@ -291,13 +292,12 @@ export function MultiLineChart({ rows, series, unit = 'eur' }: {
         {isPct && <ReferenceLine y={0} {...zeroLine} />}
         <XAxis dataKey="label" {...xAxisProps} />
         <YAxis domain={domain} ticks={ticks} {...yAxisProps} tickFormatter={yFmt} width={isPct ? 56 : 64} />
-        <Tooltip cursor={lineCursor} {...tooltipCommon} formatter={tipFmt as any} />
+        <Tooltip {...chartTooltipMotion} cursor={lineCursor} {...tooltipCommon} formatter={tipFmt as any} />
         <Legend wrapperStyle={legendStyle} iconType="circle" iconSize={8} />
         {series.map(s => (
-          <Line key={s.key} type="monotone" dataKey={s.key} stroke={s.color} strokeWidth={s.strong ? 2.5 : 1.75}
+          <Line {...chartCurveMotion} key={s.key} type="monotone" dataKey={s.key} stroke={s.color} strokeWidth={s.strong ? 2.5 : 1.75}
             filter={s.strong ? `url(#glow-${uid})` : undefined}
-            dot={{ r: s.strong ? 3.5 : 2.5, fill: s.color, stroke: darkRing, strokeWidth: 1.2 }}
-            activeDot={{ r: 4, fill: s.color, stroke: s.color, strokeWidth: 2 }} connectNulls />
+            dot={{ r: s.strong ? 3.5 : 2.5, fill: s.color, stroke: darkRing, strokeWidth: 1.2 }} connectNulls />
         ))}
       </ComposedChart>
     </ResponsiveContainer>

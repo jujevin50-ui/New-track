@@ -996,3 +996,20 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 .rail-settings-pill:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }
 .rail-brand-logo { justify-content: center; padding: 0 0 22px; }
 .rail-workspaces { margin-bottom: 22px; }
+
+/* Trendtrack-inspired motion: one reveal, then a fluid pointer-led inspection. */
+.recharts-tooltip-wrapper { transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1) !important; will-change: transform; }
+.chart-motion-cursor { transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1); }
+.recharts-line-curve, .recharts-area-curve, .recharts-area-area { animation: chart-trace-in 1050ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.recharts-line-dots, .recharts-area-dots { animation: chart-points-in 1050ms ease both; }
+.recharts-bar-rectangle, .recharts-pie, .recharts-radar-polygon { animation: chart-shape-in 650ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes chart-trace-in { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes chart-points-in { 0%, 55% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes chart-shape-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .recharts-tooltip-wrapper, .chart-motion-cursor { transition: none !important; }
+  .recharts-line-curve, .recharts-area-curve, .recharts-area-area, .recharts-line-dots, .recharts-area-dots, .recharts-bar-rectangle, .recharts-pie, .recharts-radar-polygon { animation: none; }
+}
+.chart-motion-dot { transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1); }
+.recharts-pie-sector path { transition: fill-opacity 160ms ease; }
+@media (prefers-reduced-motion: reduce) { .chart-motion-dot, .recharts-pie-sector path { transition: none; } }

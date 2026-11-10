@@ -1,3 +1,4 @@
+import { chartCurveMotion, chartTooltipMotion, chartLineCursor } from '@/lib/chartMotion';
 import { useEffect, useMemo, useState } from 'react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -25,12 +26,12 @@ export default function DisciplineYearChart({ journals, selectedDate, today, onS
           <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeDasharray="3 5" />
           <XAxis dataKey="date" ticks={monthTicks} tickFormatter={date => new Date(`${date}T12:00:00`).toLocaleDateString('fr-FR', { month: 'short' })} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} tickLine={false} axisLine={false} minTickGap={18} dy={8} />
           <YAxis domain={[0, 100]} ticks={[0, 20, 40, 60, 80, 100]} tickFormatter={value => `${value} %`} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} tickLine={false} axisLine={false} width={52} />
-          <Tooltip filterNull={false} content={({ active, payload, label }) => {
+          <Tooltip {...chartTooltipMotion} cursor={chartLineCursor} filterNull={false} content={({ active, payload, label }) => {
             if (!active || !payload?.length || typeof label !== 'string') return null;
             const percent = payload[0]?.payload?.percent;
             return <div className="rounded-[10px] border border-border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-sm"><p className="font-medium">{new Date(`${label}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</p><p className="mt-1 text-muted-foreground">{percent === null ? label > today ? 'À venir' : 'Sans suivi' : `${percent} % · ${percent / 20} règles sur 5`}</p></div>;
           }} />
-          <Area type="linear" dataKey="percent" fill="hsl(var(--muted-foreground))" fillOpacity={0.22} stroke="hsl(var(--foreground))" strokeWidth={2} dot={{ r: 2, fill: 'hsl(var(--foreground))', strokeWidth: 0 }} activeDot={{ r: 5 }} connectNulls={false} isAnimationActive={false} />
+          <Area {...chartCurveMotion} type="linear" dataKey="percent" fill="hsl(var(--muted-foreground))" fillOpacity={0.22} stroke="hsl(var(--foreground))" strokeWidth={2} dot={{ r: 2, fill: 'hsl(var(--foreground))', strokeWidth: 0 }} connectNulls={false} />
         </AreaChart>
       </ResponsiveContainer>
     </div>

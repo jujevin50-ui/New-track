@@ -1,4 +1,5 @@
 import React from 'react';
+import { chartLineCursor } from '@/lib/chartMotion';
 
 /* ── Shared "trading terminal" chart effects ─────────────────────────
    Clean, low-noise tooltip and hover cursors — used by every dashboard
@@ -24,7 +25,7 @@ export const tooltipLabelStyle: React.CSSProperties = {
 
 export const tooltipItemStyle: React.CSSProperties = { color: 'hsl(var(--popover-foreground))', fontWeight: 600 };
 
-export const lineCursor = { stroke: 'hsl(var(--muted-foreground) / 0.35)', strokeWidth: 1, strokeDasharray: '3 3' };
+export const lineCursor = chartLineCursor;
 export const barCursor = { fill: 'hsl(var(--muted-foreground) / 0.08)' };
 
 const AXIS_FONT = 'Inter, system-ui, sans-serif';

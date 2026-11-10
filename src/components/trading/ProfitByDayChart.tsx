@@ -1,3 +1,4 @@
+import { chartCurveMotion, chartSeriesMotion, chartTooltipMotion } from '@/lib/chartMotion';
 import { useId, useMemo } from 'react';
 import { ComposedChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid, Line, ReferenceLine } from 'recharts';
 import { niceTicks, niceDomain } from '@/lib/chartTicks';
@@ -52,12 +53,12 @@ const ProfitByDayChart = ({ data, accentColor, medianLineColor, medianLineVisibl
         <CartesianGrid stroke="hsla(215,15%,55%,0.14)" strokeWidth={1} strokeDasharray="3 6" vertical={false} />
         <ReferenceLine y={0} stroke="hsla(215,15%,55%,0.45)" strokeWidth={1} />
         {medianLineVisible !== false && (
-          <Line type="monotone" dataKey="avgLine" stroke={medianLineColor || 'hsl(38,92%,50%)'} strokeWidth={1} strokeDasharray="5 5" strokeOpacity={0.8} dot={false} connectNulls />
+          <Line {...chartCurveMotion} type="monotone" dataKey="avgLine" stroke={medianLineColor || 'hsl(38,92%,50%)'} strokeWidth={1} strokeDasharray="5 5" strokeOpacity={0.8} dot={false} connectNulls />
         )}
         <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'hsla(215, 15%, 55%, 0.7)' }} tickLine={false} axisLine={false} />
         <YAxis domain={domain} ticks={ticks} tick={{ fontSize: 10, fill: 'hsla(215, 15%, 55%, 0.7)' }} tickLine={false} axisLine={false} tickFormatter={v => usePercent ? `${v.toFixed(v < 1 && v > -1 ? 1 : 0)}%` : `$${v}`} />
-        <Tooltip cursor={barCursor} contentStyle={glassTooltip} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} formatter={(value: number, _: string, entry: any) => [usePercent ? `${value.toFixed(2)}% (${entry.payload.count} trades)` : `$${value.toFixed(2)} (${entry.payload.count} trades)`, 'Profit']} />
-        <Bar dataKey="profit" radius={[6, 6, 0, 0]} barSize={16}>
+        <Tooltip {...chartTooltipMotion} cursor={barCursor} contentStyle={glassTooltip} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} formatter={(value: number, _: string, entry: any) => [usePercent ? `${value.toFixed(2)}% (${entry.payload.count} trades)` : `$${value.toFixed(2)} (${entry.payload.count} trades)`, 'Profit']} />
+        <Bar {...chartSeriesMotion} dataKey="profit" radius={[6, 6, 0, 0]} barSize={16}>
           {data.map((entry, index) => (
             <Cell
               key={index}

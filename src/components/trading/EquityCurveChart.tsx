@@ -1,3 +1,4 @@
+import { chartCurveMotion, chartTooltipMotion } from '@/lib/chartMotion';
 import { useId, useMemo } from 'react';
 import { ComposedChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Line, ReferenceDot } from 'recharts';
 import { niceTicks, niceDomain } from '@/lib/chartTicks';
@@ -67,11 +68,11 @@ const EquityCurveChart = ({ data, accentColor, liveColor, medianLineColor, media
         </defs>
         <CartesianGrid {...gridProps} />
         {medianLineVisible !== false && (
-          <Line type="monotone" dataKey="avgLine" {...medianLineStyle(medianLineColor)} dot={false} connectNulls />
+          <Line {...chartCurveMotion} type="monotone" dataKey="avgLine" {...medianLineStyle(medianLineColor)} dot={false} connectNulls />
         )}
         <XAxis dataKey="date" tick={axisTick} tickLine={false} axisLine={false} />
         <YAxis domain={domain} ticks={ticks} tick={axisTick} tickLine={false} axisLine={false} tickFormatter={v => `$${v.toLocaleString()}`} />
-        <Tooltip
+        <Tooltip {...chartTooltipMotion}
           cursor={lineCursor}
           contentStyle={glassTooltip}
           labelStyle={tooltipLabelStyle}
@@ -81,13 +82,11 @@ const EquityCurveChart = ({ data, accentColor, liveColor, medianLineColor, media
             name === 'avgLine' ? 'Average' : name === 'balanceLive' ? 'Balance (Live 🔴)' : 'Balance',
           ]}
         />
-        <Area type="monotone" dataKey="balanceClosed" stroke={color} fill={`url(#balGrad-${uid})`} strokeWidth={2} filter={`url(#glow-${uid})`}
-          dot={hasLive ? makeTurningPointDots(chartData, 'balanceClosed', color, false) : makeTurningPointDots(chartData, 'balanceClosed', color)}
-          activeDot={{ r: 4, fill: color, stroke: color, strokeWidth: 2 }} connectNulls={false} />
+        <Area {...chartCurveMotion} type="monotone" dataKey="balanceClosed" stroke={color} fill={`url(#balGrad-${uid})`} strokeWidth={2} filter={`url(#glow-${uid})`}
+          dot={hasLive ? makeTurningPointDots(chartData, 'balanceClosed', color, false) : makeTurningPointDots(chartData, 'balanceClosed', color)} connectNulls={false} />
         {hasLive && (
-          <Area type="monotone" dataKey="balanceLive" stroke={live} fill={`url(#liveGrad-${uid})`} strokeWidth={2} strokeDasharray="6 3" filter={`url(#glow-${uid})`}
-            dot={makeTurningPointDots(chartData, 'balanceLive', live)}
-            activeDot={{ r: 4, fill: live, stroke: live, strokeWidth: 2 }} connectNulls={false} />
+          <Area {...chartCurveMotion} type="monotone" dataKey="balanceLive" stroke={live} fill={`url(#liveGrad-${uid})`} strokeWidth={2} strokeDasharray="6 3" filter={`url(#glow-${uid})`}
+            dot={makeTurningPointDots(chartData, 'balanceLive', live)} connectNulls={false} />
         )}
         {maxIdx !== -1 && maxIdx !== data.length - 1 && (
           <ReferenceDot x={data[maxIdx].date} y={max} r={2.5} fill={color} stroke="none"

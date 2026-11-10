@@ -1,3 +1,4 @@
+import { chartSeriesMotion, chartTooltipMotion } from '@/lib/chartMotion';
 import { useId } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { glassTooltip, tooltipItemStyle, Glow } from './chartFx';
@@ -35,7 +36,7 @@ const ExitDistributionChart = ({ data, accentColor }: Props) => {
         <defs>
           <Glow id={`glow-${uid}`} strength={4} />
         </defs>
-        <Pie data={filtered} dataKey="count" nameKey="type" cx="50%" cy="50%" innerRadius={62} outerRadius={95} strokeWidth={0} paddingAngle={4} cornerRadius={8}>
+        <Pie {...chartSeriesMotion} data={filtered} dataKey="count" nameKey="type" cx="50%" cy="50%" innerRadius={62} outerRadius={95} strokeWidth={0} paddingAngle={4} cornerRadius={8}>
           {filtered.map((entry, index) => {
             const originalIndex = data.findIndex(d => d.type === entry.type);
             return <Cell key={index} fill={colors[originalIndex % colors.length]} filter={`url(#glow-${uid})`} />;
@@ -50,7 +51,7 @@ const ExitDistributionChart = ({ data, accentColor }: Props) => {
           style={{ fontSize: 9, fontWeight: 600, fill: 'hsla(215,15%,55%,0.8)', letterSpacing: '0.15em', textTransform: 'uppercase' as const }}>
           TRADES
         </text>
-        <Tooltip cursor={false} contentStyle={glassTooltip} itemStyle={tooltipItemStyle}
+        <Tooltip {...chartTooltipMotion} cursor={false} contentStyle={glassTooltip} itemStyle={tooltipItemStyle}
           formatter={(value: number, name: string) => [`${value} (${total > 0 ? Math.round((value / total) * 100) : 0}%)`, name]} />
         <Legend wrapperStyle={{ fontSize: '11px', color: 'hsl(215, 15%, 55%)' }} iconType="circle" iconSize={8} />
       </PieChart>

@@ -1,3 +1,4 @@
+import { chartCurveMotion, chartSeriesMotion, chartTooltipMotion } from '@/lib/chartMotion';
 import { useMemo, useState } from 'react';
 import { LogoSwitch } from '@/components/trading/LogoSwitch';
 import { HEADER_BAR, HEADER_GRID, NAV_PILL, navItemClass } from '@/components/trading/navStyles';
@@ -748,12 +749,12 @@ export default function Habits() {
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                         <XAxis dataKey="day" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
                         <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={v => `${v}%`} />
-                        <Tooltip
+                        <Tooltip {...chartTooltipMotion}
                           contentStyle={{ borderRadius: 12, border: '1px solid hsl(var(--border))', background: 'hsl(var(--card))', fontSize: 12 }}
                           formatter={(v: number) => [`${v}%`, 'Complétion']}
                           labelFormatter={(_, payload) => payload?.[0]?.payload?.full || ''}
                         />
-                        <Area type="monotone" dataKey="rate" stroke="hsl(var(--primary))" fill="url(#habitArea)" strokeWidth={2} connectNulls={false} />
+                        <Area {...chartCurveMotion} type="monotone" dataKey="rate" stroke="hsl(var(--primary))" fill="url(#habitArea)" strokeWidth={2} connectNulls={false} />
                       </ComposedChart>
                     </ResponsiveContainer>
                   </div>
@@ -771,11 +772,11 @@ export default function Habits() {
                           <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" />
                           <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={v => `${v}%`} />
                           <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                          <Tooltip
+                          <Tooltip {...chartTooltipMotion}
                             contentStyle={{ borderRadius: 12, border: '1px solid hsl(var(--border))', background: 'hsl(var(--card))', fontSize: 12 }}
                             formatter={(v: number, _: string, item: any) => [`${v}% (${item.payload.done}/${item.payload.expected})`, 'Réussite']}
                           />
-                          <Bar dataKey="rate" radius={[0, 6, 6, 0]} barSize={18}>
+                          <Bar {...chartSeriesMotion} dataKey="rate" radius={[0, 6, 6, 0]} barSize={18}>
                             {rateBars.map((e, i) => (
                               <Cell key={i} fill={e.color} />
                             ))}

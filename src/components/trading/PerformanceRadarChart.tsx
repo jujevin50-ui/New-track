@@ -1,3 +1,4 @@
+import { chartSeriesMotion, chartTooltipMotion } from '@/lib/chartMotion';
 import { useId } from 'react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { glassTooltip, tooltipLabelStyle, tooltipItemStyle, Glow } from './chartFx';
@@ -38,7 +39,7 @@ const PerformanceRadarChart = ({ data, accentColor }: Props) => {
         <PolarGrid stroke="hsla(215,15%,55%,0.18)" />
         <PolarAngleAxis dataKey="metric" tick={{ fontSize: 11, fill: 'hsla(215, 15%, 65%, 0.85)' }} />
         <PolarRadiusAxis domain={[0, 100]} tickCount={5} tick={false} axisLine={false} />
-        <Radar
+        <Radar {...chartSeriesMotion}
           dataKey="value"
           stroke={color}
           strokeWidth={2}
@@ -47,7 +48,7 @@ const PerformanceRadarChart = ({ data, accentColor }: Props) => {
           filter={`url(#glow-${uid})`}
           dot={{ r: 3, fill: color, strokeWidth: 0 }}
         />
-        <Tooltip
+        <Tooltip {...chartTooltipMotion}
           contentStyle={glassTooltip}
           labelStyle={tooltipLabelStyle}
           itemStyle={tooltipItemStyle}

@@ -1,3 +1,4 @@
+import { chartSeriesMotion, chartTooltipMotion } from '@/lib/chartMotion';
 import { useState } from 'react';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { PALETTE } from './financeCharts';
@@ -12,10 +13,10 @@ export default function StatementAllocation({ holdings }: { holdings: { id: stri
   return <div className="space-y-4">
     <div className="relative h-[220px]" role="img" aria-label={`Répartition de ${data.length} actifs, total ${eur(total)}`}>
       <ResponsiveContainer width="100%" height="100%"><PieChart>
-        <Pie data={data} dataKey="value" nameKey="name" innerRadius={78} outerRadius={100} paddingAngle={data.length > 1 ? 3 : 0} cornerRadius={5} startAngle={90} endAngle={-270} strokeWidth={0} isAnimationActive={false}>
+        <Pie {...chartSeriesMotion} data={data} dataKey="value" nameKey="name" innerRadius={78} outerRadius={100} paddingAngle={data.length > 1 ? 3 : 0} cornerRadius={5} startAngle={90} endAngle={-270} strokeWidth={0}>
           {data.map(holding => <Cell key={holding.id} fill={holding.color} fillOpacity={!selected || active === holding.id ? 1 : 0.25} className="transition-opacity duration-200 motion-reduce:transition-none" />)}
         </Pie>
-        <Tooltip content={({ active: visible, payload }) => {
+        <Tooltip {...chartTooltipMotion} content={({ active: visible, payload }) => {
           if (!visible || !payload?.length) return null;
           const point = payload[0].payload;
           return <div className="max-w-64 rounded-xl border border-border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-sm"><p className="font-medium">{point.name}</p><p className="mt-1">{eur(point.value)} · {(point.value / total * 100).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %</p></div>;

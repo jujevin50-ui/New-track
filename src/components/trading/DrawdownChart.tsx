@@ -1,3 +1,4 @@
+import { chartCurveMotion, chartTooltipMotion } from '@/lib/chartMotion';
 import { useId, useMemo } from 'react';
 import { ComposedChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Line, ReferenceLine, ReferenceDot } from 'recharts';
 import { niceTicks, niceDomain } from '@/lib/chartTicks';
@@ -49,14 +50,13 @@ const DrawdownChart = ({ data, accentColor, medianLineColor, medianLineVisible }
         <CartesianGrid {...gridProps} />
         <ReferenceLine y={0} {...zeroLine} />
         {medianLineVisible !== false && (
-          <Line type="monotone" dataKey="avgLine" {...medianLineStyle(medianLineColor)} dot={false} connectNulls />
+          <Line {...chartCurveMotion} type="monotone" dataKey="avgLine" {...medianLineStyle(medianLineColor)} dot={false} connectNulls />
         )}
         <XAxis dataKey="date" tick={axisTick} tickLine={false} axisLine={false} />
         <YAxis domain={domain} ticks={ticks} tick={axisTick} tickLine={false} axisLine={false} tickFormatter={v => `${v.toFixed(v < 1 ? 1 : 0)}%`} />
-        <Tooltip cursor={lineCursor} contentStyle={glassTooltip} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} formatter={(value: number, name: string) => [`${value.toFixed(2)}%`, name === 'avgLine' ? 'Average' : 'Drawdown']} />
-        <Area type="monotone" dataKey="drawdown" stroke={color} fill={`url(#ddGrad-${uid})`} strokeWidth={2} filter={`url(#glow-${uid})`}
-          dot={makeTurningPointDots(dataAvg, 'drawdown', color)}
-          activeDot={{ r: 4, fill: color, stroke: color, strokeWidth: 2 }} />
+        <Tooltip {...chartTooltipMotion} cursor={lineCursor} contentStyle={glassTooltip} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} formatter={(value: number, name: string) => [`${value.toFixed(2)}%`, name === 'avgLine' ? 'Average' : 'Drawdown']} />
+        <Area {...chartCurveMotion} type="monotone" dataKey="drawdown" stroke={color} fill={`url(#ddGrad-${uid})`} strokeWidth={2} filter={`url(#glow-${uid})`}
+          dot={makeTurningPointDots(dataAvg, 'drawdown', color)} />
         {worstDdIdx !== -1 && worstDd < 0 && (
           <ReferenceDot x={data[worstDdIdx].date} y={worstDd} r={2.5} fill={color} stroke="none"
             label={{ value: `${worstDd.toFixed(1)}%`, position: 'bottom', ...valueLabelStyle }} />

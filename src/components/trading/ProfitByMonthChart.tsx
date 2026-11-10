@@ -1,3 +1,4 @@
+import { chartCurveMotion, chartSeriesMotion, chartTooltipMotion } from '@/lib/chartMotion';
 import { useId, useMemo } from 'react';
 import { ComposedChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid, Line, ReferenceLine, LabelList } from 'recharts';
 import { niceTicks, niceDomain } from '@/lib/chartTicks';
@@ -52,12 +53,12 @@ const ProfitByMonthChart = ({ data, accentColor, medianLineColor, medianLineVisi
         <CartesianGrid {...gridProps} />
         <ReferenceLine y={0} {...zeroLine} />
         {medianLineVisible !== false && (
-          <Line type="monotone" dataKey="avgLine" {...medianLineStyle(medianLineColor)} dot={false} connectNulls />
+          <Line {...chartCurveMotion} type="monotone" dataKey="avgLine" {...medianLineStyle(medianLineColor)} dot={false} connectNulls />
         )}
         <XAxis dataKey="month" tick={axisTick} tickLine={false} axisLine={false} />
         <YAxis domain={domain} ticks={ticks} tick={axisTick} tickLine={false} axisLine={false} tickFormatter={v => usePercent ? `${v.toFixed(v < 1 && v > -1 ? 1 : 0)}%` : `$${v}`} />
-        <Tooltip cursor={barCursor} contentStyle={glassTooltip} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} formatter={(value: number, name: string, entry: any) => [usePercent ? `${value.toFixed(2)}% (${entry.payload.count} trades)` : `$${value.toFixed(2)} (${entry.payload.count} trades)`, name === 'avgLine' ? 'Average' : 'Profit']} />
-        <Bar dataKey="profit" radius={[3, 3, 0, 0]} barSize={20}>
+        <Tooltip {...chartTooltipMotion} cursor={barCursor} contentStyle={glassTooltip} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} formatter={(value: number, name: string, entry: any) => [usePercent ? `${value.toFixed(2)}% (${entry.payload.count} trades)` : `$${value.toFixed(2)} (${entry.payload.count} trades)`, name === 'avgLine' ? 'Average' : 'Profit']} />
+        <Bar {...chartSeriesMotion} dataKey="profit" radius={[3, 3, 0, 0]} barSize={20}>
           <LabelList dataKey="profit" position="top"
             formatter={(v: number) => usePercent ? `${v >= 0 ? '+' : ''}${v.toFixed(1)}%` : `${v >= 0 ? '+' : ''}$${v.toFixed(0)}`}
             style={valueLabelStyle} />

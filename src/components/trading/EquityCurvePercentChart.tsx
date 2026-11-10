@@ -1,3 +1,4 @@
+import { chartCurveMotion, chartTooltipMotion } from '@/lib/chartMotion';
 import { useMemo, useId } from 'react';
 import { ComposedChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Line, ReferenceLine, ReferenceDot } from 'recharts';
 import { niceTicks, niceDomain } from '@/lib/chartTicks';
@@ -74,23 +75,21 @@ const EquityCurvePercentChart = ({ data, accentColor, liveColor, medianLineColor
         <CartesianGrid {...gridProps} />
         <ReferenceLine y={0} {...zeroLine} />
         {medianLineVisible !== false && (
-          <Line type="monotone" dataKey="avgLine" {...medianLineStyle(medianLineColor)} dot={false} connectNulls />
+          <Line {...chartCurveMotion} type="monotone" dataKey="avgLine" {...medianLineStyle(medianLineColor)} dot={false} connectNulls />
         )}
         <XAxis dataKey="date" tick={axisTick} tickLine={false} axisLine={false} />
         <YAxis domain={domain} ticks={ticks} tick={axisTick} tickLine={false} axisLine={false} tickFormatter={v => `${v.toFixed(v < 1 ? 1 : 0)}%`} />
-        <Tooltip cursor={lineCursor} contentStyle={glassTooltip} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle}
+        <Tooltip {...chartTooltipMotion} cursor={lineCursor} contentStyle={glassTooltip} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle}
           formatter={(value: number, name: string) => [
             `${value.toFixed(2)}%`,
             name === 'avgLine' ? 'Average' : name === 'percentLive' ? 'Performance (Live 🔴)' : 'Performance',
           ]}
         />
-        <Area type="monotone" dataKey="percentClosed" stroke={color} strokeWidth={2} fill={`url(#pctGrad-${uid})`} filter={`url(#glow-${uid})`}
-          dot={hasLive ? makeTurningPointDots(chartData, 'percentClosed', color, false) : makeTurningPointDots(chartData, 'percentClosed', color)}
-          activeDot={{ r: 4, stroke: color, fill: 'hsl(220, 18%, 10%)' }} connectNulls={false} />
+        <Area {...chartCurveMotion} type="monotone" dataKey="percentClosed" stroke={color} strokeWidth={2} fill={`url(#pctGrad-${uid})`} filter={`url(#glow-${uid})`}
+          dot={hasLive ? makeTurningPointDots(chartData, 'percentClosed', color, false) : makeTurningPointDots(chartData, 'percentClosed', color)} connectNulls={false} />
         {hasLive && (
-          <Area type="monotone" dataKey="percentLive" stroke={live} strokeWidth={2} strokeDasharray="6 3" fill={`url(#pctLiveGrad-${uid})`} filter={`url(#glow-${uid})`}
-            dot={makeTurningPointDots(chartData, 'percentLive', live)}
-            activeDot={{ r: 4, stroke: live, fill: 'hsl(220, 18%, 10%)' }} connectNulls={false} />
+          <Area {...chartCurveMotion} type="monotone" dataKey="percentLive" stroke={live} strokeWidth={2} strokeDasharray="6 3" fill={`url(#pctLiveGrad-${uid})`} filter={`url(#glow-${uid})`}
+            dot={makeTurningPointDots(chartData, 'percentLive', live)} connectNulls={false} />
         )}
         {maxPctIdx !== -1 && maxPctIdx !== data.length - 1 && (
           <ReferenceDot x={data[maxPctIdx].date} y={maxPct} r={2.5} fill={color} stroke="none"
