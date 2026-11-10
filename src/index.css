@@ -1129,3 +1129,17 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 .trades-advanced summary { width: fit-content; padding: 5px 0; }
 @media (max-width: 639px) { .trades-page .trades-filter-controls { grid-template-columns: repeat(2,minmax(0,1fr)); } .trades-page .trades-filter-controls .dashboard-filter-field { width: 100%; } .trades-page .trades-filter-controls .dashboard-filter-account { grid-column: 1 / -1; } }
 .calendar-weekend { min-width: 0; padding: 9px 7px; color: hsl(var(--muted-foreground) / 0.35); font-size: 11px; }
+
+.dashboard-filter-menu-account { width: 400px; max-width: calc(100vw - 32px); max-height: min(440px, var(--radix-select-content-available-height)); }
+.dashboard-filter-menu-account .dashboard-filter-option { min-height: 44px; padding-block: 12px; white-space: normal; overflow-wrap: anywhere; }
+
+.trades-page .trades-filter-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; gap: 16px; }
+.trades-page .trades-filter-controls .dashboard-filter-field { width: 100%; }
+.trades-page .trades-filter-controls .dashboard-filter-account { grid-column: span 2; }
+.trades-page > div:first-child > div:last-child { align-items: center; }
+.trades-page > div:first-child > div:last-child > button { height: 40px; }
+.trades-page > div:first-child .dashboard-switch { height: 40px; }
+.trades-page > div:first-child .dashboard-switch button { height: 32px; min-height: 32px; padding-block: 5px; }
+@media (min-width: 1280px) { .trades-page .trades-filter-controls { grid-template-columns: repeat(5,minmax(0,1fr)); } .trades-page .trades-filter-controls .dashboard-filter-account { grid-column: auto; } }
+@media (max-width: 639px) { .trades-page .trades-filter-controls { grid-template-columns: repeat(2,minmax(0,1fr)); } .trades-page .trades-filter-controls .dashboard-filter-account { grid-column: 1 / -1; } }
+.dashboard-filter-menu-account [data-radix-select-viewport] { height: auto !important; max-height: 360px; }

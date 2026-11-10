@@ -17,7 +17,7 @@ export default function DashboardFilter({ label, ariaLabel, value, onChange, opt
       <SelectTrigger id={id} aria-label={ariaLabel} className="dashboard-filter-trigger">
         <SelectValue placeholder="Aucun compte" />
       </SelectTrigger>
-      <SelectContent className="dashboard-filter-menu" sideOffset={6} align="start">
+      <SelectContent className={`dashboard-filter-menu${label === 'Compte' ? ' dashboard-filter-menu-account' : ''}`} sideOffset={6} align="start">
         <SelectGroup>
           <SelectLabel className="dashboard-filter-menu-label">{label}</SelectLabel>
           {options.map(option => (

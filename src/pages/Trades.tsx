@@ -1,5 +1,4 @@
 import DashboardFilter from '@/components/trading/DashboardFilter';
-import { dashboardAnalytics } from '@/lib/dashboardAnalytics';
 import { localDay } from '@/lib/discipline';
 import { useState, useMemo } from 'react';
 import { useTrades } from '@/hooks/useTrades';
@@ -74,17 +73,13 @@ const Trades = ({ activeAccount, accounts, onAddAccount, onUpdateAccount, onSele
   const [editTrade, setEditTrade] = useState<Trade | null>(null);
   const [view, setView] = useState<'list' | 'table' | 'gallery'>('table');
   const [status, setStatus] = useState('all');
+  const [accountFilter, setAccountFilter] = useState('all');
   const [filters, setFilters] = useState({...initialTradeFilters});
   const availableAccounts = status === 'all' ? accounts : accounts.filter(account => account.status === status);
-  const selectedId = activeAccount?.id === 'all' ? 'all' : availableAccounts.find(account => account.id === activeAccount?.id)?.id ?? availableAccounts[0]?.id ?? '';
+  const selectedId = accountFilter === 'all' || !availableAccounts.some(account => account.id === accountFilter) ? 'all' : accountFilter;
   const scopeAccounts = selectedId === 'all' ? availableAccounts : availableAccounts.filter(account => account.id === selectedId);
   const trades = useMemo(() => allTrades.filter(trade => scopeAccounts.some(account => account.id === trade.accountId)), [allTrades, scopeAccounts]);
   const filteredTrades = useMemo(() => filterTradeList(trades,filters), [trades,filters]);
-  const currencies = [...new Set(scopeAccounts.map(account => account.currency?.trim().toUpperCase()).filter(Boolean))];
-  const uniformCurrency = currencies.length === 1 && scopeAccounts.every(account => account.currency?.trim());
-  const currency = currencies[0] ?? '';
-  const summary = dashboardAnalytics(filteredTrades, {to:localDay()});
-  const formatMoney = (value: number) => { try { return new Intl.NumberFormat('fr-FR',{style:'currency',currency,signDisplay:'exceptZero',maximumFractionDigits:2}).format(value); } catch { return '—'; } };
   const scopedPayouts = allPayouts.filter(payout => scopeAccounts.some(account => account.id === payout.accountId));
 
   const handleSubmit = async (formData: TradeFormData) => {
@@ -135,7 +130,7 @@ const Trades = ({ activeAccount, accounts, onAddAccount, onUpdateAccount, onSele
     const a = document.createElement('a');
 
     a.href = url;
-    a.download = `trades_${activeAccount?.name?.replace(/\s+/g, '_') || 'export'}_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `trades_${selectedId === 'all' ? 'tous_les_comptes' : accounts.find(account => account.id === selectedId)?.name.replace(/\s+/g, '_') || 'export'}_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
 
     URL.revokeObjectURL(url);
@@ -180,13 +175,8 @@ const Trades = ({ activeAccount, accounts, onAddAccount, onUpdateAccount, onSele
 
       <TradeFilters trades={trades} filters={filters} onChange={setFilters}>
         <DashboardFilter label="Statut" ariaLabel="Statut des comptes" value={status} onChange={setStatus} options={[{value:'all',label:'Tous les comptes'},{value:'active',label:'Actifs'},{value:'pending',label:'En attente'},{value:'terminated',label:'Terminés'},{value:'paid_out',label:'Payout effectué'}]}/>
-        <DashboardFilter label="Compte" ariaLabel="Compte des trades" value={selectedId} onChange={onSelectAccount} disabled={!availableAccounts.length} options={[{value:'all',label:'Tous les comptes'},...availableAccounts.map(account=>({value:account.id,label:account.name}))]}/>
+        <DashboardFilter label="Compte" ariaLabel="Compte des trades" value={selectedId} onChange={id => {setAccountFilter(id); if (id !== 'all') onSelectAccount(id);}} disabled={!availableAccounts.length} options={[{value:'all',label:'Tous les comptes'},...availableAccounts.map(account=>({value:account.id,label:account.name}))]}/>
       </TradeFilters>
-      <div className="grid grid-cols-2 gap-x-5 gap-y-6 lg:grid-cols-4">
-        {[{label:'Résultat net réalisé',value:uniformCurrency ? formatMoney(summary.netProfit) : '—',color:summary.netProfit>0 ? 'text-profit' : summary.netProfit<0 ? 'text-loss' : ''}, {label:'Trades clôturés',value:String(summary.totalTrades)}, {label:'Positions ouvertes',value:String(summary.openCount)}, {label:'Win rate',value:summary.winRate===null ? '—' : `${summary.winRate.toLocaleString('fr-FR',{maximumFractionDigits:1})} %`}].map(metric=><div key={metric.label} className="min-w-0 text-center"><p className="text-xs text-muted-foreground">{metric.label}</p><p className={`mt-5 break-words text-xl font-semibold tracking-tight tabular-nums sm:text-[27px] ${metric.color??''}`}>{metric.value}</p></div>)}
-      </div>
-      {!uniformCurrency && scopeAccounts.length>0 && <p className="text-xs text-muted-foreground">Sélectionne un compte pour afficher son résultat dans sa devise.</p>}
-
       <div className="min-w-0">
         {view === 'list' ? (
           <TradeListView
