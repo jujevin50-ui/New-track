@@ -1029,20 +1029,21 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 @media (prefers-reduced-motion: reduce) { .dashboard-switch button, .dashboard-text-link { transition: none; } }
 
 
-.dashboard-filter-controls { display: flex; flex-wrap: wrap; gap: 12px; min-width: 0; }
-.dashboard-filter-trigger { height: 58px; width: 244px; max-width: 100%; padding: 9px 14px; border-radius: 14px; background: hsl(var(--secondary) / 0.18); text-align: left; box-shadow: none; }
-.dashboard-filter-copy { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.dashboard-filter-caption { font-size: 10px; color: hsl(var(--muted-foreground)); font-weight: 400; line-height: 1; }
-.dashboard-filter-value { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 500; line-height: 1.4; }
-.dashboard-filter-trigger > svg { flex-shrink: 0; margin-left: 16px; width: 14px; height: 14px; transition: transform 180ms ease; }
-.dashboard-filter-trigger:hover { border-color: hsl(var(--foreground) / 0.3); background: hsl(var(--secondary) / 0.45); }
-.dashboard-filter-trigger[data-state=open] { border-color: hsl(var(--primary) / 0.65); background: hsl(var(--secondary) / 0.45); }
+.dashboard-filter-controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px; min-width: 0; max-width: 100%; }
+.dashboard-filter-field { width: 200px; min-width: 0; max-width: 100%; }
+.dashboard-filter-account { width: 280px; }
+.dashboard-filter-caption { display: block; margin: 0 0 8px 2px; font-size: 11px; color: hsl(var(--muted-foreground)); font-weight: 400; line-height: 1.2; }
+.dashboard-filter-trigger { height: 42px; width: 100%; min-width: 0; padding: 0 12px; border-radius: 10px; background: hsl(var(--background)); text-align: left; box-shadow: 0 1px 2px hsl(0 0% 0% / 0.03); font-size: 12px; font-weight: 500; gap: 16px; }
+.dashboard-filter-trigger > span { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; -webkit-line-clamp: unset; }
+.dashboard-filter-trigger > svg { flex-shrink: 0; width: 14px; height: 14px; transition: transform 180ms ease; }
+.dashboard-filter-trigger:hover { border-color: hsl(var(--foreground) / 0.3); background: hsl(var(--secondary) / 0.3); }
+.dashboard-filter-trigger[data-state=open] { border-color: hsl(var(--primary) / 0.65); background: hsl(var(--secondary) / 0.3); }
 .dashboard-filter-trigger[data-state=open] > svg { transform: rotate(180deg); }
-.dashboard-filter-menu { max-width: calc(100vw - 32px); max-height: min(360px, var(--radix-select-content-available-height)); border-radius: 14px; padding: 4px; border-color: hsl(var(--border)); box-shadow: 0 12px 35px -12px hsl(0 0% 0% / 0.3); }
+.dashboard-filter-menu { max-width: calc(100vw - 32px); max-height: min(360px, var(--radix-select-content-available-height)); border-radius: 12px; padding: 4px; border-color: hsl(var(--border)); box-shadow: 0 12px 35px -12px hsl(0 0% 0% / 0.3); }
 .dashboard-filter-menu-label { padding: 8px 10px 10px; font-size: 10px; font-weight: 400; color: hsl(var(--muted-foreground)); }
-.dashboard-filter-option { padding-top: 10px; padding-bottom: 10px; border-radius: 8px; font-size: 12px; cursor: pointer; transition: background 140ms ease; }
+.dashboard-filter-option { padding-top: 10px; padding-bottom: 10px; border-radius: 7px; font-size: 12px; cursor: pointer; transition: background 140ms ease; }
 .dashboard-filter-option[data-state=checked] { background: hsl(var(--primary) / 0.09); font-weight: 500; }
-@media (max-width: 639px) { .dashboard-filter-controls { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; } .dashboard-filter-trigger { width: 100%; } }
+@media (max-width: 639px) { .dashboard-filter-controls { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; } .dashboard-filter-field { width: 100%; } }
 @media (prefers-reduced-motion: reduce) { .dashboard-filter-trigger > svg, .dashboard-filter-option { transition: none; } }
 
 .rail-links-sliding { position: relative; isolation: isolate; }

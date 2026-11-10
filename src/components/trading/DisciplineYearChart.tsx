@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import type { DailyJournal } from '@/hooks/useDailyJournal';
 import { disciplineYear, localDay } from '@/lib/discipline';
 
-export default function DisciplineYearChart({ journals, selectedDate, today, onSelectDate, period = 'year' }: { period?: 'month' | 'year'; journals: DailyJournal[]; selectedDate: string; today: string; onSelectDate: (date: string) => void }) {
+export default function DisciplineYearChart({ journals, selectedDate, today, onSelectDate, hideSummary = false, period = 'year' }: { hideSummary?: boolean; period?: 'month' | 'year'; journals: DailyJournal[]; selectedDate: string; today: string; onSelectDate: (date: string) => void }) {
   const [month, setMonth] = useState(selectedDate.slice(0, 7));
   const [year, setYear] = useState(Number(selectedDate.slice(0, 4)));
   useEffect(() => { setYear(Number(selectedDate.slice(0, 4))); setMonth(selectedDate.slice(0, 7)); }, [selectedDate]);
@@ -19,10 +19,10 @@ export default function DisciplineYearChart({ journals, selectedDate, today, onS
 
   return <section className="app-panel surface min-w-0 p-5 sm:p-6" aria-labelledby="discipline-year-title">
     <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
-      <div><h2 id="discipline-year-title" className="text-base font-semibold">Réussite de la discipline</h2><p className="mt-1 text-xs text-muted-foreground">Règles respectées chaque jour · {data.length} jours</p></div>
+      <div><h2 id="discipline-year-title" className="text-base font-semibold">Réussite de la discipline</h2>{!hideSummary && <p className="mt-1 text-xs text-muted-foreground">Règles respectées chaque jour · {data.length} jours</p>}</div>
       <div className="flex items-center gap-2"><Button variant="outline" size="icon" aria-label={period === 'year' ? 'Année précédente' : 'Mois précédent'} onClick={() => period === 'year' ? setYear(value => value - 1) : moveMonth(-1)}><ChevronLeft /></Button><span className="min-w-12 text-center text-sm font-semibold" aria-live="polite">{periodLabel}</span><Button variant="outline" size="icon" aria-label={period === 'year' ? 'Année suivante' : 'Mois suivant'} disabled={period === 'year' ? year >= Number(today.slice(0, 4)) : month >= today.slice(0,7)} onClick={() => period === 'year' ? setYear(value => value + 1) : moveMonth(1)}><ChevronRight /></Button></div>
     </header>
-    <div className="mb-5 flex flex-wrap items-baseline gap-x-3 gap-y-1"><span className="text-3xl font-semibold tracking-tight">{average === null ? '—' : `${average} %`}</span><span className="text-xs text-muted-foreground">{recorded.length ? `en moyenne · ${recorded.length} journée${recorded.length > 1 ? 's' : ''} enregistrée${recorded.length > 1 ? 's' : ''}` : 'Aucune journée enregistrée sur cette période'}</span></div>
+    {!hideSummary && <div className="mb-5 flex flex-wrap items-baseline gap-x-3 gap-y-1"><span className="text-3xl font-semibold tracking-tight">{average === null ? '—' : `${average} %`}</span><span className="text-xs text-muted-foreground">{recorded.length ? `en moyenne · ${recorded.length} journée${recorded.length > 1 ? 's' : ''} enregistrée${recorded.length > 1 ? 's' : ''}` : 'Aucune journée enregistrée sur cette période'}</span></div>}
     <div className="h-[280px] w-full min-w-0" role="img" aria-label={`Pourcentage de règles respectées par jour · ${periodLabel}, ${data.length} jours, ${recorded.length} journées enregistrées${average === null ? '' : `, moyenne ${average} %`}`}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={{ top: 12, right: 12, bottom: 8, left: -12 }} onClick={event => { if (typeof event?.activeLabel === 'string' && event.activeLabel <= today) onSelectDate(event.activeLabel); }}>

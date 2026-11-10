@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Props {
@@ -10,13 +11,11 @@ interface Props {
 }
 
 export default function DashboardFilter({ label, ariaLabel, value, onChange, options, disabled }: Props) {
+  const id = useId();
   return (
-    <Select value={value} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger aria-label={ariaLabel} className="dashboard-filter-trigger">
-        <span className="dashboard-filter-copy">
-          <span className="dashboard-filter-caption">{label}</span>
-          <span className="dashboard-filter-value"><SelectValue placeholder="Aucun compte" /></span>
-        </span>
+    <div className={`dashboard-filter-field${label === 'Compte' ? ' dashboard-filter-account' : ''}`}><label htmlFor={id} className="dashboard-filter-caption">{label}</label><Select value={value} onValueChange={onChange} disabled={disabled}>
+      <SelectTrigger id={id} aria-label={ariaLabel} className="dashboard-filter-trigger">
+        <SelectValue placeholder="Aucun compte" />
       </SelectTrigger>
       <SelectContent className="dashboard-filter-menu" sideOffset={6} align="start">
         <SelectGroup>
@@ -26,6 +25,6 @@ export default function DashboardFilter({ label, ariaLabel, value, onChange, opt
           ))}
         </SelectGroup>
       </SelectContent>
-    </Select>
+    </Select></div>
   );
 }
