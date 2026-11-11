@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { usePagePreference, oneOf } from '@/hooks/usePagePreference';
 import { Check, X } from 'lucide-react';
 import DashboardFilter from './DashboardFilter';
 import { Input } from '@/components/ui/input';
@@ -10,10 +10,10 @@ import type { DashboardDay } from '@/lib/dashboardAnalytics';
 export default function CalendarJournalList({ journals,daily,month,today,selectedDate,onSelectDate,currency }: {
   journals:DailyJournal[];daily:DashboardDay[];month:string;today:string;selectedDate:string;onSelectDate:(day:string)=>void;currency:string;
 }) {
-  const [query,setQuery]=useState('');
-  const [period,setPeriod]=useState('all');
-  const [status,setStatus]=useState('saved');
-  const [limit,setLimit]=useState(24);
+  const [query,setQuery]=usePagePreference('calendar.list.search','');
+  const [period,setPeriod]=usePagePreference('calendar.list.period','all',oneOf('all','month'));
+  const [status,setStatus]=usePagePreference('calendar.list.status','saved',oneOf('saved','all','missing'));
+  const [limit,setLimit]=usePagePreference('calendar.list.limit',24);
   const journalMap=new Map(journals.map(journal=>[journal.date,journal]));
   const results=new Map(daily.map(day=>[day.date,day]));
   const text=query.trim().toLocaleLowerCase('fr-FR');

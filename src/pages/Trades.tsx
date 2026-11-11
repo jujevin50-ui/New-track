@@ -1,3 +1,4 @@
+import { usePagePreference, oneOf } from '@/hooks/usePagePreference';
 import DashboardFilter from '@/components/trading/DashboardFilter';
 import { useState, useMemo } from 'react';
 import { useTrades } from '@/hooks/useTrades';
@@ -27,9 +28,9 @@ const Trades = ({ activeAccount, accounts, onSelectAccount }: TradesPageProps) =
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editTrade, setEditTrade] = useState<Trade | null>(null);
-  const [view, setView] = useState<'list' | 'table' | 'gallery'>('table');
-  const [status, setStatus] = useState('all');
-  const [filters, setFilters] = useState({...initialTradeFilters});
+  const [view, setView] = usePagePreference<'list'|'table'|'gallery'>('trades.view','table',oneOf('list','table','gallery'));
+  const [status, setStatus] = usePagePreference('trades.status','all');
+  const [filters, setFilters] = usePagePreference('trades.filters',{...initialTradeFilters});
   const availableAccounts = status === 'all' ? accounts : accounts.filter(account => account.status === status);
   const selectedId = activeAccount?.id ?? 'all';
   const scopeAccounts = selectedId === 'all' ? availableAccounts : availableAccounts.filter(account => account.id === selectedId);

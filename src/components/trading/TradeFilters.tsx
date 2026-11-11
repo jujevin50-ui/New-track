@@ -1,3 +1,4 @@
+import { usePagePreference } from '@/hooks/usePagePreference';
 import { initialTradeFilters, type TradeFilterState } from '@/lib/tradeFilters';
 import type { ReactNode } from 'react';
 import { EXIT_TYPES, type Trade } from '@/types/trade';
@@ -8,6 +9,7 @@ import { RotateCcw } from 'lucide-react';
 
 interface Props { trades: Trade[]; filters: TradeFilterState; onChange: (filters: TradeFilterState) => void; children?: ReactNode; actions?: ReactNode; }
 export default function TradeFilters({ trades, filters, onChange, children, actions }: Props) {
+  const [advancedOpen,setAdvancedOpen]=usePagePreference('trades.advanced-open',false);
   const pairs = [...new Set([...trades.map(trade => trade.pair), ...(filters.pair !== 'all' ? [filters.pair] : [])])].sort();
   const set = (key: keyof TradeFilterState, value: string) => onChange({...filters,[key]:value});
   const active = Object.keys(filters).some(key => filters[key as keyof TradeFilterState] !== initialTradeFilters[key as keyof TradeFilterState]);
@@ -19,7 +21,7 @@ export default function TradeFilters({ trades, filters, onChange, children, acti
       {field('position','Position',[{value:'all',label:'Toutes'},{value:'open',label:'Ouvertes'},{value:'closed',label:'Clôturées'}])}
       {field('result','Résultat',[{value:'all',label:'Tous'},{value:'win',label:'Gagnants'},{value:'loss',label:'Perdants'},{value:'neutral',label:'Neutres'}])}
     </div>{actions}</div>
-    <details className="trades-advanced"><summary className="cursor-pointer text-xs text-muted-foreground">Plus de filtres</summary><div className="dashboard-filter-controls mt-4">
+    <details className="trades-advanced" open={advancedOpen} onToggle={event=>{if(event.currentTarget.open!==advancedOpen)setAdvancedOpen(event.currentTarget.open);}}><summary className="cursor-pointer text-xs text-muted-foreground">Plus de filtres</summary><div className="dashboard-filter-controls mt-4">
       {field('direction','Direction',[{value:'all',label:'Toutes'},{value:'Buy',label:'Long'},{value:'Sell',label:'Short'}])}
       {field('exit','Sortie',[{value:'all',label:'Toutes'},...EXIT_TYPES.map(exit => ({value:exit,label:exit}))])}
       {field('strategy','Stratégie',[{value:'all',label:'Toutes'},{value:'yes',label:'Respectée'},{value:'no',label:'Non respectée'}])}

@@ -1,3 +1,4 @@
+import { usePagePreference, oneOf } from '@/hooks/usePagePreference';
 import DashboardFilter from '@/components/trading/DashboardFilter';
 import { Input } from '@/components/ui/input';
 import type { Account } from '@/types/account';
@@ -13,11 +14,11 @@ const StrategyPdfViewer = lazy(() => import('@/components/trading/StrategyPdfVie
 
 export default function Strategy({ accounts, activeAccountId, onSelectAccount }: {accounts:Account[]; activeAccountId:string | null; onSelectAccount:(id:string)=>void}) {
   const { data, addRow, deleteRow } = useData();
-  const [query, setQuery] = useState('');
-  const [kind, setKind] = useState('all');
-  const [order, setOrder] = useState('recent');
+  const [query, setQuery] = usePagePreference('strategy.search','');
+  const [kind, setKind] = usePagePreference('strategy.kind','all',oneOf('all','pdf','docx','html'));
+  const [order, setOrder] = usePagePreference('strategy.order','recent',oneOf('recent','name'));
   const documents = data.strategyDocuments.filter(document => (!document.accountId || activeAccountId === 'all' || document.accountId === activeAccountId) && (kind === 'all' || document.kind === kind) && document.name.toLocaleLowerCase('fr-FR').includes(query.trim().toLocaleLowerCase('fr-FR'))).sort((a,b) => order === 'name' ? a.name.localeCompare(b.name,'fr') : b.createdAt.localeCompare(a.createdAt));
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = usePagePreference<string|null>('strategy.selected',null,value=>value===null||typeof value==='string');
   const selected = documents.find(document => document.id === selectedId) || documents[0];
   const [preview, setPreview] = useState<{ id: string; url: string; html?: string } | null>(null);
   const [readingError, setReadingError] = useState('');

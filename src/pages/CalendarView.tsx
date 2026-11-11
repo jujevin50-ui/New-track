@@ -1,6 +1,7 @@
+import { usePagePreference, oneOf } from '@/hooks/usePagePreference';
 import CalendarJournalList from '@/components/trading/CalendarJournalList';
 import { accountScope } from '@/lib/accountScope';
-import { useRef, useState } from 'react';
+import { useRef, useState, useLayoutEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
 import { useTrades } from '@/hooks/useTrades';
@@ -26,16 +27,22 @@ function money(value: number, currency: string, compact = false) {
 }
 
 export default function CalendarView({ activeAccount, accounts, onSelectAccount }: Props) {
-  const { state } = useLocation();
+  const { state, key: navigationKey } = useLocation();
   const target = state as {year?:number; month?:number} | null;
   const today = localDay();
   const { journals, getJournal, saveJournal } = useDailyJournal();
-  const [date, setDate] = useState(previousTradingDay(today));
-  const [month, setMonth] = useState(() => target?.year !== undefined && target?.month !== undefined ? localDay(new Date(target.year, target.month, 1)).slice(0,7) : previousTradingDay(today).slice(0,7));
-  const [view,setView] = useState<'calendar'|'list'>('calendar');
-  const [status, setStatus] = useState('all');
-  const [preferredCurrency, setPreferredCurrency] = useState('');
-  const [draft, setDraft] = useState(() => getJournal(previousTradingDay(today)) ?? newDailyJournal(previousTradingDay(today)));
+  const [date, setDate] = usePagePreference('calendar.date',previousTradingDay(today),value=>typeof value==='string'&&value<=today&&isTradingDay(value));
+  const [month, setMonth] = usePagePreference('calendar.month',previousTradingDay(today).slice(0,7),value=>typeof value==='string'&&/^\d{4}-(0[1-9]|1[0-2])$/.test(value));
+  const [lastTarget,setLastTarget] = usePagePreference('calendar.navigation-key','');
+  useLayoutEffect(()=>{
+    if (lastTarget===navigationKey || target?.year===undefined || target.month===undefined) return;
+    if (!Number.isInteger(target.year)||!Number.isInteger(target.month)||target.month<0||target.month>11) return;
+    setMonth(localDay(new Date(target.year,target.month,1)).slice(0,7));setLastTarget(navigationKey);
+  },[navigationKey,lastTarget,target?.year,target?.month,setMonth,setLastTarget]);
+  const [view,setView] = usePagePreference<'calendar'|'list'>('calendar.view','calendar',oneOf('calendar','list'));
+  const [status, setStatus] = usePagePreference('calendar.status','all');
+  const [preferredCurrency, setPreferredCurrency] = usePagePreference('calendar.currency','');
+  const [draft, setDraft] = useState(() => getJournal(date) ?? newDailyJournal(date));
   const dirty = useRef(false);
   const saving = useRef(false);
   const filteredAccounts = status === 'all' ? accounts : accounts.filter(account => account.status === status);

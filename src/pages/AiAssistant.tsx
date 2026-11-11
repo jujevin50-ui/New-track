@@ -1,3 +1,4 @@
+import { usePagePreference } from '@/hooks/usePagePreference';
 import { dashboardAnalytics } from '@/lib/dashboardAnalytics';
 import { localDay } from '@/lib/discipline';
 import DashboardFilter from '@/components/trading/DashboardFilter';
@@ -49,7 +50,7 @@ const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
 export default function AiAssistant({ activeAccount, accounts, onSelectAccount }: Props) {
-  const [preferredCurrency,setPreferredCurrency] = useState('');
+  const [preferredCurrency,setPreferredCurrency] = usePagePreference('assistant.currency','');
   const scope = useMemo(()=>accountScope(accounts,activeAccount?.id ?? 'all',preferredCurrency || activeAccount?.currency || accounts[0]?.currency),[accounts,activeAccount?.id,activeAccount?.currency,preferredCurrency]);
   const initialBalance = scope.capital;
   const { allTrades } = useTrades(activeAccount?.id ?? null, initialBalance);
@@ -71,7 +72,7 @@ export default function AiAssistant({ activeAccount, accounts, onSelectAccount }
   const prevScope = useRef(scopeKey);
   const pendingConversation = useRef<AiConversation | null>(null);
   const [conversationScope,setConversationScope] = useState(scopeKey);
-  const [historyQuery,setHistoryQuery] = useState('');
+  const [historyQuery,setHistoryQuery] = usePagePreference('assistant.history-search','');
 
   useEffect(() => {
     const viewport = bottomRef.current?.closest<HTMLElement>('[data-radix-scroll-area-viewport]');

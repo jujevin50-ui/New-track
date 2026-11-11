@@ -1,3 +1,4 @@
+import { usePagePreference, oneOf } from '@/hooks/usePagePreference';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Trade,
@@ -52,8 +53,8 @@ const TradeTable = ({
   onDelete,
   accounts = [],
 }: TradeTableProps) => {
-  const [sortField, setSortField] = useState<SortField>('date');
-  const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [sortField, setSortField] = usePagePreference<SortField>('trades.sort.field','date',oneOf('tradeNumber','pair','date','endDate','result','riskPercent'));
+  const [sortDir, setSortDir] = usePagePreference<SortDir>('trades.sort.direction','desc',oneOf('asc','desc'));
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const rows = useMemo(() => {

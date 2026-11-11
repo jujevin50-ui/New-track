@@ -1,3 +1,4 @@
+import { usePagePreference } from '@/hooks/usePagePreference';
 import { useMemo, useState } from 'react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { useData } from '@/contexts/DataContext';
@@ -21,9 +22,9 @@ export default function Payouts({accounts,activeAccountId,onSelectAccount}:Props
   const [removing,setRemoving]=useState<PayoutRecord|null>(null);
   const [deleting,setDeleting]=useState(false);
   const [error,setError]=useState('');
-  const [year,setYear]=useState('all');
-  const [preferredCurrency,setPreferredCurrency]=useState('');
-  const [query,setQuery]=useState('');
+  const [year,setYear]=usePagePreference('payout.year','all');
+  const [preferredCurrency,setPreferredCurrency]=usePagePreference('payout.currency','');
+  const [query,setQuery]=usePagePreference('payout.search','');
   const allPayouts=(data.payouts as PayoutRecord[]).map(row=>({...row,amount:Number(row.amount)}));
   const accountName=(row:PayoutRecord)=>accounts.find(account=>account.id===row.accountId)?.name || row.accountName || 'Compte supprimé';
   const rowCurrency=(row:PayoutRecord)=>(row.currency || accounts.find(account=>account.id===row.accountId)?.currency || '').trim().toUpperCase();

@@ -1,3 +1,4 @@
+import { usePagePreference, oneOf } from '@/hooks/usePagePreference';
 import { accountScope } from '@/lib/accountScope';
 import DashboardFilter from '@/components/trading/DashboardFilter';
 import { useRef, useState } from 'react';
@@ -18,13 +19,13 @@ export default function Discipline({ activeAccount, accounts, onSelectAccount }:
   const { journals, getJournal, saveJournal } = useDailyJournal();
   const selectedAccount = accounts.find(account => account.id === activeAccount?.id) ?? accounts[0];
   const { allTrades } = useTrades(selectedAccount?.id ?? null, selectedAccount?.initialBalance ?? 0);
-  const [preferredCurrency, setPreferredCurrency] = useState('');
+  const [preferredCurrency, setPreferredCurrency] = usePagePreference('discipline.currency','');
   const selectedId = activeAccount?.id === 'all' ? 'all' : selectedAccount?.id;
   const scope = accountScope(accounts, selectedId, preferredCurrency || selectedAccount?.currency);
   const trades = allTrades.filter(trade => scope.accounts.some(account => account.id === trade.accountId));
   const today = localDay();
-  const [date, setDate] = useState(previousTradingDay(today));
-  const [chartPeriod, setChartPeriod] = useState<'month' | 'year'>('year');
+  const [date, setDate] = usePagePreference('discipline.date',previousTradingDay(today),value=>typeof value==='string'&&value<=today&&isTradingDay(value));
+  const [chartPeriod, setChartPeriod] = usePagePreference<'month'|'year'>('discipline.period','year',oneOf('month','year'));
   const dirty = useRef(false);
   const saving = useRef(false);
   const stats = disciplineStats(journals, today);

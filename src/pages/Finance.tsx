@@ -1,3 +1,4 @@
+import { usePagePreference, oneOf } from '@/hooks/usePagePreference';
 import { useDialogDraft } from '@/hooks/useDialogDraft';
 import { FormField } from '@/components/ui/form-field';
 import DashboardFilter from '@/components/trading/DashboardFilter';
@@ -57,10 +58,10 @@ export default function Finance() {
   const scopedSubscriptions = subscriptions.filter(subscription => selectedAccount === 'all' || subscription.accountId === selectedAccount);
   const scopedTransfers = transfers.filter(transfer => selectedAccount === 'all' || transfer.fromAccountId === selectedAccount || transfer.toAccountId === selectedAccount);
   const scopedStatements = statements.filter(statement => selectedAccount === 'all' || statement.accountId === selectedAccount);
-  const [tab, setTab] = useState<Tab>('overview');
+  const [tab, setTab] = usePagePreference<Tab>('finance.page','overview',oneOf('overview','transactions','accounts','subscriptions','transfers','invest'));
   const [investmentStart, setInvestmentStart] = useState<string | undefined>();
-  const [overviewMode, setOverviewMode] = useState<'month' | 'year'>('month');
-  const [cursor, setCursor] = useState(new Date());
+  const [overviewMode, setOverviewMode] = usePagePreference<'month'|'year'>('finance.overview.mode','month',oneOf('month','year'));
+  const [cursor, setCursor] = usePagePreference('finance.overview.date',new Date());
   const [txOpen, setTxOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [subOpen, setSubOpen] = useState(false);
@@ -457,10 +458,10 @@ function TxRow({ t, accountName, onEdit, onDelete }: { t: FinanceTransaction; ac
 const dayLabel = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
 function TransactionsView({ accountFilter, transactions, accounts, onAdd, onEdit, onDelete }: { accountFilter: ReactNode; transactions: FinanceTransaction[]; accounts: FinanceAccount[]; onAdd: () => void; onEdit: (x: FinanceTransaction) => void; onDelete: (x: FinanceTransaction) => void }) {
-  const [filter, setFilter] = useState('');
-  const [kind, setKind] = useState<'all' | 'expense' | 'income'>('all');
-  const [limit, setLimit] = useState(80);
-  const [period, setPeriod] = useState('all');
+  const [filter, setFilter] = usePagePreference('finance.transactions.search','');
+  const [kind, setKind] = usePagePreference<'all'|'expense'|'income'>('finance.transactions.kind','all',oneOf('all','expense','income'));
+  const [limit, setLimit] = usePagePreference('finance.transactions.limit',80);
+  const [period, setPeriod] = usePagePreference('finance.transactions.period','all',oneOf('all','month','year'));
   const q = filter.trim().toLowerCase();
   const list = useMemo(() => transactions
     .filter(t => kind === 'all' || t.type === kind)
@@ -512,9 +513,9 @@ function formatAccountBalance(account: FinanceAccount) {
 }
 
 function AccountsView({ accounts, onNew, onEdit, onDelete, onStatements }: { accounts: FinanceAccount[]; onNew: () => void; onEdit: (a: FinanceAccount) => void; onDelete: (a: FinanceAccount) => void; onStatements: (a: FinanceAccount) => void }) {
-  const [status,setStatus] = useState('active');
-  const [type,setType] = useState('all');
-  const [search,setSearch] = useState('');
+  const [status,setStatus] = usePagePreference('finance.accounts.status','active',oneOf('all','active','archived'));
+  const [type,setType] = usePagePreference('finance.accounts.type','all');
+  const [search,setSearch] = usePagePreference('finance.accounts.search','');
   const filtered=accounts.filter(account => (status==='all' || Boolean(account.archived)===(status==='archived')) && (type==='all' || account.type===type) && `${account.name} ${account.institution}`.toLocaleLowerCase('fr-FR').includes(search.toLocaleLowerCase('fr-FR')));
   return <div className="space-y-6">
     <h1 className="sr-only page-title-hidden">Comptes</h1>
@@ -538,8 +539,8 @@ function AccountsView({ accounts, onNew, onEdit, onDelete, onStatements }: { acc
 }
 
 function SubscriptionsView({ accountFilter, subscriptions, accounts, onNew, onToggle, onDelete }: { accountFilter: ReactNode; subscriptions: FinanceSubscription[]; accounts: FinanceAccount[]; onNew: () => void; onToggle: (s: FinanceSubscription) => void; onDelete: (s: FinanceSubscription) => void }) {
-  const [status,setStatus]=useState('all');
-  const [search,setSearch]=useState('');
+  const [status,setStatus]=usePagePreference('finance.subscriptions.status','all',oneOf('all','active','inactive'));
+  const [search,setSearch]=usePagePreference('finance.subscriptions.search','');
   const list=subscriptions.filter(item=>(status==='all'||item.active===(status==='active')) && item.name.toLocaleLowerCase('fr-FR').includes(search.toLocaleLowerCase('fr-FR')));
   const monthly=list.filter(item=>item.active).reduce((sum,item)=>sum+item.amount*(item.frequency==='yearly'?1/12:item.frequency==='weekly'?52/12:1),0);
   const freq={monthly:'mois',yearly:'an',weekly:'semaine'};
@@ -555,7 +556,7 @@ function SubscriptionsView({ accountFilter, subscriptions, accounts, onNew, onTo
 }
 
 function TransfersView({ accountFilter, transfers, accounts, onNew, onDelete }: { accountFilter: ReactNode; transfers: FinanceTransfer[]; accounts: FinanceAccount[]; onNew: () => void; onDelete: (t: FinanceTransfer) => void }) {
-  const [kind,setKind]=useState('all');
+  const [kind,setKind]=usePagePreference('finance.transfers.kind','all',oneOf('all','once','recurring'));
   const name=(id:string)=>accounts.find(account=>account.id===id)?.name||'—';
   const frequency={monthly:'Mensuel',weekly:'Hebdomadaire',yearly:'Annuel'};
   const list=[...transfers].filter(item=>kind==='all'||item.recurring===(kind==='recurring')).sort((a,b)=>b.date.localeCompare(a.date));

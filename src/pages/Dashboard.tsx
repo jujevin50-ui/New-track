@@ -1,3 +1,4 @@
+import { usePagePreference, oneOf } from '@/hooks/usePagePreference';
 import { periodPerformance } from '@/lib/periodPerformance';
 import PeriodPerformanceList from '@/components/trading/PeriodPerformanceList';
 import MonthlyPerformanceChart from '@/components/trading/MonthlyPerformanceChart';
@@ -5,7 +6,7 @@ import DashboardFilter from '@/components/trading/DashboardFilter';
 import { ResponsiveContainer, BarChart, Bar, Cell, ReferenceLine, XAxis, YAxis, Tooltip } from 'recharts';
 import DisciplineYearChart from '@/components/trading/DisciplineYearChart';
 import { chartTooltipMotion } from '@/lib/chartMotion';
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTrades } from '@/hooks/useTrades';
 import { useDailyJournal } from '@/hooks/useDailyJournal';
@@ -39,13 +40,13 @@ export default function Dashboard({ activeAccount, accounts, onSelectAccount }: 
   const navigate = useNavigate();
   const { allTrades } = useTrades(activeAccount?.id ?? null, activeAccount?.initialBalance ?? 0);
   const { journals } = useDailyJournal();
-  const [view, setView] = useState<View>(() => localStorage.getItem('dashboard-view') === 'global' ? 'global' : 'account');
-  const [period, setPeriod] = useState<Period>('all');
-  const [custom, setCustom] = useState({ from: '', to: localDay() });
-  const [status, setStatus] = useState('all');
-  const [category, setCategory] = useState('all');
-  const [preferredCurrency, setCurrency] = useState('');
-  const [unit, setUnit] = useState<'amount' | 'percent'>('amount');
+  const [view, setView] = usePagePreference<View>('dashboard.view',()=>{try{return localStorage.getItem('dashboard-view')==='global'?'global':'account';}catch{return 'account';}},oneOf('account','global'));
+  const [period, setPeriod] = usePagePreference<Period>('dashboard.period','all',oneOf('all','30','90','year','custom'));
+  const [custom, setCustom] = usePagePreference('dashboard.range',{from:'',to:localDay()});
+  const [status, setStatus] = usePagePreference('dashboard.status','all');
+  const [category, setCategory] = usePagePreference('dashboard.category','all');
+  const [preferredCurrency, setCurrency] = usePagePreference('dashboard.currency','');
+  const [unit, setUnit] = usePagePreference<'amount'|'percent'>('dashboard.unit','amount',oneOf('amount','percent'));
   const today = localDay();
   const filteredAccounts = status === 'all' ? accounts : accounts.filter(account => account.status === status);
   const selectedAccount = filteredAccounts.find(account => account.id === activeAccount?.id) ?? filteredAccounts[0];
@@ -60,7 +61,7 @@ export default function Dashboard({ activeAccount, accounts, onSelectAccount }: 
   const range = period === 'custom' ? { from: custom.from, to: custom.to && custom.to < today ? custom.to : today } : period === 'year' ? { from: `${today.slice(0, 4)}-01-01`, to: today } : period === 'all' ? { from: '', to: today } : { from: shiftDay(today, -(Number(period) - 1)), to: today };
   const invalidRange = Boolean(range.from && range.to && range.from > range.to);
   const stats = dashboardAnalytics(allTrades, { accountIds: scopeAccounts.map(account => account.id), from: range.from, to: range.to, startingCapital: capital });
-  const switchView = (next: View) => { setView(next); localStorage.setItem('dashboard-view', next); };
+  const switchView = (next: View) => setView(next);
   const instruments = [...stats.closedTrades.reduce((map, trade) => { const entry = map.get(trade.pair) ?? { name: trade.pair, net: 0, trades: 0 }; entry.net += getNetResult(trade); entry.trades++; map.set(trade.pair, entry); return map; }, new Map<string, { name: string; net: number; trades: number }>()).values()].map(item => ({ ...item, percent: capital > 0 ? item.net / capital * 100 : null })).sort((a, b) => b.net - a.net);
   const qualities = stats.closedTrades.map(trade => trade.setupQuality).filter(value => Number.isFinite(value) && value >= 1 && value <= 3);
   const quality = qualities.length ? qualities.reduce((sum, value) => sum + value, 0) / qualities.length : null;
@@ -69,7 +70,7 @@ export default function Dashboard({ activeAccount, accounts, onSelectAccount }: 
   const positiveDays = stats.daily.filter(item => item.net > 0).length;
   const percentageAvailable = capital > 0;
   const chartUnit = view === 'global' ? 'percent' : percentageAvailable ? unit : 'amount';
-  const [disciplineDate, setDisciplineDate] = useState(today);
+  const [disciplineDate, setDisciplineDate] = usePagePreference('dashboard.discipline-date',today);
   const weeklyPeriods=periodPerformance(stats.closedTrades,capital,'week',scopeAccounts);
   const monthlyPeriods=periodPerformance(stats.closedTrades,capital,'month',scopeAccounts);
   const rrKnown=weeklyPeriods.reduce((sum,row)=>sum+row.rrTrades,0);
@@ -112,7 +113,7 @@ export default function Dashboard({ activeAccount, accounts, onSelectAccount }: 
     <div className="space-y-8">
       <Section title="Progression du résultat" action={view === 'account' && <div className="dashboard-switch dashboard-switch-small" role="group" aria-label="Unité de la courbe"><button type="button" aria-pressed={chartUnit === 'amount'} onClick={() => setUnit('amount')}>{currency === 'UNKNOWN' ? 'Montant' : currency}</button><button type="button" aria-pressed={chartUnit === 'percent'} disabled={!percentageAvailable} title="Résultat rapporté au capital initial" onClick={() => setUnit('percent')}>% du capital</button></div>}><div className="h-[300px] w-full min-w-0 sm:h-[340px]"><DashboardPerformanceChart data={stats.curve} currency={currency} startingCapital={capital} unit={chartUnit} /></div></Section>
       {view==='global'&&<div className="grid min-w-0 items-start gap-8 xl:grid-cols-2"><PeriodPerformanceList rows={weeklyPeriods} kind="week"/><PeriodPerformanceList rows={monthlyPeriods} kind="month"/></div>}
-      <DisciplineYearChart hideSummary key={view} journals={journals} selectedDate={disciplineDate} today={today} period={view === 'global' ? 'year' : 'month'} onSelectDate={setDisciplineDate} />
+      <DisciplineYearChart hideSummary key={view} preferenceKey={`dashboard.${view}.discipline-chart`} journals={journals} selectedDate={disciplineDate} today={today} period={view === 'global' ? 'year' : 'month'} onSelectDate={setDisciplineDate} />
     </div>
     {view === 'global' ? <Section title="Performance mensuelle" action={<span className="text-xs text-muted-foreground">Résultat net / capital initial total · {currency}</span>}><MonthlyPerformanceChart data={monthly} validCapital={percentageAvailable} /></Section> : <div className="grid items-start gap-8 md:grid-cols-2"><Section title="Qualité d’exécution"><dl className="divide-y divide-border/50"><Detail label="Trades dans le plan" value={pct(stats.strategyRate)} /><Detail label="Qualité moyenne des setups" value={quality === null ? '—' : `${quality.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} / 3`} /><Detail label="Résultat des trades hors plan" value={outsidePlan.length ? money(outsidePlan.reduce((sum, trade) => sum + getNetResult(trade), 0), currency, true) : 'Aucun'} /><Detail label="Gains / pertes moyens" value={stats.totalTrades ? `${money(stats.avgWin ?? 0, currency)} / ${money(stats.avgLoss ?? 0, currency)}` : '—'} /></dl></Section><Section title="Performance nette par devise" action={<span className="text-[10px] text-muted-foreground">% du capital initial</span>}>{capital <= 0 ? <p className="text-sm text-muted-foreground">Renseigne un capital initial positif pour calculer les performances.</p> : instruments.length ? <div style={{height: Math.max(256, instruments.length * 42 + 40)}} role="img" aria-label="Performance nette par paire en pourcentage du capital initial"><ResponsiveContainer width="100%" height="100%"><BarChart data={instruments} layout="vertical" margin={{left:10,right:25}}><XAxis type="number" tickFormatter={value => `${value} %`} tick={{fontSize:11}} axisLine={false} tickLine={false}/><YAxis type="category" dataKey="name" width={90} tick={{fontSize:11}} axisLine={false} tickLine={false}/><ReferenceLine x={0} stroke="hsl(var(--border))"/><Tooltip {...chartTooltipMotion} cursor={{fill: 'hsl(var(--muted-foreground) / 0.08)'}} formatter={(value: number) => [`${value > 0 ? '+' : ''}${value.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} %`, 'Performance nette']}/><Bar dataKey="percent" name="Performance nette" radius={[0,4,4,0]} barSize={22}>{instruments.map(item => <Cell key={item.name} fill={item.net < 0 ? 'hsl(var(--loss))' : 'hsl(var(--profit))'}/>)}</Bar></BarChart></ResponsiveContainer></div> : <p className="text-sm text-muted-foreground">Aucun trade clôturé sur cette période.</p>}</Section></div>}
     <div className="dashboard-bottom-grid grid items-stretch gap-8 lg:grid-cols-2"><Section title="La régularité, séance après séance" action={<Link className="dashboard-text-link" to="/calendar">Calendrier →</Link>}><div className="mb-5 flex items-baseline gap-2"><span className="text-2xl font-semibold tabular-nums">{stats.daily.length ? `${positiveDays} / ${stats.daily.length}` : '—'}</span><span className="text-xs text-muted-foreground">journées positives</span></div>{days.length ? <div className="flex gap-1.5" role="list" aria-label="Dernières journées de trading">{days.map(item => <div role="listitem" aria-label={`${new Date(`${item.date}T12:00:00`).toLocaleDateString('fr-FR', { dateStyle: 'long' })} : ${money(item.net, currency, true)}`} key={item.date} className="min-w-0 flex-1" title={`${dateLabel(item.date)} : ${money(item.net, currency, true)}`}><span className={`block h-8 rounded-[3px] ${item.net > 0 ? 'bg-profit/65' : item.net < 0 ? 'bg-loss/60' : 'bg-secondary'}`} /><span className="mt-2 block text-center text-[9px] text-muted-foreground">{Number(item.date.slice(-2))}</span></div>)}</div> : <p className="text-xs text-muted-foreground">Une séance enregistrée à la clôture de tes trades.</p>}<dl className="mt-4 divide-y divide-border/50"><Detail label="Meilleure journée" value={stats.bestDay ? `${dateLabel(stats.bestDay.date)} · ${money(stats.bestDay.net, currency, true)}` : '—'} /><Detail label="Commissions / swaps" value={stats.totalTrades ? `${money(-stats.commissionCost, currency)} / ${money(stats.swap, currency, true)}` : '—'} /></dl></Section>

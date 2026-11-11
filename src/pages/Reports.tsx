@@ -1,3 +1,4 @@
+import { usePagePreference, oneOf } from '@/hooks/usePagePreference';
 import DashboardFilter from '@/components/trading/DashboardFilter';
 import { accountScope } from '@/lib/accountScope';
 import { localDay } from '@/lib/discipline';
@@ -116,18 +117,18 @@ const Reports = ({ activeAccount, accounts, onSelectAccount }: ReportsProps) => 
   const { allTrades: rawTrades } = useTrades(activeAccount?.id || null, activeAccount?.initialBalance || 0);
   const { reports, getReport, saveReport } = usePeriodReports();
 
-  const [preferredCurrency, setPreferredCurrency] = useState('');
+  const [preferredCurrency, setPreferredCurrency] = usePagePreference('reports.currency','');
   const scope = useMemo(() => accountScope(accounts, activeAccount?.id ?? 'all', preferredCurrency || (activeAccount?.id === 'all' ? accounts[0]?.currency : activeAccount?.currency)), [accounts,activeAccount?.id,activeAccount?.currency,preferredCurrency]);
   const allTrades = useMemo(() => rawTrades.filter(trade => scope.accounts.some(account => account.id === trade.accountId) && Boolean(trade.endDate) && trade.endDate!.slice(0,10) <= localDay()), [rawTrades, scope.accounts]);
-  const [query, setQuery] = useState('');
-  const [visibility, setVisibility] = useState('all');
+  const [query, setQuery] = usePagePreference('reports.search','');
+  const [visibility, setVisibility] = usePagePreference('reports.visibility','all',oneOf('all','saved','draft'));
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const loadedForm = useRef<PeriodReportData | null>(null);
   const formatMoney = (value: number, currency = scope.currency) => { try { return new Intl.NumberFormat('fr-FR', {style:'currency',currency,signDisplay:'exceptZero',maximumFractionDigits:2}).format(value); } catch {return value.toLocaleString('fr-FR',{signDisplay:'exceptZero',maximumFractionDigits:2});} };
   const pdfMoney = useCallback((value: number, currency = scope.currency) => `${value >= 0 ? '+' : ''}${value.toFixed(2)} ${currency}`, [scope.currency]);
-  const [browseType, setBrowseType] = useState<PeriodType>('weekly');
-  const [selected, setSelected] = useState<{ type: PeriodType; key: string } | null>(null);
+  const [browseType, setBrowseType] = usePagePreference<PeriodType>('reports.type','weekly',oneOf('weekly','monthly','yearly'));
+  const [selected, setSelected] = usePagePreference<{type:PeriodType;key:string}|null>('reports.selected',null,value=>value===null||Boolean(value&&typeof value==='object'&&oneOf('weekly','monthly','yearly')(Reflect.get(value,'type'))&&typeof Reflect.get(value,'key')==='string'));
   const [formData, setFormData] = useState<PeriodReportData>({
     emotionGenerale: '',
     tradesEmotionnels: 0,

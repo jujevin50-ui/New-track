@@ -1,6 +1,7 @@
+import { usePagePreference, oneOf } from '@/hooks/usePagePreference';
 import DashboardFilter from '@/components/trading/DashboardFilter';
 import { Segmented } from './ui';
-import { lazy, Suspense, useMemo, useRef, useState, type ComponentProps } from 'react';
+import { lazy, Suspense, useMemo, useRef, useState, useEffect, type ComponentProps } from 'react';
 import { FileText, Plus, Search, Pencil, Upload, Trash2, ChevronRight } from 'lucide-react';
 import InvestmentOverview from './InvestmentOverview';
 import { investmentColor } from './investmentColors';
@@ -24,9 +25,10 @@ export function InvestmentView(props: ComponentProps<typeof StatementsView>) {
   const { data, upsertRow } = useData();
   const profiles = data.financeAssets;
   const assets = useMemo(() => investmentAssets(props.statements, profiles), [props.statements, profiles]);
-  const [tab, setTab] = useState<'statements' | 'assets'>(props.initialAccountId ? 'statements' : 'assets');
-  const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('all');
+  const [tab, setTab] = usePagePreference<'statements'|'assets'>('finance.invest.view','assets',oneOf('assets','statements'));
+  useEffect(()=>{if(props.initialAccountId)setTab('statements');},[props.initialAccountId,setTab]);
+  const [search, setSearch] = usePagePreference('finance.invest.search','');
+  const [status, setStatus] = usePagePreference('finance.invest.status','all',oneOf('all','present','past'));
   const [editing, setEditing] = useState<FinanceAssetProfile | null>(null);
   const [detailTab, setDetailTab] = useState<'details' | 'pdf' | 'history'>('details');
   const [importingPdf, setImportingPdf] = useState(false);

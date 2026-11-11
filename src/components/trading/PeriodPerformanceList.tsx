@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { usePagePreference } from '@/hooks/usePagePreference';
 import { Button } from '@/components/ui/button';
 import type { PeriodPerformance } from '@/lib/periodPerformance';
 
@@ -6,7 +6,7 @@ const date=(day:string)=>new Date(`${day}T12:00:00`).toLocaleDateString('fr-FR',
 const percent=(value:number|null)=>value===null?'—':`${value>0?'+':''}${value.toLocaleString('fr-FR',{maximumFractionDigits:2})} %`;
 
 export default function PeriodPerformanceList({ rows,kind }: {rows:PeriodPerformance[];kind:'week'|'month'}) {
-  const [limit,setLimit]=useState(8);
+  const [limit,setLimit]=usePagePreference(`dashboard.${kind}.limit`,8);
   const title=kind==='week'?'Performances par semaine':'Performances par mois';
   return <section className="min-w-0" aria-label={title}>
     <header className="mb-5 flex items-baseline justify-between gap-3"><h2 className="text-sm font-semibold">{title}</h2><span className="text-xs text-muted-foreground">{rows.length} {kind==='week'?'semaine':'mois'}{kind==='week'&&rows.length>1?'s':''}</span></header>

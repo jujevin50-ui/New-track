@@ -1,15 +1,17 @@
+import { usePagePreference } from '@/hooks/usePagePreference';
 import { chartCurveMotion, chartTooltipMotion, chartLineCursor } from '@/lib/chartMotion';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { DailyJournal } from '@/hooks/useDailyJournal';
 import { disciplineYear, localDay } from '@/lib/discipline';
 
-export default function DisciplineYearChart({ journals, selectedDate, today, onSelectDate, onPeriodChange, hideSummary = false, period = 'year' }: { onPeriodChange?: (period: 'month' | 'year') => void; hideSummary?: boolean; period?: 'month' | 'year'; journals: DailyJournal[]; selectedDate: string; today: string; onSelectDate: (date: string) => void }) {
-  const [month, setMonth] = useState(selectedDate.slice(0, 7));
-  const [year, setYear] = useState(Number(selectedDate.slice(0, 4)));
-  useEffect(() => { setYear(Number(selectedDate.slice(0, 4))); setMonth(selectedDate.slice(0, 7)); }, [selectedDate]);
+export default function DisciplineYearChart({ journals, selectedDate, today, onSelectDate, onPeriodChange, hideSummary = false, period = 'year', preferenceKey = 'discipline.chart' }: { preferenceKey?: string; onPeriodChange?: (period: 'month' | 'year') => void; hideSummary?: boolean; period?: 'month' | 'year'; journals: DailyJournal[]; selectedDate: string; today: string; onSelectDate: (date: string) => void }) {
+  const [month, setMonth] = usePagePreference(`${preferenceKey}.month`,selectedDate.slice(0,7),value=>typeof value==='string'&&/^\d{4}-(0[1-9]|1[0-2])$/.test(value));
+  const [year, setYear] = usePagePreference(`${preferenceKey}.year`,Number(selectedDate.slice(0,4)),value=>typeof value==='number'&&Number.isInteger(value)&&value>1900&&value<=Number(today.slice(0,4)));
+  const previousSelected=useRef(selectedDate);
+  useEffect(()=>{if(previousSelected.current===selectedDate)return;previousSelected.current=selectedDate;setYear(Number(selectedDate.slice(0,4)));setMonth(selectedDate.slice(0,7));},[selectedDate,setYear,setMonth]);
   const data = useMemo(() => disciplineYear(journals, period === 'month' ? Number(month.slice(0, 4)) : year, today).filter(day => period === 'year' || day.date.startsWith(month)), [journals, year, today, period, month]);
   const moveMonth = (offset: number) => setMonth(localDay(new Date(Number(month.slice(0,4)), Number(month.slice(5,7)) - 1 + offset, 1)).slice(0,7));
   const periodLabel = period === 'year' ? String(year) : new Date(`${month}-01T12:00:00`).toLocaleDateString('fr-FR', {month:'long', year:'numeric'});

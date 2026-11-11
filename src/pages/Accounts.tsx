@@ -1,3 +1,4 @@
+import { usePagePreference } from '@/hooks/usePagePreference';
 import DashboardFilter from '@/components/trading/DashboardFilter';
 import { localDay } from '@/lib/discipline';
 import { useState, useMemo } from 'react';
@@ -50,11 +51,11 @@ const Accounts = ({ accounts, onAdd, onUpdate, onDelete, categories, allTrades }
   const [editAccount, setEditAccount] = useState<Account | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState<AccountFormData>(emptyForm);
-  const [filterStatus, setFilterStatus] = useState<AccountStatus | 'all'>('all');
-  const [query, setQuery] = useState('');
+  const [filterStatus, setFilterStatus] = usePagePreference<AccountStatus|'all'>('accounts.status','all');
+  const [query, setQuery] = usePagePreference('accounts.search','');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
-  const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [filterCategory, setFilterCategory] = usePagePreference<string>('accounts.category','all');
   const [customBrokers, setCustomBrokers] = useState<string[]>([]);
 
   const allBrokers = useMemo(() => {

@@ -1,3 +1,4 @@
+import { usePagePreference } from '@/hooks/usePagePreference';
 import DashboardFilter from '@/components/trading/DashboardFilter';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -136,7 +137,7 @@ export function StatementsView({ accounts, statements, initialAccountId, selecte
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [expanded, setExpanded] = usePagePreference<string|null>('finance.statements.expanded',null,value=>value===null||typeof value==='string');
   const [saving, setSaving] = useState(false);
 
   const orderedAccounts = useMemo(() => {
