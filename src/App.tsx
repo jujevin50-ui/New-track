@@ -109,22 +109,24 @@ const AppContent = () => {
     initialBalance: accounts.reduce((s, a) => s + a.initialBalance, 0), payoutIntervalDays: 0, dailyDrawdownPct: 0, maxDrawdownPct: 0, riskPct: 1,
   } : null) : activeAccount;
 
+  const splash = showSplash && <WelcomeSplash name={userName} onDone={() => setShowSplash(false)} />;
+
   if (location.pathname === "/finance") {
     return (
-      <div className="relative z-10 min-h-screen text-foreground">
+      <>{splash}<div className="relative z-10 min-h-screen text-foreground" aria-hidden={showSplash || undefined} {...(showSplash ? {inert: ''} : {})}>
         <ErrorBoundary resetKey="finance">
           <Suspense fallback={<PageLoader />}>
             <Finance />
           </Suspense>
         </ErrorBoundary>
-      </div>
+      </div></>
     );
   }
 
   return (
     <>
-      {showSplash && <WelcomeSplash name={userName} onDone={() => setShowSplash(false)} />}
-      <div className="relative z-10">
+      {splash}
+      <div className="relative z-10" aria-hidden={showSplash || undefined} {...(showSplash ? {inert: ''} : {})}>
         <AppLayout accounts={accounts} activeAccountId={activeAccountId} onSelectAccount={setActiveAccountId}>
           <ErrorBoundary resetKey={location.pathname}>
             <Suspense fallback={<PageLoader />}>
