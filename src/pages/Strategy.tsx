@@ -85,7 +85,7 @@ export default function Strategy({ accounts, activeAccountId, onSelectAccount }:
           <Button variant="outline" className="rounded-xl" disabled={busy} onClick={() => input.current?.click()}>Choisir un fichier</Button>
         </div>
       ) : (
-        <div className="grid items-start gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <div className="ui-reading-divider grid items-start gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
           <nav aria-label="Documents de stratégie" className="reports-period-list min-w-0 lg:sticky lg:top-6">
             {documents.map(document => <button key={document.id} type="button" aria-current={selected?.id === document.id ? 'true' : undefined} onClick={() => setSelectedId(document.id)} aria-pressed={selected?.id === document.id} className="reports-period-item flex min-w-0 items-center gap-3">
               <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />

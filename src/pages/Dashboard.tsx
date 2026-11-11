@@ -86,7 +86,7 @@ export default function Dashboard({ activeAccount, accounts, onSelectAccount }: 
       {period === 'custom' && <div className="flex w-full flex-wrap items-center gap-3"><label className="flex items-center gap-2 text-xs text-muted-foreground">Du<Input aria-label="Début de la période" type="date" value={custom.from} onChange={event => setCustom(previous => ({ ...previous, from: event.target.value }))} className="h-8 w-auto" /></label><label className="flex items-center gap-2 text-xs text-muted-foreground">Au<Input aria-label="Fin de la période" type="date" value={custom.to} max={today} onChange={event => setCustom(previous => ({ ...previous, to: event.target.value }))} className="h-8 w-auto" /></label>{invalidRange && <p role="alert" className="text-xs text-loss">La fin doit être postérieure au début.</p>}</div>}
     </div>
     {!scopeAccounts.length ? <div className="py-16 text-center"><p className="mb-4 text-sm text-muted-foreground">{ambiguousCurrency ? 'Renseigne la devise de ces comptes pour comparer leurs résultats.' : accounts.length ? 'Aucun compte dans cette sélection.' : 'Ajoute un compte pour commencer à suivre ta progression.'}</p><Link to="/accounts" className="dashboard-text-link">{accounts.length ? 'Gérer mes comptes' : 'Ajouter mon premier compte'} →</Link></div> : <>
-    <div className="dashboard-metrics grid grid-cols-2 gap-x-5 gap-y-6 md:grid-cols-3 xl:grid-cols-5">
+    <div className="dashboard-metrics ui-rule-after grid grid-cols-2 gap-x-5 gap-y-6 md:grid-cols-3 xl:grid-cols-5">
       {[
         {label: 'Résultat net réalisé', value: money(stats.netProfit, currency, true), color: tone(stats.netProfit)},
         {label: 'Espérance par trade', value: stats.expectancy === null ? '—' : money(stats.expectancy, currency, true)},

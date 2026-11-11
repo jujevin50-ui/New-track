@@ -83,7 +83,7 @@ function DisciplineSession({ date, existing, trades, currency, onDirty, onSaving
         })}</div>
       </section>
     </fieldset>
-    <section className="discipline-review min-w-0" aria-labelledby="discipline-review-title">
+    <section className="discipline-review ui-review-divider min-w-0" aria-labelledby="discipline-review-title">
       <div className="mb-6"><h2 id="discipline-review-title" className="text-sm font-semibold tracking-tight">Bilan journalier</h2></div>
       <DailyReview currency={currency} date={date} existing={existing} value={draft} onChange={update} psychologyElsewhere trades={trades} onSave={save} saveLabel="Enregistrer la journée" />
     </section>

@@ -95,7 +95,7 @@ export default function CalendarView({ activeAccount, accounts, onSelectAccount 
             })}
           </div>
         </section>
-        <section className="discipline-review min-w-0" aria-labelledby="calendar-review-title">
+        <section className="discipline-review ui-review-divider min-w-0" aria-labelledby="calendar-review-title">
           <header className="mb-6 flex flex-wrap items-center justify-between gap-3"><h2 id="calendar-review-title" className="text-sm font-semibold">Bilan journalier</h2><Input aria-label="Date du bilan" type="date" max={today} value={date} onChange={event => chooseDate(event.target.value)} className="h-10 w-auto max-w-full rounded-[10px] bg-transparent text-xs"/></header>
           <DailyReview key={date} currency={currency} date={date} existing={getJournal(date)} value={draft} onChange={value => {setDraft(value); dirty.current = true;}} psychologyElsewhere trades={dayTrades} saveLabel="Enregistrer la journée" onSave={async value => {saving.current = true; try {await saveJournal(value); dirty.current = false;} finally {saving.current = false;}}}/>
         </section>

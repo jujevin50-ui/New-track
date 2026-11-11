@@ -95,3 +95,22 @@
 .app-update-prompt { position: fixed; right: 24px; bottom: max(24px,env(safe-area-inset-bottom)); z-index: 80; width: min(390px,calc(100vw - 32px)); padding: 20px; border: 1px solid hsl(var(--border)); border-radius: 16px; background: hsl(var(--popover)); color: hsl(var(--popover-foreground)); box-shadow: var(--shadow-pop); animation: ui-page-in var(--ui-duration-normal) var(--ui-ease-enter); }
 @media (max-width: 639px) { .app-update-prompt { right: 16px; bottom: max(16px,env(safe-area-inset-bottom)); } }
 @media (prefers-reduced-motion: reduce) { .app-update-prompt { animation: none; } }
+
+/* Sparse structural rules: summary/content, reading panes and table headings only. */
+:root { --ui-divider: hsl(var(--foreground) / .1); }
+.ui-rule-after, .ui-rule-before, .finance-metrics, .finance-invest-metrics, .ui-reading-divider, .ui-review-divider { position: relative; }
+.ui-rule-after::after, .finance-metrics::after, .finance-invest-metrics::after,
+.ui-rule-before::before { content: ''; position: absolute; left: 0; right: 0; height: 1px; pointer-events: none; background: linear-gradient(90deg,transparent,var(--ui-divider) 4%,var(--ui-divider) 96%,transparent); }
+.ui-rule-after::after, .finance-metrics::after, .finance-invest-metrics::after { bottom: -16px; }
+.ui-rule-before::before { top: -16px; }
+/* One line beneath column labels; rows continue to be separated by whitespace. */
+.workspace-shell main table > thead > tr:last-child, .finance-list-heading {
+  background-image: linear-gradient(var(--ui-divider),var(--ui-divider));
+  background-size: 100% 1px; background-position: left bottom; background-repeat: no-repeat;
+}
+@media (min-width: 1024px) {
+  .ui-reading-divider::before { content: ''; position: absolute; left: 296px; top: 0; bottom: 0; width: 1px; background: var(--ui-divider); pointer-events: none; }
+}
+@media (min-width: 1280px) {
+  .ui-review-divider::before { content: ''; position: absolute; left: -16px; top: 0; bottom: 0; width: 1px; background: var(--ui-divider); pointer-events: none; }
+}
