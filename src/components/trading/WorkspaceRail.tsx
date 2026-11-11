@@ -37,7 +37,7 @@ export default function WorkspaceRail({ children }: { children: ReactNode }) {
     return () => { animation.cancel(); media.removeEventListener('change', stop); };
   }, [finance, desktop, open]);
   const content = <div className="rail-inner">
-    <div className="rail-brand rail-brand-logo"><img src="/logo.png" alt="Track Record" className="h-16 w-16 object-contain" /></div>
+    <div className="rail-brand rail-brand-logo"><img src="/logo.png?v=5" alt="Track Record" className="h-16 w-16 rounded-2xl object-contain" /></div>
     <div className="rail-workspaces rail-workspaces-animated" role="navigation" aria-label="Modules de l’application">
       <span ref={workspacePill} className="rail-workspace-pill" aria-hidden="true" style={{transform:`translateX(${finance ? 100 : 0}%)`}} />
       {[{ value: false, label: 'Trading' }, { value: true, label: 'Finance' }].map(({ value, label }) => <button type="button" key={label} aria-current={finance === value ? 'page' : undefined} onClick={() => {
@@ -49,7 +49,7 @@ export default function WorkspaceRail({ children }: { children: ReactNode }) {
   </div>;
 
   return <>{desktop ? <aside className="workspace-rail" aria-label="Bandeau latéral">{content}</aside> : <>
-    <header className="rail-mobile-header"><Button ref={trigger} variant="ghost" size="icon" aria-label="Ouvrir la navigation" onClick={() => setOpen(true)}><Menu className="h-5 w-5" /></Button><img src="/logo.png" alt="Track Record" className="absolute left-1/2 h-9 w-9 -translate-x-1/2 object-contain" /></header>
+    <header className="rail-mobile-header"><Button ref={trigger} variant="ghost" size="icon" aria-label="Ouvrir la navigation" onClick={() => setOpen(true)}><Menu className="h-5 w-5" /></Button><img src="/logo.png?v=5" alt="Track Record" className="absolute left-1/2 h-9 w-9 -translate-x-1/2 rounded-[10px] object-contain" /></header>
     <Sheet open={open} onOpenChange={setOpen}><SheetContent onCloseAutoFocus={event => { event.preventDefault(); trigger.current?.focus(); }} side="left" className="workspace-rail-mobile p-0"><SheetTitle className="sr-only">Navigation de l’application</SheetTitle><SheetDescription className="sr-only">Choisir un espace et une rubrique.</SheetDescription>{content}</SheetContent></Sheet>
   </>}</>;
 }

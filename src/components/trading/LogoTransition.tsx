@@ -28,7 +28,7 @@ const TURNS_REVEAL = 3;  // tours pendant le rétrécissement
 const END_SIZE = 170;    // taille du logo (px) quand il arrive au centre
 
 // Précharge le logo HD utilisé en plein écran
-if (typeof window !== 'undefined') { const i = new Image(); i.src = '/logo-large.png'; }
+if (typeof window !== 'undefined') { const i = new Image(); i.src = '/logo-large.png?v=5'; }
 
 /** Précharge la page cible pendant l'animation pour qu'elle apparaisse sans écran de chargement. */
 const preload = (target: string) => {
@@ -124,10 +124,10 @@ function Overlay({ phase, from }: { phase: Phase; from: LogoRect; target: string
   return (
     <div className="fixed inset-0 z-[200] pointer-events-auto overflow-hidden" aria-hidden>
       <div className="absolute inset-0" style={{ background: 'hsl(var(--background))', opacity: veilOpacity, transition: veilTransition }} />
-      <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #ff8a2a 0%, #d6243a 28%, #8b2fc9 62%, #3b6fe0 100%)', opacity: washOpacity, transition: washTransition }} />
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #080808 0%, #eeb900 42%, #aaa9ba 72%, #080808 100%)', opacity: washOpacity, transition: washTransition }} />
       <img
-        src="/logo-large.png"
-        onError={e => { const el = e.currentTarget; if (!el.src.endsWith('/logo.png')) el.src = '/logo.png'; }}
+        src="/logo-large.png?v=5"
+        onError={e => { const el = e.currentTarget; if (!el.src.endsWith('/logo.png?v=5')) el.src = '/logo.png?v=5'; }}
         alt=""
         draggable={false}
         style={{
