@@ -11,7 +11,7 @@ interface AppLayoutProps { children: ReactNode; accounts: Account[]; activeAccou
 const STATUS_DOT: Record<string, string> = { active: 'bg-profit', pending: 'bg-primary', terminated: 'bg-destructive', paid_out: 'bg-[hsl(38_92%_50%)]' };
 type StatusFilter = 'all' | AccountStatus;
 const FILTERS: { key: StatusFilter; label: string }[] = [
-  { key: 'all', label: 'All' }, { key: 'active', label: 'Active' }, { key: 'pending', label: 'Pending' }, { key: 'terminated', label: 'Terminated' }, { key: 'paid_out', label: 'Paid Out' },
+  { key: 'all', label: 'All' }, { key: 'active', label: 'Active' }, { key: 'pending', label: 'Pending' }, { key: 'terminated', label: 'Terminated' }, { key: 'paid_out', label: 'Cycle clôturé' },
 ];
 
 export function AppLayout({ children, accounts, activeAccountId, onSelectAccount }: AppLayoutProps) {
@@ -40,7 +40,7 @@ export function AppLayout({ children, accounts, activeAccountId, onSelectAccount
       <WorkspaceRail><TopNav sidebar /></WorkspaceRail>
 
       {/* Filtres de comptes : descendus sous le menu, alignés à droite */}
-      {accounts.length > 0 && location.pathname !== '/' && location.pathname !== '/discipline' && location.pathname !== '/calendar' && location.pathname !== '/trades' && location.pathname !== '/reports' && !['/strategy','/ai-assistant','/accounts'].includes(location.pathname) && (
+      {accounts.length > 0 && location.pathname !== '/' && location.pathname !== '/discipline' && location.pathname !== '/calendar' && location.pathname !== '/trades' && location.pathname !== '/reports' && !['/strategy','/ai-assistant','/accounts','/payout'].includes(location.pathname) && (
         <div className="relative z-40 px-3 md:px-5 pt-3 pb-1 max-w-[1800px] w-full mx-auto flex justify-end">
           <div className="flex flex-wrap items-center justify-end gap-1 min-h-9 px-1.5 py-1 rounded-xl bg-background/90 border border-border/70">
             <div className="flex flex-wrap items-center gap-0.5">

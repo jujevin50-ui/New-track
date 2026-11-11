@@ -6,9 +6,7 @@ import {
   getTradeScreenshots,
 } from '@/types/trade';
 import { Account } from '@/types/account';
-import { Payout } from '@/hooks/usePayouts';
 import {
-  Banknote,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -28,8 +26,6 @@ interface TradeTableProps {
   onEdit: (trade: Trade) => void;
   onDelete: (id: string) => void;
   accounts?: Account[];
-  payouts?: Payout[];
-  onDeletePayout?: (id: string) => void;
 }
 
 type SortDir = 'asc' | 'desc';
@@ -55,8 +51,6 @@ const TradeTable = ({
   onEdit,
   onDelete,
   accounts = [],
-  payouts = [],
-  onDeletePayout,
 }: TradeTableProps) => {
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
@@ -68,11 +62,6 @@ const TradeTable = ({
         kind: 'trade' as const,
         data: trade,
         sortDate: trade.endDate || trade.date,
-      })),
-      ...payouts.map(payout => ({
-        kind: 'payout' as const,
-        data: payout,
-        sortDate: payout.date,
       })),
     ];
 
@@ -97,7 +86,7 @@ const TradeTable = ({
     });
 
     return unified;
-  }, [trades, payouts, sortField, sortDir]);
+  }, [trades, sortField, sortDir]);
 
   const allImages = useMemo(
     () =>
@@ -207,43 +196,6 @@ const TradeTable = ({
 
             <tbody>
               {rows.map((row, index) => {
-                if (row.kind === 'payout') {
-                  const payout = row.data;
-
-                  return (
-                    <tr
-                      key={`payout-${payout.id}`}
-                      className="border-b border-border/40 bg-primary/[0.025] hover:bg-primary/[0.045]"
-                    >
-                      <td className="px-4 py-3"><Banknote className="h-4 w-4 text-muted-foreground/50" /></td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <span className="rounded-md border border-primary/20 bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-primary">
-                            Payout
-                          </span>
-                          <span className="truncate text-xs text-muted-foreground">
-                            {accounts.find(a => a.id === payout.accountId)?.name || ''}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{payout.date}</td>
-                      <td colSpan={9} className="px-4 py-3 text-xs text-muted-foreground">
-                        {payout.note || 'Payout'}
-                      </td>
-                      <td className="px-2 py-3 text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => onDeletePayout?.(payout.id)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                }
-
                 const trade = row.data;
                 const net = getNetResult(trade);
                 const account = accounts.find(a => a.id === trade.accountId);

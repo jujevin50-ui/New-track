@@ -1191,3 +1191,5 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 .accounts-page tbody tr:hover { background: hsl(var(--secondary) / 0.3); }
 @media (max-width: 639px) { .assistant-chat { height: 560px; } .accounts-page .dashboard-filter-controls, .strategy-page > .dashboard-filter-controls { width: 100%; } .accounts-page .dashboard-filter-field, .strategy-page > .dashboard-filter-controls .dashboard-filter-field { width: 100%; } }
 @media (max-width: 639px) { .account-editor form > div:last-of-type > .flex { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); } .account-editor form button { white-space: normal; } }
+.payout-editor .dashboard-filter-field { width: 100%; }
+@media (max-width: 639px) { .payout-page .dashboard-filter-controls { width: 100%; } .payout-page .dashboard-filter-field { width: 100%; } }

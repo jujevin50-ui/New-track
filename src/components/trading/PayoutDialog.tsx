@@ -1,162 +1,47 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Banknote, Zap } from 'lucide-react';
-import { Account } from '@/types/account';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import DashboardFilter from './DashboardFilter';
+import { Loader2 } from 'lucide-react';
+import type { Account } from '@/types/account';
+import type { PayoutRecord } from '@/lib/payouts';
+import { localDay } from '@/lib/discipline';
 
-interface PayoutDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSubmit: (accountId: string, amount: number, date: string, note: string) => void;
-  accounts: Account[];
-  defaultAccountId?: string;
-  accountProfits?: Record<string, number>;
+interface Props { open:boolean; onOpenChange:(open:boolean)=>void; onSubmit:(accountId:string,amount:number,date:string,note:string,renew:boolean)=>Promise<void>; accounts:Account[]; defaultAccountId?:string; accountProfits?:Record<string,number>; payout?:PayoutRecord | null; }
+export default function PayoutDialog({open,onOpenChange,onSubmit,accounts,defaultAccountId,accountProfits={},payout}:Props) {
+  const [accountId,setAccountId]=useState('');
+  const [amount,setAmount]=useState('');
+  const [date,setDate]=useState(localDay());
+  const [note,setNote]=useState('');
+  const [renew,setRenew]=useState(true);
+  const [saving,setSaving]=useState(false);
+  const [error,setError]=useState('');
+  const busy=useRef(false);
+  const eligible=accounts.filter(account=>['active','pending'].includes(account.status) || account.id===payout?.accountId);
+  const selected=accounts.find(account=>account.id===accountId);
+  const currency=payout?.currency || selected?.currency || '';
+  const profit=accountProfits[accountId] ?? 0;
+  useEffect(()=>{
+    if(!open) return;
+    const account=payout?.accountId || (eligible.some(account=>account.id===defaultAccountId) ? defaultAccountId! : eligible[0]?.id || '');
+    setAccountId(account);setAmount(payout ? String(payout.amount) : (accountProfits[account]??0)>0 ? accountProfits[account].toFixed(2) : '');setDate(payout?.date ?? localDay());setNote(payout?.note ?? '');setRenew(true);setError('');
+    // A draft is initialized only on opening, never overwritten by account updates during saving.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[open,payout?.id]);
+  return <Dialog open={open} onOpenChange={value=>{if(!busy.current) onOpenChange(value);}}><DialogContent className="payout-editor w-[calc(100vw-32px)] max-h-[90dvh] overflow-y-auto sm:max-w-lg"><DialogHeader><DialogTitle>{payout ? 'Modifier le payout' : 'Nouveau payout'}</DialogTitle></DialogHeader><form className="space-y-5" onSubmit={async event=>{
+    event.preventDefault();if(busy.current) return;const value=Number(amount.replace(',','.'));if(!Number.isFinite(value)||value<=0||!accountId||!date||date>localDay()){setError('Vérifie le compte, le montant et la date.');return;}
+    busy.current=true;setSaving(true);setError('');try{await onSubmit(accountId,value,date,note,!payout&&renew);onOpenChange(false);}catch(cause){setError(cause instanceof Error ? cause.message : 'Impossible d’enregistrer le payout.');}finally{busy.current=false;setSaving(false);}
+  }}><fieldset disabled={saving} className="min-w-0 space-y-5">
+    <DashboardFilter label="Compte" ariaLabel="Compte du payout" value={accountId} disabled={Boolean(payout)||saving} onChange={id=>{setAccountId(id);setAmount((accountProfits[id]??0)>0 ? accountProfits[id].toFixed(2) : '');}} options={eligible.map(account=>({value:account.id,label:account.name}))}/>
+    <div className="grid grid-cols-2 items-end gap-4"><div className="space-y-2"><Label htmlFor="payout-amount" className="text-xs text-muted-foreground">Montant {currency ? `(${currency})` : ''}</Label><Input id="payout-amount" type="text" inputMode="decimal" required value={amount} onChange={event=>setAmount(event.target.value)} className="h-[42px] rounded-[10px] bg-transparent"/></div><div className="space-y-2"><Label htmlFor="payout-date" className="text-xs text-muted-foreground">Date</Label><Input id="payout-date" type="date" required max={localDay()} value={date} onChange={event=>setDate(event.target.value)} className="h-[42px] min-w-0 rounded-[10px] bg-transparent text-xs"/></div></div>
+    {!payout&&profit>0 && <button type="button" onClick={()=>setAmount(profit.toFixed(2))} className="text-xs text-primary">Utiliser le profit disponible : {profit.toLocaleString('fr-FR',{maximumFractionDigits:2})} {currency}</button>}
+    <div className="space-y-2"><Label htmlFor="payout-note" className="text-xs text-muted-foreground">Détails</Label><Textarea id="payout-note" value={note} onChange={event=>setNote(event.target.value)} className="min-h-28 rounded-[10px] bg-transparent text-sm"/></div>
+    {!payout&&<label className="flex cursor-pointer items-start gap-3 text-xs leading-5"><Checkbox checked={renew} onCheckedChange={value=>setRenew(value===true)} className="mt-0.5"/>Clôturer ce cycle et créer le compte suivant</label>}
+    {error&&<p role="alert" className="text-sm text-loss">{error}</p>}
+    <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={()=>onOpenChange(false)}>Annuler</Button><Button type="submit" disabled={saving||!accountId||!amount} className="gap-2">{saving&&<Loader2 className="h-4 w-4 animate-spin"/>}Enregistrer le payout</Button></div>
+  </fieldset></form></DialogContent></Dialog>;
 }
-
-const today = () => new Date().toISOString().slice(0, 10);
-
-const fmt2 = (n: number) => n.toFixed(2);
-
-const PayoutDialog = ({ open, onOpenChange, onSubmit, accounts, defaultAccountId, accountProfits = {} }: PayoutDialogProps) => {
-  const activeAccounts = accounts.filter(a => a.status === 'active' || a.status === 'pending');
-  const [accountId, setAccountId] = useState(defaultAccountId || activeAccounts[0]?.id || '');
-  const [amount, setAmount] = useState('');
-  const [date, setDate] = useState(today());
-  const [note, setNote] = useState('');
-
-  const selected = accounts.find(a => a.id === accountId);
-  const autoProfit = accountId ? (accountProfits[accountId] ?? null) : null;
-
-  // Auto-fill amount when account changes
-  useEffect(() => {
-    if (accountId && autoProfit !== null && autoProfit > 0) {
-      setAmount(fmt2(autoProfit));
-    } else {
-      setAmount('');
-    }
-  }, [accountId]);
-
-  // Reset when dialog opens
-  useEffect(() => {
-    if (open) {
-      const id = defaultAccountId || activeAccounts[0]?.id || '';
-      setAccountId(id);
-      setDate(today());
-      setNote('');
-      const profit = id ? (accountProfits[id] ?? null) : null;
-      setAmount(profit !== null && profit > 0 ? fmt2(profit) : '');
-    }
-  }, [open]);
-
-  const handleAccountChange = (id: string) => {
-    setAccountId(id);
-    const profit = accountProfits[id] ?? null;
-    if (profit !== null && profit > 0) setAmount(fmt2(profit));
-    else setAmount('');
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const n = parseFloat(amount);
-    if (!n || n <= 0 || !accountId) return;
-    onSubmit(accountId, n, date, note);
-    setAmount('');
-    setDate(today());
-    setNote('');
-    onOpenChange(false);
-  };
-
-  const curr = selected?.currency === 'EUR' ? '€' : '$';
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Banknote className="h-4 w-4 text-muted-foreground" />
-            Payout
-          </DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 pt-1">
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Compte</Label>
-            <Select value={accountId} onValueChange={handleAccountChange}>
-              <SelectTrigger className="bg-secondary border-border">
-                <SelectValue placeholder="Sélectionner un compte" />
-              </SelectTrigger>
-              <SelectContent>
-                {activeAccounts.map(a => (
-                  <SelectItem key={a.id} value={a.id}>
-                    <span className="flex items-center gap-2">
-                      {a.name}
-                      {a.accountCode && <span className="font-mono text-[10px] text-muted-foreground">{a.accountCode}</span>}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs text-muted-foreground">
-                Montant {selected ? `(${selected.currency})` : ''}
-              </Label>
-              {autoProfit !== null && autoProfit > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setAmount(fmt2(autoProfit))}
-                  className="flex items-center gap-1 text-[10px] text-primary hover:text-primary/80 transition-colors"
-                >
-                  <Zap className="h-3 w-3" />
-                  Profit actuel : {curr}{fmt2(autoProfit)}
-                </button>
-              )}
-            </div>
-            <Input
-              type="number"
-              min="0.01"
-              step="0.01"
-              placeholder="0.00"
-              value={amount}
-              onChange={e => setAmount(e.target.value)}
-              className="font-mono"
-              autoFocus
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Date</Label>
-            <Input
-              type="date"
-              value={date}
-              onChange={e => setDate(e.target.value)}
-              className="font-mono"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Note (optionnel)</Label>
-            <Input
-              placeholder="Ex: Payout mensuel"
-              value={note}
-              onChange={e => setNote(e.target.value)}
-            />
-          </div>
-          <div className="flex justify-end gap-2 pt-1">
-            <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-              Annuler
-            </Button>
-            <Button type="submit" size="sm" disabled={!amount || parseFloat(amount) <= 0 || !accountId}>
-              Confirmer le payout
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-export default PayoutDialog;
