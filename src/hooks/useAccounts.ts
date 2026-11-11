@@ -1,22 +1,21 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useSyncExternalStore, useEffect } from 'react';
 import { Account, AccountFormData, AccountStatus } from '@/types/account';
 import { useData } from '@/contexts/DataContext';
 
-const ACTIVE_KEY = 'trading-journal-active-account';
+import { readActiveAccount, subscribeActiveAccount, selectActiveAccount } from '@/lib/activeAccountStore';
 
 export const useAccounts = () => {
   const { data, status, addRow, updateRow, deleteRow } = useData();
 
-  const [activeAccountId, setActiveAccountId] = useState<string | null>(() =>
-    localStorage.getItem(ACTIVE_KEY)
-  );
-
+  const activeAccountId = useSyncExternalStore(subscribeActiveAccount, readActiveAccount, () => 'all');
+  const setActiveAccountId = selectActiveAccount;
   useEffect(() => {
-    if (activeAccountId) localStorage.setItem(ACTIVE_KEY, activeAccountId);
-    else localStorage.removeItem(ACTIVE_KEY);
-  }, [activeAccountId]);
+    if (status === 'connected' && activeAccountId !== 'all' && !(data.accounts as Account[]).some(account => account.id === activeAccountId)) {
+      selectActiveAccount('all');
+    }
+  }, [status, data.accounts, activeAccountId]);
 
-  const accounts: Account[] = (data.accounts as any[]).map(a => ({
+  const accounts: Account[] = (data.accounts as Account[]).map(a => ({
     id: a.id,
     accountCode: a.accountCode || '',
     name: a.name,
@@ -29,7 +28,7 @@ export const useAccounts = () => {
     payoutIntervalDays: Number(a.payoutIntervalDays) || 0,
     dailyDrawdownPct: Number(a.dailyDrawdownPct) || 0,
     maxDrawdownPct: Number(a.maxDrawdownPct) || 0,
-    riskPct: Number(a.riskPct) ?? 1,
+    riskPct: a.riskPct != null && Number.isFinite(Number(a.riskPct)) ? Number(a.riskPct) : 1,
   }));
 
   const addAccount = useCallback(async (formData: AccountFormData) => {
@@ -38,7 +37,7 @@ export const useAccounts = () => {
     await addRow('accounts', account);
     if (!activeAccountId) setActiveAccountId(id);
     return account;
-  }, [addRow, activeAccountId]);
+  }, [addRow, activeAccountId, setActiveAccountId]);
 
   const updateAccount = useCallback(async (id: string, formData: AccountFormData) => {
     await updateRow('accounts', id, { ...formData, id });
@@ -47,10 +46,9 @@ export const useAccounts = () => {
   const deleteAccount = useCallback(async (id: string) => {
     await deleteRow('accounts', id);
     if (activeAccountId === id) {
-      const remaining = accounts.filter(a => a.id !== id);
-      setActiveAccountId(remaining.length > 0 ? remaining[0].id : null);
+      setActiveAccountId('all');
     }
-  }, [deleteRow, activeAccountId, accounts]);
+  }, [deleteRow, activeAccountId, setActiveAccountId]);
 
   const activeAccount = accounts.find(a => a.id === activeAccountId) || null;
   const categories = [...new Set(accounts.map(a => a.category).filter(Boolean))];

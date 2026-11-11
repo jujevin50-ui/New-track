@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -111,8 +111,18 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
     return withData ? withData.id : 'all';
   }, [initialAccountId, accounts, byAccount]);
 
-  const [selectedRaw, setSelectedRaw] = useState<string>('');
+  const [selectedRaw, setSelectedState] = useState<string>(() => {
+    if (initialAccountId && accounts.some(account => account.id === initialAccountId)) return initialAccountId;
+    try { return localStorage.getItem('finance-selected-account') || ''; } catch { return ''; }
+  });
+  const setSelectedRaw = (id: string) => {
+    setSelectedState(id);
+    try { localStorage.setItem('finance-selected-account', id); } catch { /* Selection remains usable without browser storage. */ }
+  };
   const selected = selectedRaw && (selectedRaw === 'all' || accounts.some(a => a.id === selectedRaw)) ? selectedRaw : defaultSelected;
+  useEffect(() => {
+    try { localStorage.setItem('finance-selected-account', selected); } catch { /* Browser storage is optional. */ }
+  }, [selected]);
 
   const initial = useMemo(() => (selected === 'all' ? null : initialOfAccount(accounts.find(a => a.id === selected))), [selected, accounts]);
   const [initialOpen, setInitialOpen] = useState(false);

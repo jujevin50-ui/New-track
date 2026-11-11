@@ -73,10 +73,9 @@ const Trades = ({ activeAccount, accounts, onAddAccount, onUpdateAccount, onSele
   const [editTrade, setEditTrade] = useState<Trade | null>(null);
   const [view, setView] = useState<'list' | 'table' | 'gallery'>('table');
   const [status, setStatus] = useState('all');
-  const [accountFilter, setAccountFilter] = useState('all');
   const [filters, setFilters] = useState({...initialTradeFilters});
   const availableAccounts = status === 'all' ? accounts : accounts.filter(account => account.status === status);
-  const selectedId = accountFilter === 'all' || !availableAccounts.some(account => account.id === accountFilter) ? 'all' : accountFilter;
+  const selectedId = activeAccount?.id ?? 'all';
   const scopeAccounts = selectedId === 'all' ? availableAccounts : availableAccounts.filter(account => account.id === selectedId);
   const trades = useMemo(() => allTrades.filter(trade => scopeAccounts.some(account => account.id === trade.accountId)), [allTrades, scopeAccounts]);
   const filteredTrades = useMemo(() => filterTradeList(trades,filters), [trades,filters]);
@@ -177,7 +176,7 @@ const Trades = ({ activeAccount, accounts, onAddAccount, onUpdateAccount, onSele
         </div>
       }>
         <DashboardFilter label="Statut" ariaLabel="Statut des comptes" value={status} onChange={setStatus} options={[{value:'all',label:'Tous'},{value:'active',label:'Actifs'},{value:'pending',label:'En attente'},{value:'terminated',label:'Terminés'},{value:'paid_out',label:'Payout effectué'}]}/>
-        <DashboardFilter label="Compte" ariaLabel="Compte des trades" value={selectedId} onChange={id => {setAccountFilter(id); if (id !== 'all') onSelectAccount(id);}} disabled={!availableAccounts.length} options={[{value:'all',label:'Tous les comptes'},...availableAccounts.map(account=>({value:account.id,label:account.name}))]}/>
+        <DashboardFilter label="Compte" ariaLabel="Compte des trades" value={selectedId} onChange={id => {setStatus('all'); onSelectAccount(id);}} disabled={!accounts.length} options={[{value:'all',label:'Tous les comptes'},...accounts.map(account=>({value:account.id,label:account.name}))]}/>
       </TradeFilters>
       <div className="min-w-0">
         {view === 'list' ? (
