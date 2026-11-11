@@ -1,3 +1,4 @@
+import { APP_LOGO, APP_LOGO_LARGE } from '@/lib/branding';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -28,7 +29,7 @@ const TURNS_REVEAL = 3;  // tours pendant le rétrécissement
 const END_SIZE = 170;    // taille du logo (px) quand il arrive au centre
 
 // Précharge le logo HD utilisé en plein écran
-if (typeof window !== 'undefined') { const i = new Image(); i.src = '/logo-large.png?v=5'; }
+if (typeof window !== 'undefined') { const i = new Image(); i.src = APP_LOGO_LARGE; }
 
 /** Précharge la page cible pendant l'animation pour qu'elle apparaisse sans écran de chargement. */
 const preload = (target: string) => {
@@ -126,8 +127,8 @@ function Overlay({ phase, from }: { phase: Phase; from: LogoRect; target: string
       <div className="absolute inset-0" style={{ background: 'hsl(var(--background))', opacity: veilOpacity, transition: veilTransition }} />
       <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #080808 0%, #eeb900 42%, #aaa9ba 72%, #080808 100%)', opacity: washOpacity, transition: washTransition }} />
       <img
-        src="/logo-large.png?v=5"
-        onError={e => { const el = e.currentTarget; if (!el.src.endsWith('/logo.png?v=5')) el.src = '/logo.png?v=5'; }}
+        src={APP_LOGO_LARGE}
+        onError={e => { const el = e.currentTarget; if (!el.src.endsWith(APP_LOGO)) el.src = APP_LOGO; }}
         alt=""
         draggable={false}
         style={{

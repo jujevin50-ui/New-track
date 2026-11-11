@@ -1,3 +1,4 @@
+import { APP_LOGO } from '@/lib/branding';
 import { useState } from 'react';
 import { BarChart3, List, Wallet, CalendarDays, ClipboardList, LogOut, Settings, Sparkles } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
@@ -56,7 +57,7 @@ export function AppSidebar() {
       <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar">
         <div className={`h-14 px-4 flex items-center ${collapsed ? 'justify-center' : 'gap-3'} shrink-0`}>
           <div className="h-9 w-9 rounded-lg overflow-hidden shrink-0">
-            <img src="/logo.png?v=5" alt="Logo" className="h-full w-full object-contain" />
+            <img src={APP_LOGO} alt="Logo" className="h-full w-full object-contain" />
           </div>
           {!collapsed && (
             <div className="overflow-hidden">
