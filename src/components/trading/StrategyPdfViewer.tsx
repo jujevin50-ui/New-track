@@ -7,10 +7,10 @@ import { Button } from '@/components/ui/button';
 
 GlobalWorkerOptions.workerSrc = workerUrl;
 
-export default function StrategyPdfViewer({ content, label = 'Document de stratégie PDF' }: { content: string; label?: string }) {
+export default function StrategyPdfViewer({ content, label = 'Document de stratégie PDF', initialZoom = 1 }: { content: string; label?: string; initialZoom?: number }) {
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(initialZoom);
   const [width, setWidth] = useState(0);
   const [rendering, setRendering] = useState(true);
   const [text, setText] = useState('');
@@ -20,13 +20,13 @@ export default function StrategyPdfViewer({ content, label = 'Document de strat�
 
   useEffect(() => {
     let cancelled = false;
-    setPdf(null); setError(''); setPageNumber(1); setZoom(1);
+    setPdf(null); setError(''); setPageNumber(1); setZoom(initialZoom);
     const task = getDocument({ data: new Uint8Array(documentBuffer(content)) });
     task.promise.then(document => { if (!cancelled) setPdf(document); }).catch(() => {
       if (!cancelled) setError('Impossible de lire ce PDF. Vérifiez le fichier original.');
     });
     return () => { cancelled = true; void task.destroy(); };
-  }, [content]);
+  }, [content, initialZoom]);
 
   useEffect(() => {
     if (!container.current) return;
