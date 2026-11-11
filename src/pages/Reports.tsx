@@ -1,7 +1,7 @@
 import DashboardFilter from '@/components/trading/DashboardFilter';
 import { accountScope } from '@/lib/accountScope';
 import { localDay } from '@/lib/discipline';
-import { useEffect, useMemo, useState, useCallback, useRef, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef, lazy, Suspense, type ReactNode } from 'react';
 import { Account } from '@/types/account';
 import { Trade, getNetResult, getTradeScreenshots } from '@/types/trade';
 import { useTrades } from '@/hooks/useTrades';
@@ -31,6 +31,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
+
+const ReportPdfPreview = lazy(() => import('@/components/trading/ReportPdfPreview'));
 
 interface ReportsProps {
   activeAccount: Account | null;
@@ -123,7 +125,7 @@ const Reports = ({ activeAccount, accounts, onSelectAccount }: ReportsProps) => 
   const [saving, setSaving] = useState(false);
   const loadedForm = useRef<PeriodReportData | null>(null);
   const formatMoney = (value: number, currency = scope.currency) => { try { return new Intl.NumberFormat('fr-FR', {style:'currency',currency,signDisplay:'exceptZero',maximumFractionDigits:2}).format(value); } catch {return value.toLocaleString('fr-FR',{signDisplay:'exceptZero',maximumFractionDigits:2});} };
-  const pdfMoney = (value: number, currency = scope.currency) => `${value >= 0 ? '+' : ''}${value.toFixed(2)} ${currency}`;
+  const pdfMoney = useCallback((value: number, currency = scope.currency) => `${value >= 0 ? '+' : ''}${value.toFixed(2)} ${currency}`, [scope.currency]);
   const [browseType, setBrowseType] = useState<PeriodType>('weekly');
   const [selected, setSelected] = useState<{ type: PeriodType; key: string } | null>(null);
   const [formData, setFormData] = useState<PeriodReportData>({
@@ -138,6 +140,8 @@ const Reports = ({ activeAccount, accounts, onSelectAccount }: ReportsProps) => 
   });
   const [previewImgs, setPreviewImgs] = useState<string[] | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const reportContext = `${selected?.type}/${selected?.key}/${activeAccount?.id}/${scope.currency}`;
+  const loadedContext = useRef('');
 
   const buildEntries = useCallback((type: PeriodType): PeriodEntry[] => {
     const keys = new Set<string>(Object.keys(reports[type]));
@@ -216,8 +220,9 @@ const Reports = ({ activeAccount, accounts, onSelectAccount }: ReportsProps) => 
       solutions: next.solutions,
     };
     loadedForm.current = loaded;
+    loadedContext.current = reportContext;
     setFormData(loaded);
-  }, [selected, getReport, allTrades, reports, dirty]);
+  }, [selected, getReport, allTrades, reports, dirty, reportContext]);
 
   const selectedTrades = useMemo(() => {
     if (!selected) return [] as Trade[];
@@ -272,7 +277,7 @@ const Reports = ({ activeAccount, accounts, onSelectAccount }: ReportsProps) => 
     try { await saveReport(selected.type, selected.key, formData); loadedForm.current = formData; setDirty(false); toast.success('Rapport enregistré'); setIsEditing(false); } catch { toast.error('Impossible d’enregistrer le rapport.'); } finally { setSaving(false); }
   };
 
-  const handleDownloadPDF = async (mode: 'download' | 'view' | 'blob' = 'download'): Promise<string | undefined> => {
+  const handleDownloadPDF = useCallback(async (mode: 'download' | 'preview' = 'download'): Promise<string | undefined> => {
     if (!selected) return;
 
     const title = periodStorageTitle(selected.type);
@@ -429,19 +434,14 @@ const Reports = ({ activeAccount, accounts, onSelectAccount }: ReportsProps) => 
       y += 4;
     }
 
-    if (mode === 'blob') {
-      return pdf.output('bloburl') as unknown as string;
-    }
-
-    if (mode === 'view') {
-      window.open(pdf.output('bloburl') as unknown as string, '_blank');
-      return;
-    }
+    if (mode === 'preview') return pdf.output('datauristring').split(',')[1];
 
     pdf.save(`${selected.type}-report-${selected.key}.pdf`);
     toast.success('PDF téléchargé');
     return undefined;
-  };
+  }, [selected, stats, selectedTrades, formData, accounts, pdfMoney]);
+
+  const generatePreview = useCallback(() => handleDownloadPDF('preview'), [handleDownloadPDF]);
 
   if (!activeAccount) {
     return (
@@ -486,8 +486,8 @@ const Reports = ({ activeAccount, accounts, onSelectAccount }: ReportsProps) => 
                   <div className="flex items-center gap-2 mb-1">
                     <currentMeta.icon className="h-4 w-4 text-primary" />
                     <span className="text-[10px] uppercase tracking-widest text-muted-foreground">{currentMeta.title}</span>
-                    {selectedSaved && <span className="text-[9px] px-1.5 py-0.5 rounded bg-profit/10 text-profit">Enregistré</span>}
-                    {!selectedSaved && <span className="text-[9px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">Brouillon</span>}
+                    {selectedSaved && !dirty && <span className="text-[9px] px-1.5 py-0.5 rounded bg-profit/10 text-profit">Enregistré</span>}
+                    {(!selectedSaved || dirty) && <span className="text-[9px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">{dirty ? 'Modifications non enregistrées' : 'Brouillon'}</span>}
                   </div>
                   <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">{selectedEntry?.label || reportLabel(selected.type, selected.key)}</h2>
                   <p className="mt-3 text-sm text-muted-foreground">{activeAccount.id === 'all' ? `Tous les comptes${scope.currency ? ` · ${scope.currency}` : ''}` : activeAccount.name}</p>
@@ -498,7 +498,6 @@ const Reports = ({ activeAccount, accounts, onSelectAccount }: ReportsProps) => 
                       <Button size="sm" onClick={() => setIsEditing(true)} className="gap-1.5 text-xs">
                         <Edit3 className="h-3.5 w-3.5" />Modifier
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDownloadPDF('view')} className="gap-1.5 text-xs"><Eye className="h-3.5 w-3.5" />Voir PDF</Button>
                       <Button variant="outline" size="sm" onClick={() => handleDownloadPDF()} className="gap-1.5 text-xs">
                         <Download className="h-3.5 w-3.5" />Export PDF
                       </Button>
@@ -635,29 +634,14 @@ const Reports = ({ activeAccount, accounts, onSelectAccount }: ReportsProps) => 
                   <Button disabled={saving} onClick={handleSave} className="gap-1.5 text-xs">
                     <Save className="h-3.5 w-3.5" />Enregistrer le rapport
                   </Button>
-                  <Button variant="outline" onClick={() => handleDownloadPDF('view')} className="gap-1.5 text-xs">
+                  <Button variant="outline" onClick={() => setIsEditing(false)} className="gap-1.5 text-xs">
                     <Eye className="h-3.5 w-3.5" />Voir PDF
                   </Button>
                 </div>
               </div>
               ) : (
-                <div className="px-6 py-8 sm:px-12 sm:py-10">
-                  <dl className="grid grid-cols-2 gap-x-6 gap-y-7 border-b border-border/60 pb-8 sm:grid-cols-4">
-                    {[
-                      { label: 'Résultat net', value: formatMoney(stats.pnl), color: stats.pnl >= 0 ? 'text-profit' : 'text-loss' },
-                      { label: 'Trades', value: String(stats.total), color: 'text-foreground' },
-                      { label: 'Win rate', value: stats.total ? `${stats.winRate} %` : '—', color: 'text-foreground' },
-                      { label: 'Stratégie respectée', value: stats.total ? `${stats.strategy} %` : '—', color: 'text-foreground' },
-                    ].map(item => <div key={item.label} className="min-w-0"><dt className="text-xs text-muted-foreground">{item.label}</dt><dd className={`mt-2 break-words font-mono text-xl sm:text-2xl font-semibold tracking-tight ${item.color}`}>{item.value}</dd></div>)}
-                  </dl>
-                  <div className="mt-7 flex flex-wrap gap-x-6 gap-y-3 text-xs text-muted-foreground">
-                    <span>Profit factor <strong className="ml-2 font-mono font-medium text-foreground">{!stats.total ? '—' : stats.profitFactor === Infinity ? '∞' : stats.profitFactor.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></span>
-                  </div>
-                  <div className="my-12 space-y-12 sm:my-14 sm:space-y-14">
-                    <article><h3 className="mb-4 text-lg font-semibold">Bilan de la période</h3><p className="report-reading text-[15px] text-foreground/80">{formData.conclusion || '—'}</p></article>
-                    <article><h3 className="mb-4 text-lg font-semibold">Objectifs</h3><p className="report-reading text-[15px] text-foreground/80">{formData.objectifPrincipal || '—'}</p>{formData.objectifsSecondaires && <p className="report-reading mt-5 text-[15px] text-muted-foreground">{formData.objectifsSecondaires}</p>}</article>
-                  </div>
-                  {selectedTrades.length > 0 && <section className="border-t border-border/60 pt-6"><h3 className="mb-3 text-base font-semibold">Trades de la période</h3><div className="divide-y divide-border/50">{selectedTrades.map(trade => <div key={trade.id} className="py-4"><div className="flex flex-wrap items-center justify-between gap-2"><span className="font-medium">{trade.pair} <span className="ml-2 text-xs text-muted-foreground">{trade.type === 'Buy' ? 'Long' : 'Short'} · {getTradeReportDate(trade)}</span></span><span className={`font-mono text-sm font-semibold ${getNetResult(trade) >= 0 ? 'text-profit' : 'text-loss'}`}>{formatMoney(getNetResult(trade),accounts.find(account=>account.id===trade.accountId)?.currency)}</span></div>{(formData.tradeNotes[trade.id] ?? trade.notes) && <p className="report-reading mt-2 text-sm text-muted-foreground">{formData.tradeNotes[trade.id] ?? trade.notes}</p>}{getTradeScreenshots(trade).length > 0 && <button onClick={() => setPreviewImgs(getTradeScreenshots(trade))} className="mt-2 inline-flex items-center gap-1.5 text-xs text-primary"><Image className="h-3.5 w-3.5" />Captures</button>}</div>)}</div></section>}
+                <div className="report-pdf-preview">
+                  {loadedContext.current !== reportContext ? <p role="status" className="py-12 text-center text-sm text-muted-foreground">Préparation du rapport…</p> : <Suspense fallback={<p role="status" className="py-12 text-center text-sm text-muted-foreground">Ouverture du PDF…</p>}><ReportPdfPreview generate={generatePreview} label={`Rapport PDF · ${reportLabel(selected.type, selected.key)}`}/></Suspense>}
                 </div>
               )}
             </>
