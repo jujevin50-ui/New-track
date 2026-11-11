@@ -47,7 +47,7 @@ export function InvestmentView(props: ComponentProps<typeof StatementsView>) {
   const patch = (field: keyof FinanceAssetProfile, value: string) => setEditing(previous => previous ? { ...previous, [field]: value } : null);
 
   return <div className="space-y-6">
-    <div className="finance-invest-header"><h1 className="text-xl font-semibold tracking-tight">Invest</h1><Button className="gap-2" onClick={() => edit()}><Plus className="h-4 w-4" />Ajouter un actif</Button></div>
+    <div className="finance-invest-header justify-end"><h1 className="sr-only page-title-hidden">Invest</h1><Button className="gap-2" onClick={() => edit()}><Plus className="h-4 w-4" />Ajouter un actif</Button></div>
     <div className="finance-toolbar"><div className="dashboard-filter-controls"><DashboardFilter label="Compte" ariaLabel="Compte Finance" value={props.selectedAccountId ?? 'all'} onChange={props.onAccountChange ?? (() => {})} options={[{value:'all',label:'Tous les comptes'},...props.accounts.map(account=>({value:account.id,label:account.name}))]} /></div><Segmented<'assets' | 'statements'> value={tab} onChange={setTab} options={[[ 'assets','Actifs'],['statements','Relevés et évolution']]} /></div>
     {tab === 'assets' && <InvestmentOverview assets={assets} lastDate={props.statements.map(statement => statement.date).sort().at(-1)} onSelect={openAsset} />}
     {tab === 'statements' ? <StatementsView {...props} /> : <section className="app-panel surface min-w-0 overflow-hidden" aria-label="Historique des actifs investis">

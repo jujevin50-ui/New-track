@@ -80,14 +80,7 @@ const Trades = ({ activeAccount, accounts, onSelectAccount }: TradesPageProps) =
 
   return (
     <div className="trades-page w-full mx-auto space-y-8 pb-10">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Trades</h1>
-        </div>
-
-
-      </div>
-
+      <h1 className="sr-only page-title-hidden">Trades</h1>
       <TradeFilters trades={trades} filters={filters} onChange={setFilters} actions={
         <div className="trades-actions flex flex-wrap items-center gap-2">
           <div className="dashboard-switch" role="group" aria-label="Vue des trades">{[{value:'table',label:'Tableau',Icon:List},{value:'gallery',label:'Galerie',Icon:Image}].map(({value,label,Icon})=><button type="button" key={value} aria-pressed={view===value} onClick={()=>setView(value as 'table' | 'gallery')} className="inline-flex items-center gap-2"><Icon className="h-3.5 w-3.5"/>{label}</button>)}</div>

@@ -36,9 +36,7 @@ export default function Discipline({ activeAccount, accounts, onSelectAccount }:
   };
 
   return <div className="discipline-page mx-auto w-full space-y-8 pb-10">
-    <header className="flex flex-wrap items-center justify-between gap-4">
-      <div><h1 className="text-2xl font-semibold tracking-tight">Discipline</h1></div>
-    </header>
+    <h1 className="sr-only page-title-hidden">Discipline</h1>
     <div className="dashboard-filters"><div className="dashboard-filter-controls"><DashboardFilter label="Compte" ariaLabel="Compte du bilan" value={selectedId ?? ''} onChange={onSelectAccount} disabled={!accounts.length} options={[{value:'all',label:'Tous les comptes'},...accounts.map(account => ({value:account.id, label:account.name}))]} />{scope.groups.length > 1 && <DashboardFilter label="Devise" ariaLabel="Devise du bilan" value={scope.currency || 'UNKNOWN'} onChange={setPreferredCurrency} options={scope.groups.map(group => ({value:group.currency,label:group.currency}))}/>}<div><span className="dashboard-filter-caption">Journée</span>      <div className="discipline-date-control flex flex-wrap items-center gap-2">
         <Button variant="outline" size="icon" aria-label="Jour précédent" onClick={() => chooseDate(shiftTradingDay(date, -1))}><ChevronLeft /></Button>
         <Input aria-label="Date de discipline" type="date" max={today} value={date} onChange={event => chooseDate(event.target.value)} className="h-10 w-auto max-w-full rounded-[10px] bg-transparent text-xs" />

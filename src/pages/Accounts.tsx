@@ -96,7 +96,7 @@ const Accounts = ({ accounts, onAdd, onUpdate, onDelete, categories, allTrades }
 
   return (
     <div className="accounts-page w-full space-y-8 pb-10">
-      <h1 className="text-2xl font-semibold tracking-tight">Comptes</h1>
+      <h1 className="sr-only page-title-hidden">Comptes</h1>
       <div className="flex flex-wrap items-end justify-between gap-4"><div className="dashboard-filter-controls">
 
         <DashboardFilter label="Statut" ariaLabel="Statut des comptes" value={filterStatus} onChange={value=>setFilterStatus(value as AccountStatus | 'all')} options={[{value:'all',label:'Tous les statuts'},...Object.entries(STATUS_CONFIG).map(([value,item])=>({value,label:item.label}))]}/>

@@ -1,3 +1,4 @@
+import CalendarJournalList from '@/components/trading/CalendarJournalList';
 import { accountScope } from '@/lib/accountScope';
 import { useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
@@ -28,9 +29,10 @@ export default function CalendarView({ activeAccount, accounts, onSelectAccount 
   const { state } = useLocation();
   const target = state as {year?:number; month?:number} | null;
   const today = localDay();
-  const { getJournal, saveJournal } = useDailyJournal();
+  const { journals, getJournal, saveJournal } = useDailyJournal();
   const [date, setDate] = useState(previousTradingDay(today));
   const [month, setMonth] = useState(() => target?.year !== undefined && target?.month !== undefined ? localDay(new Date(target.year, target.month, 1)).slice(0,7) : previousTradingDay(today).slice(0,7));
+  const [view,setView] = useState<'calendar'|'list'>('calendar');
   const [status, setStatus] = useState('all');
   const [preferredCurrency, setPreferredCurrency] = useState('');
   const [draft, setDraft] = useState(() => getJournal(previousTradingDay(today)) ?? newDailyJournal(previousTradingDay(today)));
@@ -46,6 +48,7 @@ export default function CalendarView({ activeAccount, accounts, onSelectAccount 
   const year = Number(month.slice(0,4)), monthIndex = Number(month.slice(5,7)) - 1;
   const lastDay = localDay(new Date(year, monthIndex + 1, 0));
   const stats = dashboardAnalytics(allTrades.filter(trade => !trade.endDate || isTradingDay(trade.endDate)), {accountIds:scope.accounts.map(account => account.id), from:`${month}-01`, to:lastDay < today ? lastDay : today, startingCapital:capital});
+  const history = dashboardAnalytics(allTrades.filter(trade=>!trade.endDate||isTradingDay(trade.endDate)),{accountIds:scope.accounts.map(account=>account.id),to:today,startingCapital:capital});
   const daily = new Map(stats.daily.map(day => [day.date, day]));
   const dayTrades = dashboardAnalytics(allTrades.filter(trade => !trade.endDate || isTradingDay(trade.endDate)), {accountIds:scope.accounts.map(account => account.id), from:date, to:date}).closedTrades;
   const offset = (new Date(year, monthIndex, 1).getDay() + 6) % 7;
@@ -53,31 +56,34 @@ export default function CalendarView({ activeAccount, accounts, onSelectAccount 
   const rows = Math.ceil((offset + days) / 7);
   const cells = Array.from({length:rows * 7}, (_, index) => index >= offset && index < offset + days ? `${month}-${String(index-offset+1).padStart(2,'0')}` : null);
   const chooseDate = (next: string) => {
-    if (!next || !isTradingDay(next) || next > today || saving.current) return;
-    if (next !== date && dirty.current && !window.confirm('Changer de journée sans enregistrer les modifications ?')) return;
+    if (!next || !isTradingDay(next) || next > today || saving.current) return false;
+    if (next !== date && dirty.current && !window.confirm('Changer de journée sans enregistrer les modifications ?')) return false;
     if (next !== date) { setDate(next); setDraft(getJournal(next) ?? newDailyJournal(next)); dirty.current = false; }
     setMonth(next.slice(0,7));
+    return true;
   };
   const moveMonth = (offset: number) => setMonth(localDay(new Date(year, monthIndex + offset, 1)).slice(0,7));
 
   return <div className="calendar-page discipline-page w-full space-y-8 pb-10">
-    <header><h1 className="text-2xl font-semibold tracking-tight">Calendrier</h1></header>
+    <h1 className="sr-only page-title-hidden">Calendrier</h1>
     <div className="dashboard-filters"><div className="dashboard-filter-controls">
       <DashboardFilter label="Statut" ariaLabel="Statut des comptes" value={status} onChange={value => { setStatus(value); const matching = accounts.filter(account => value === 'all' || account.status === value); if (matching.length && activeAccount?.id !== 'all' && !matching.some(account => account.id === activeAccount?.id)) onSelectAccount(matching[0].id); }} options={[{value:'all',label:'Tous les comptes'}, {value:'active',label:'Actifs'}, {value:'pending',label:'En attente'}, {value:'terminated',label:'Terminés'}, {value:'paid_out',label:'Cycle clôturé'}]} />
       <DashboardFilter label="Compte" ariaLabel="Compte du calendrier" value={selectedId ?? ''} onChange={onSelectAccount} disabled={!filteredAccounts.length} options={[{value:'all',label:'Tous les comptes'},...filteredAccounts.map(account => ({value:account.id,label:account.name}))]} />
       {scope.groups.length > 1 && <DashboardFilter label="Devise" ariaLabel="Devise du calendrier" value={scope.currency || 'UNKNOWN'} onChange={setPreferredCurrency} options={scope.groups.map(group => ({value:group.currency,label:group.currency}))}/>}
-    </div></div>
+    </div><div className="dashboard-switch" role="group" aria-label="Vue du calendrier"><button type="button" aria-pressed={view==='calendar'} onClick={()=>setView('calendar')}>Calendrier</button><button type="button" aria-pressed={view==='list'} onClick={()=>setView('list')}>Liste</button></div></div>
     {!scope.accounts.length ? <div className="py-16 text-center text-sm text-muted-foreground"><p>{accounts.length ? 'Aucun compte dans cette sélection.' : 'Ajoute un compte pour suivre tes séances.'}</p><Link to="/accounts" className="dashboard-text-link mt-4 inline-block">Gérer mes comptes →</Link></div> : <>
-      <div className="grid grid-cols-3 gap-4 py-3">
+      {view==='calendar'&&<div className="grid grid-cols-3 gap-4 py-3">
         {[{label:'Résultat net du mois',value:money(stats.netProfit,currency),color:tone(stats.netProfit)}, {label:'Trades clôturés',value:String(stats.totalTrades),color:''}, {label:'Win rate',value:percent(stats.winRate),color:''}].map(metric => <div key={metric.label} className="min-w-0 text-center"><p className="text-xs text-muted-foreground">{metric.label}</p><p className={`mt-5 break-words text-lg font-semibold tracking-tight tabular-nums sm:text-[27px] ${metric.color}`}>{metric.value}</p></div>)}
-      </div>
+      </div>}
       <div className="calendar-review-layout grid items-stretch gap-8 xl:grid-cols-2">
-        <section className="calendar-month flex min-w-0 flex-col" aria-label="Calendrier mensuel">
+        <section className="calendar-month flex min-w-0 flex-col" aria-label={view==='calendar'?'Calendrier mensuel':'Liste des bilans'}>
           <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold capitalize" aria-live="polite">{new Date(`${month}-01T12:00:00`).toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}</h2>
-            <div className="flex items-center gap-2"><Button variant="outline" size="icon" aria-label="Mois précédent" onClick={() => moveMonth(-1)}><ChevronLeft className="h-4 w-4"/></Button><Button variant="ghost" className="h-10 text-xs" onClick={() => chooseDate(previousTradingDay(today))}>Aujourd’hui</Button><Button variant="outline" size="icon" aria-label="Mois suivant" onClick={() => moveMonth(1)}><ChevronRight className="h-4 w-4"/></Button></div>
+            <h2 className="text-sm font-semibold capitalize" aria-live="polite">{view==='calendar'?new Date(`${month}-01T12:00:00`).toLocaleDateString('fr-FR',{month:'long',year:'numeric'}):'Bilans journaliers'}</h2>
+            {view==='calendar'&&<div className="flex items-center gap-2"><Button variant="outline" size="icon" aria-label="Mois précédent" onClick={() => moveMonth(-1)}><ChevronLeft className="h-4 w-4"/></Button><Button variant="ghost" className="h-10 text-xs" onClick={() => chooseDate(previousTradingDay(today))}>Aujourd’hui</Button><Button variant="outline" size="icon" aria-label="Mois suivant" onClick={() => moveMonth(1)}><ChevronRight className="h-4 w-4"/></Button></div>}
           </header>
-          <div className="mb-3 grid grid-cols-7 gap-1" aria-hidden="true">{weekdays.map(day => <span key={day} className="text-center text-[10px] font-medium text-muted-foreground">{day}</span>)}</div>
+          {view==='list'?<CalendarJournalList journals={journals} daily={history.daily} month={month} today={today} selectedDate={date} currency={currency} onSelectDate={day=>{
+            if (chooseDate(day)&&window.innerWidth<1280) document.getElementById('calendar-review-title')?.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
+          }} />:<><div className="mb-3 grid grid-cols-7 gap-1" aria-hidden="true">{weekdays.map(day => <span key={day} className="text-center text-[10px] font-medium text-muted-foreground">{day}</span>)}</div>
           <div className="calendar-days grid flex-1 grid-cols-7 gap-1.5" style={{gridTemplateRows:`repeat(${rows}, minmax(78px, 1fr))`}}>
             {cells.map((day,index) => {
               if (!day) return <div key={`empty-${index}`} aria-hidden="true"/>;
@@ -93,7 +99,7 @@ export default function CalendarView({ activeAccount, accounts, onSelectAccount 
                 <span className="calendar-day-count">{result ? `${result.trades} tr.` : ''}</span>
               </button></TooltipTrigger><TooltipContent className="rounded-xl border-border bg-popover px-4 py-3 text-xs text-popover-foreground shadow-sm"><p className="font-medium">{fullDate(day)}</p><p className="mt-2">{result ? `${money(result.net,currency)} · ${result.trades} trade${result.trades > 1 ? 's' : ''}` : 'Aucun trade clôturé'}</p>{journal?.event && <p className="mt-1 text-muted-foreground">{events[journal.event]}</p>}</TooltipContent></Tooltip>;
             })}
-          </div>
+          </div></>}
         </section>
         <section className="discipline-review ui-review-divider min-w-0" aria-labelledby="calendar-review-title">
           <header className="mb-6 flex flex-wrap items-center justify-between gap-3"><h2 id="calendar-review-title" className="text-sm font-semibold">Bilan journalier</h2><Input aria-label="Date du bilan" type="date" max={today} value={date} onChange={event => chooseDate(event.target.value)} className="h-10 w-auto max-w-full rounded-[10px] bg-transparent text-xs"/></header>

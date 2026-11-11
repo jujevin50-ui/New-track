@@ -21,7 +21,7 @@ import {
   Landmark, Pencil, Plus, Repeat2, Save, Search, TrendingUp, X, PiggyBank,
 } from 'lucide-react';
 import { YearFlowBars, CashflowChart, FlowAreaChart, Donut, AccountBars, PALETTE } from '@/components/finance/financeCharts';
-import { Card, CategoryTile, Empty, Segmented, SectionHeader, SplitBar, Stat, Tile, eur } from '@/components/finance/ui';
+import { Card, CategoryTile, Empty, Segmented, SplitBar, Stat, Tile, eur } from '@/components/finance/ui';
 import { toast } from 'sonner';
 
 interface FinanceAccount { id: string; name: string; type: string; institution: string; balance: number; openingBalance?: number; currency: string; color?: string; archived?: boolean; initialCapital?: number | null; initialDate?: string | null; }
@@ -477,7 +477,7 @@ function TransactionsView({ accountFilter, transactions, accounts, onAdd, onEdit
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold tracking-tight">Transactions</h1>
+      <h1 className="sr-only page-title-hidden">Transactions</h1>
       <div className="finance-list-filters dashboard-filter-controls">
         {accountFilter}
         <DashboardFilter label="Mouvement" ariaLabel="Type de transaction" value={kind} onChange={value => { setKind(value as typeof kind); setLimit(80); }} options={[{value:'all',label:'Tous les mouvements'},{value:'expense',label:'Dépenses'},{value:'income',label:'Revenus'}]} />
@@ -517,11 +517,12 @@ function AccountsView({ accounts, onNew, onEdit, onDelete, onStatements }: { acc
   const [search,setSearch] = useState('');
   const filtered=accounts.filter(account => (status==='all' || Boolean(account.archived)===(status==='archived')) && (type==='all' || account.type===type) && `${account.name} ${account.institution}`.toLocaleLowerCase('fr-FR').includes(search.toLocaleLowerCase('fr-FR')));
   return <div className="space-y-6">
-    <SectionHeader title="Comptes" subtitle="" action={<Button className="gap-2" onClick={onNew}><Plus className="h-4 w-4" />Nouveau compte</Button>} />
+    <h1 className="sr-only page-title-hidden">Comptes</h1>
     <div className="finance-list-filters dashboard-filter-controls">
       <DashboardFilter label="Statut" ariaLabel="Statut des comptes Finance" value={status} onChange={setStatus} options={[{value:'all',label:'Tous les comptes'},{value:'active',label:'Actifs'},{value:'archived',label:'Archivés'}]} />
       <DashboardFilter label="Type" ariaLabel="Type de compte Finance" value={type} onChange={setType} options={[{value:'all',label:'Tous les types'},...ACCOUNT_TYPES.map(value=>({value,label:value}))]} />
       <div className="finance-search"><label className="dashboard-filter-caption" htmlFor="finance-account-search">Recherche</label><Input id="finance-account-search" value={search} onChange={event=>setSearch(event.target.value)} placeholder="Nom ou établissement…" /></div>
+      <Button className="ml-auto gap-2" onClick={onNew}><Plus className="h-4 w-4" />Nouveau compte</Button>
     </div>
     <div className="finance-account-list">
       <div className="finance-account-row finance-list-heading" aria-hidden="true"><span>Compte</span><span>Établissement</span><span>Solde actuel</span><span /></div>
@@ -543,7 +544,7 @@ function SubscriptionsView({ accountFilter, subscriptions, accounts, onNew, onTo
   const monthly=list.filter(item=>item.active).reduce((sum,item)=>sum+item.amount*(item.frequency==='yearly'?1/12:item.frequency==='weekly'?52/12:1),0);
   const freq={monthly:'mois',yearly:'an',weekly:'semaine'};
   return <div className="space-y-6">
-    <h1 className="text-xl font-semibold tracking-tight">Abonnements</h1>
+    <h1 className="sr-only page-title-hidden">Abonnements</h1>
     <div className="finance-list-filters dashboard-filter-controls">{accountFilter}<DashboardFilter label="Statut" ariaLabel="Statut des abonnements" value={status} onChange={setStatus} options={[{value:'all',label:'Tous les abonnements'},{value:'active',label:'Actifs'},{value:'inactive',label:'En pause'}]} /><div className="finance-search"><label className="dashboard-filter-caption" htmlFor="finance-sub-search">Recherche</label><Input id="finance-sub-search" value={search} onChange={event=>setSearch(event.target.value)} placeholder="Rechercher un abonnement…" /></div><Button className="ml-auto h-[42px] gap-2" onClick={onNew}><Plus className="h-4 w-4" />Ajouter</Button></div><p className="text-xs text-muted-foreground">Budget mensuel <span className="ml-2 text-sm font-semibold tabular-nums text-foreground">{eur(monthly)}</span></p>
     <div>{list.map(item=><div key={item.id} className={`finance-subscription-row ${item.active?'':'opacity-60'}`}>
       <div className="flex min-w-0 items-center gap-3"><CategoryTile category={item.category} /><div className="min-w-0"><p className="truncate text-sm font-semibold">{item.name}</p><p className="mt-1 text-xs text-muted-foreground">{accounts.find(account=>account.id===item.accountId)?.name || '—'}</p></div></div>
@@ -559,7 +560,7 @@ function TransfersView({ accountFilter, transfers, accounts, onNew, onDelete }: 
   const frequency={monthly:'Mensuel',weekly:'Hebdomadaire',yearly:'Annuel'};
   const list=[...transfers].filter(item=>kind==='all'||item.recurring===(kind==='recurring')).sort((a,b)=>b.date.localeCompare(a.date));
   return <div className="space-y-6">
-    <h1 className="text-xl font-semibold tracking-tight">Virements</h1>
+    <h1 className="sr-only page-title-hidden">Virements</h1>
     <div className="dashboard-filter-controls">{accountFilter}<DashboardFilter label="Fréquence" ariaLabel="Type de virement" value={kind} onChange={setKind} options={[{value:'all',label:'Tous les virements'},{value:'once',label:'Ponctuels'},{value:'recurring',label:'Récurrents'}]} /><Button className="ml-auto h-[42px] gap-2" onClick={onNew}><Plus className="h-4 w-4" />Nouveau virement</Button></div>
     <div>{list.map(item=><div key={item.id} className="finance-transfer-row">
       <div className="min-w-0"><p className="text-sm font-medium">{name(item.fromAccountId)} <span className="mx-2 text-muted-foreground">→</span> {name(item.toAccountId)}</p><p className="mt-1.5 text-xs text-muted-foreground">{new Date(`${item.date}T12:00:00`).toLocaleDateString('fr-FR')}{item.recurring ? ` · ${frequency[item.frequency||'monthly']}`:''}</p></div>

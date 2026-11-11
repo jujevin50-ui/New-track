@@ -461,7 +461,7 @@ const Reports = ({ activeAccount, accounts, onSelectAccount }: ReportsProps) => 
   const visibleEntries = reportEntries[browseType].filter(entry => (visibility === 'all' || (visibility === 'saved' ? entry.hasReport : !entry.hasReport)) && normalize(`${entry.label} ${entry.key}`).includes(normalize(query)));
   return (
     <div className="reports-page w-full space-y-8 pb-10">
-      <h1 className="text-2xl font-semibold tracking-tight">Rapports</h1>
+      <h1 className="sr-only page-title-hidden">Rapports</h1>
       <div className="dashboard-filter-controls"><DashboardFilter label="Compte" ariaLabel="Compte des rapports" value={activeAccount?.id ?? 'all'} onChange={id => {if (!dirty || window.confirm('Changer de compte sans enregistrer les modifications ?')) {setDirty(false); setIsEditing(false); onSelectAccount(id);}}} options={[{value:'all',label:'Tous les comptes'},...accounts.map(account => ({value:account.id,label:account.name}))]}/>{scope.groups.length>1 && <DashboardFilter label="Devise" ariaLabel="Devise des rapports" value={scope.currency || 'UNKNOWN'} onChange={value => {if (!dirty || window.confirm('Changer de devise sans enregistrer les modifications ?')) {setDirty(false); setIsEditing(false); setPreferredCurrency(value);}}} options={scope.groups.map(group=>({value:group.currency,label:group.currency}))}/>}</div>
       <div className="reports-layout ui-reading-divider grid items-start gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
         <aside className="reports-browser min-w-0 space-y-4" aria-label="Liste des rapports">

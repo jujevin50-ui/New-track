@@ -69,8 +69,8 @@ export default function Strategy({ accounts, activeAccountId, onSelectAccount }:
 
   return (
     <div className="strategy-page mx-auto w-full space-y-8 pb-10">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Stratégie</h1>
+      <header className="flex flex-wrap items-center justify-end gap-4">
+        <h1 className="sr-only page-title-hidden">Stratégie</h1>
         <Button className="gap-2 rounded-xl" disabled={busy} onClick={() => input.current?.click()}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}Importer un document
         </Button>

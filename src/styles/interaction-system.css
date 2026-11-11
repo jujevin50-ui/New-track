@@ -114,3 +114,21 @@
 @media (min-width: 1280px) {
   .ui-review-divider::before { content: ''; position: absolute; left: -16px; top: 0; bottom: 0; width: 1px; background: var(--ui-divider); pointer-events: none; }
 }
+/* Page names stay available to assistive technology without taking a header row. */
+.page-title-hidden + * { margin-top: 0 !important; }
+.finance-invest-header:has(.page-title-hidden) { justify-content: flex-end; }
+.period-performance-table th, .period-performance-table td { padding: 15px 8px; text-align: right; vertical-align: middle; font-variant-numeric: tabular-nums; }
+.period-performance-table th:first-child { padding-left: 0; text-align: left; }
+.period-performance-table th:last-child, .period-performance-table td:last-child { padding-right: 0; }
+.period-performance-table thead th { font-size: 11px; font-weight: 400; color: hsl(var(--muted-foreground)); }
+.period-performance-table tbody tr:hover { background: hsl(var(--secondary) / .3); }
+.calendar-page .dashboard-filters { align-items: flex-end; }
+.calendar-list-filters > .dashboard-filter-field { flex: 1; width: auto; min-width: 140px; }
+.calendar-journal-list { max-height: 75vh; overflow-y: auto; scrollbar-gutter: stable; }
+.calendar-journal-row { display: block; width: 100%; padding: 18px 16px; margin-bottom: 8px; border-radius: 12px; text-align: left; }
+.calendar-journal-row:hover { background: hsl(var(--secondary) / .45); }
+.calendar-journal-row[aria-pressed=true] { background: hsl(var(--secondary)); box-shadow: inset 3px 0 hsl(var(--primary)); }
+#calendar-review-title { scroll-margin-top: 90px; }
+@media (max-width: 639px) { .period-performance-table th, .period-performance-table td { padding: 14px 4px; font-size: 12px; } .period-performance-table thead th { font-size: 10px; } .calendar-list-filters > .dashboard-filter-field { min-width: 0; width: 100%; } .calendar-journal-row { padding-inline: 12px; } }
+.period-performance-table tbody tr { height: 80px; }
+.dashboard-redesign > .dashboard-filters { align-items: flex-end; }
