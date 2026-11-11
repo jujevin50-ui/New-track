@@ -25,8 +25,8 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(payload.title ?? '📊 Trading Journal', {
       body: payload.body ?? '',
-      icon: '/icons/icon-192x192.png?v=6',
-      badge: '/icons/icon-192x192.png?v=6',
+      icon: '/icons/icon-192x192-transparent-c8ce2fb8ea.png',
+      badge: '/icons/icon-192x192-transparent-c8ce2fb8ea.png',
       data: payload.url ?? '/productivity',
       vibrate: [150, 50, 150],
       requireInteraction: false,
