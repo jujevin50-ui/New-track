@@ -112,7 +112,7 @@ const AppContent = () => {
       <>{splash}<div className="relative z-10 min-h-screen text-foreground" aria-hidden={showSplash || undefined} {...(showSplash ? {inert: ''} : {})}>
         <ErrorBoundary resetKey="finance">
           <Suspense fallback={<PageLoader />}>
-            <Finance />
+            <Finance onEnterInvest={() => setShowSplash(true)} />
           </Suspense>
         </ErrorBoundary>
       </div></>
