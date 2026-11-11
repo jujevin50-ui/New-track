@@ -1,10 +1,10 @@
 import { useLayoutEffect, useRef } from 'react';
 
-interface WelcomeSplashProps { name: string; onDone: () => void; }
+interface WelcomeSplashProps { name: string; showGreeting?: boolean; onDone: () => void; }
 
 /** Letters gather into a ribbon, travel to the top left, then unveil the page in straight horizontal bands. */
-export function WelcomeSplash({ name, onDone }: WelcomeSplashProps) {
-  const text = `Welcome back, ${name || 'Trader'}`;
+export function WelcomeSplash({ name, showGreeting = true, onDone }: WelcomeSplashProps) {
+  const text = showGreeting ? `Welcome back, ${name || 'Trader'}` : '';
   const canvas = useRef<HTMLCanvasElement>(null);
   const ribbon = useRef<HTMLCanvasElement>(null);
   const underlay = useRef<HTMLDivElement>(null);
@@ -197,7 +197,7 @@ export function WelcomeSplash({ name, onDone }: WelcomeSplashProps) {
       };
       frame = requestAnimationFrame(animate);
     };
-    timers.push(window.setTimeout(reduced.matches ? fade : beginFlight, reduced.matches ? 450 : 1400));
+    timers.push(window.setTimeout(reduced.matches ? fade : beginFlight, reduced.matches ? (showGreeting ? 450 : 0) : (showGreeting ? 1400 : 0)));
     return () => {
       finished = true;
       cancelAnimationFrame(frame);
@@ -207,9 +207,9 @@ export function WelcomeSplash({ name, onDone }: WelcomeSplashProps) {
       reduced.removeEventListener('change', onPreference);
       document.body.style.overflow = oldOverflow;
     };
-  }, [text]);
+  }, [text, showGreeting]);
 
-  return <div className="welcome-flow" role="status" aria-label={text}>
+  return <div className="welcome-flow" role="status" aria-label={text || "Ouverture de Finance"}>
     <div ref={underlay} className="welcome-flow-underlay" aria-hidden="true"/>
     <canvas ref={canvas} className="welcome-flow-canvas" aria-hidden="true"/>
     <canvas ref={ribbon} className="welcome-flow-canvas" aria-hidden="true"/>

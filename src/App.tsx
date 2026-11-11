@@ -8,7 +8,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from
 import { DataProvider, useData } from "@/contexts/DataContext";
 import { useAccounts } from "@/hooks/useAccounts";
 import { AppLayout } from "@/components/trading/AppLayout";
-import { useState, useEffect, useMemo, lazy, Suspense, type ComponentType } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useMemo, lazy, Suspense, type ComponentType } from "react";
 import { BarChart3, FolderOpen, FilePlus, HardDrive, RefreshCw } from "lucide-react";
 import { Trade } from "@/types/trade";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -72,6 +72,11 @@ const AppContent = () => {
   const [showSplash, setShowSplash] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
+  const previousPath = useRef(location.pathname);
+  useLayoutEffect(() => {
+    if (previousPath.current !== location.pathname && location.pathname === '/finance') setShowSplash(true);
+    previousPath.current = location.pathname;
+  }, [location.pathname]);
   const [routeRestored, setRouteRestored] = useState(false);
 
   const allTrades: Trade[] = useMemo(() => {
@@ -105,14 +110,14 @@ const AppContent = () => {
     initialBalance: accounts.reduce((s, a) => s + a.initialBalance, 0), payoutIntervalDays: 0, dailyDrawdownPct: 0, maxDrawdownPct: 0, riskPct: 1,
   } : null) : activeAccount;
 
-  const splash = showSplash && <WelcomeSplash name={userName} onDone={() => setShowSplash(false)} />;
+  const splash = showSplash && <WelcomeSplash name={userName} showGreeting={location.pathname !== "/finance"} onDone={() => setShowSplash(false)} />;
 
   if (location.pathname === "/finance") {
     return (
       <>{splash}<div className="relative z-10 min-h-screen text-foreground" aria-hidden={showSplash || undefined} {...(showSplash ? {inert: ''} : {})}>
         <ErrorBoundary resetKey="finance">
           <Suspense fallback={<PageLoader />}>
-            <Finance onEnterInvest={() => setShowSplash(true)} />
+            <Finance />
           </Suspense>
         </ErrorBoundary>
       </div></>

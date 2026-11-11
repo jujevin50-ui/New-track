@@ -45,7 +45,7 @@ const monthKeyOf = (d: Date) => localDate(d).slice(0, 7);
 
 const emptyTx: FinanceTransaction = { id: '', date: todayStr(), description: '', amount: 0, type: 'expense', accountId: '', category: 'Autre', notes: '' };
 
-export default function Finance({ onEnterInvest }: { onEnterInvest?: () => void }) {
+export default function Finance() {
   const { data, addRow, updateRow, deleteRow } = useData();
   const accounts = useMemo(() => Array.isArray(data?.financeAccounts) ? data.financeAccounts : [], [data?.financeAccounts]) as FinanceAccount[];
   const transactions = useMemo(() => Array.isArray(data?.financeTransactions) ? data.financeTransactions : [], [data?.financeTransactions]) as FinanceTransaction[];
@@ -240,7 +240,7 @@ export default function Finance({ onEnterInvest }: { onEnterInvest?: () => void 
   return (
     <div className="workspace-shell finance-workspace min-h-screen text-foreground relative z-10">
       <a href="#main-content" className="ui-skip-link">Aller au contenu</a>
-      <WorkspaceRail><nav className="rail-nav" aria-label="Navigation My Finance"><SlidingRailLinks>{TABS.map(([value, label, Icon]) => <button type="button" key={value} data-rail-link aria-current={tab === value ? 'page' : undefined} onClick={() => { if (value === 'invest') { setInvestmentStart(undefined); if (tab !== 'invest') onEnterInvest?.(); } setTab(value); }} className={`rail-link${tab === value ? ' is-current' : ''}`}><Icon className="header-nav-icon" aria-hidden="true" strokeWidth={1.8} /><span>{label}</span></button>)}</SlidingRailLinks></nav><TopNav sidebar utilitiesOnly /></WorkspaceRail>
+      <WorkspaceRail><nav className="rail-nav" aria-label="Navigation My Finance"><SlidingRailLinks>{TABS.map(([value, label, Icon]) => <button type="button" key={value} data-rail-link aria-current={tab === value ? 'page' : undefined} onClick={() => { setTab(value); if (value === 'invest') setInvestmentStart(undefined); }} className={`rail-link${tab === value ? ' is-current' : ''}`}><Icon className="header-nav-icon" aria-hidden="true" strokeWidth={1.8} /><span>{label}</span></button>)}</SlidingRailLinks></nav><TopNav sidebar utilitiesOnly /></WorkspaceRail>
 
       <main id="main-content" tabIndex={-1} className="finance-main">
         {tab === 'overview' && <div className="finance-toolbar">
@@ -344,7 +344,7 @@ export default function Finance({ onEnterInvest }: { onEnterInvest?: () => void 
         </>}
 
         {tab === 'transactions' && <TransactionsView accountFilter={accountFilter} transactions={scopedTransactions} accounts={accounts} onAdd={openNewTx} onEdit={(x) => { setTx(x); setTxOpen(true); }} onDelete={async (x) => { await deleteRow('financeTransactions', x.id); toast.success('Transaction supprimée'); }} />}
-        {tab === 'accounts' && <AccountsView onStatements={(a) => { selectAccount(a.id); setInvestmentStart(a.id); onEnterInvest?.(); setTab('invest'); }} accounts={accounts.map(a => ({ ...a, balance: accountBalances[a.id] ?? Number(a.balance || 0) }))} onNew={() => { setEditingAccount(null); setAccountForm({ id: '', name: '', type: 'Compte courant', institution: '', balance: 0, currency: 'EUR' }); setAccountOpen(true); }} onEdit={(a) => { const original = accounts.find(x => x.id === a.id) || a; setEditingAccount(original); setAccountForm(a); setAccountOpen(true); }} onDelete={async a => { await deleteRow('financeAccounts', a.id); toast.success('Compte supprimé'); }} />}
+        {tab === 'accounts' && <AccountsView onStatements={(a) => { selectAccount(a.id); setInvestmentStart(a.id); setTab('invest'); }} accounts={accounts.map(a => ({ ...a, balance: accountBalances[a.id] ?? Number(a.balance || 0) }))} onNew={() => { setEditingAccount(null); setAccountForm({ id: '', name: '', type: 'Compte courant', institution: '', balance: 0, currency: 'EUR' }); setAccountOpen(true); }} onEdit={(a) => { const original = accounts.find(x => x.id === a.id) || a; setEditingAccount(original); setAccountForm(a); setAccountOpen(true); }} onDelete={async a => { await deleteRow('financeAccounts', a.id); toast.success('Compte supprimé'); }} />}
         {tab === 'invest' && <InvestmentView accounts={accounts} statements={scopedStatements} initialAccountId={investmentStart} selectedAccountId={selectedAccount} onAccountChange={selectAccount} onSave={saveStatement} onDelete={deleteStatement} onSetInitial={setInitialCapital} />}
         {tab === 'subscriptions' && <SubscriptionsView accountFilter={accountFilter} subscriptions={scopedSubscriptions} accounts={accounts} onNew={() => { setSubForm({ ...subForm, id: '', name: '', amount: 0, accountId: selectedAccount !== 'all' ? selectedAccount : accounts[0]?.id || '' }); setSubOpen(true); }} onToggle={async s => await updateRow('financeSubscriptions', s.id, { active: !s.active })} onDelete={async s => { await deleteRow('financeSubscriptions', s.id); toast.success('Abonnement supprimé'); }} />}
         {tab === 'transfers' && <TransfersView accountFilter={accountFilter} transfers={scopedTransfers} accounts={accounts} onNew={() => { setTransferForm({ ...transferForm, id: '', fromAccountId: accounts[0]?.id || '', toAccountId: accounts[1]?.id || '' }); setTransferOpen(true); }} onDelete={async t => { await deleteRow('financeTransfers', t.id); toast.success('Virement supprimé'); }} />}
