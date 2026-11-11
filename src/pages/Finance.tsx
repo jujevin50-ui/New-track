@@ -1,6 +1,8 @@
+import DashboardFilter from '@/components/trading/DashboardFilter';
+import { useFinanceAccount } from '@/hooks/useFinanceAccount';
 import SlidingRailLinks from '@/components/trading/SlidingRailLinks';
 import type { LucideIcon } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import WorkspaceRail from '@/components/trading/WorkspaceRail';
 import { TopNav } from '@/components/trading/TopNav';
 import { InvestmentView } from '@/components/finance/InvestmentView';
@@ -13,11 +15,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
-  LayoutDashboard, List, ArrowDownLeft, ArrowRightLeft, ArrowUpRight, CalendarClock, ChevronLeft, ChevronRight,
-  Landmark, Pencil, Plus, Repeat2, Save, Search, Settings2, TrendingUp, X, PiggyBank,
+  LayoutDashboard, List, ArrowDownLeft, ArrowRightLeft, ArrowUpRight, ChevronLeft, ChevronRight,
+  Landmark, Pencil, Plus, Repeat2, Save, Search, TrendingUp, X, PiggyBank,
 } from 'lucide-react';
 import { YearFlowBars, CashflowChart, FlowAreaChart, Donut, AccountBars, PALETTE } from '@/components/finance/financeCharts';
-import { Card, CategoryTile, DeltaPill, Empty, Segmented, SectionHeader, SplitBar, Stat, Tile, eur } from '@/components/finance/ui';
+import { Card, CategoryTile, Empty, Segmented, SectionHeader, SplitBar, Stat, Tile, eur } from '@/components/finance/ui';
 import { toast } from 'sonner';
 
 interface FinanceAccount { id: string; name: string; type: string; institution: string; balance: number; openingBalance?: number; currency: string; color?: string; archived?: boolean; initialCapital?: number | null; initialDate?: string | null; }
@@ -47,8 +49,14 @@ export default function Finance() {
   const subscriptions = (Array.isArray((data as any)?.financeSubscriptions) ? (data as any).financeSubscriptions : []) as FinanceSubscription[];
   const transfers = (Array.isArray((data as any)?.financeTransfers) ? (data as any).financeTransfers : []) as FinanceTransfer[];
   const statements = (Array.isArray((data as any)?.financeStatements) ? (data as any).financeStatements : []) as FinanceStatement[];
-  const [statementsAccountId, setStatementsAccountId] = useState<string | undefined>(undefined);
+  const [selectedAccount, selectAccount] = useFinanceAccount(accounts);
+  const scopedAccounts = selectedAccount === 'all' ? accounts : accounts.filter(account => account.id === selectedAccount);
+  const scopedTransactions = transactions.filter(transaction => selectedAccount === 'all' || transaction.accountId === selectedAccount);
+  const scopedSubscriptions = subscriptions.filter(subscription => selectedAccount === 'all' || subscription.accountId === selectedAccount);
+  const scopedTransfers = transfers.filter(transfer => selectedAccount === 'all' || transfer.fromAccountId === selectedAccount || transfer.toAccountId === selectedAccount);
+  const scopedStatements = statements.filter(statement => selectedAccount === 'all' || statement.accountId === selectedAccount);
   const [tab, setTab] = useState<Tab>('overview');
+  const [investmentStart, setInvestmentStart] = useState<string | undefined>();
   const [overviewMode, setOverviewMode] = useState<'month' | 'year'>('month');
   const [cursor, setCursor] = useState(new Date());
   const [txOpen, setTxOpen] = useState(false);
@@ -63,7 +71,7 @@ export default function Finance() {
 
   const key = monthKeyOf(cursor);
   const monthLabel = cursor.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-  const monthTx = useMemo(() => transactions.filter(t => monthKey(t.date) === key), [transactions, key]);
+  const monthTx = useMemo(() => scopedTransactions.filter(t => monthKey(t.date) === key), [scopedTransactions, key]);
   const income = monthTx.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
   const expenses = monthTx.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
   const accountBalances = useMemo(() => {
@@ -82,11 +90,10 @@ export default function Finance() {
     });
     return result;
   }, [accounts, transactions, transfers]);
-  const balance = accounts.reduce((s, a) => s + (accountBalances[a.id] ?? 0), 0);
+  const balance = scopedAccounts.reduce((s, a) => s + (accountBalances[a.id] ?? 0), 0);
   const savingsRate = income > 0 ? ((income - expenses) / income) * 100 : 0;
-  const investmentBalance = accounts.filter(a => ['PEA', 'CTO', 'Assurance-vie', 'Crypto'].includes(a.type)).reduce((s, a) => s + (accountBalances[a.id] ?? 0), 0);
-  const fixedMonthly = subscriptions.filter(s => s.active).reduce((s, x) => s + (x.frequency === 'monthly' ? x.amount : x.frequency === 'yearly' ? x.amount / 12 : x.amount * 52 / 12), 0);
-  const cashBalance = accounts.filter(a => ['Compte courant', 'Épargne', 'Espèces'].includes(a.type)).reduce((s, a) => s + (accountBalances[a.id] ?? 0), 0);
+  const investmentBalance = scopedAccounts.filter(a => ['PEA', 'CTO', 'Assurance-vie', 'Crypto'].includes(a.type)).reduce((s, a) => s + (accountBalances[a.id] ?? 0), 0);
+  const cashBalance = scopedAccounts.filter(a => ['Compte courant', 'Épargne', 'Espèces'].includes(a.type)).reduce((s, a) => s + (accountBalances[a.id] ?? 0), 0);
 
   const categoryData = useMemo(() => {
     const map: Record<string, number> = {};
@@ -109,28 +116,28 @@ export default function Finance() {
     const year = cursor.getFullYear();
     return Array.from({ length: 12 }, (_, month) => {
       const prefix = `${year}-${String(month + 1).padStart(2, '0')}`;
-      const txs = transactions.filter(t => monthKey(t.date) === prefix);
+      const txs = scopedTransactions.filter(t => monthKey(t.date) === prefix);
       const income = txs.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
       const expenses = txs.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
       return { month: new Date(year, month, 1).toLocaleDateString('fr-FR', { month: 'short' }).replace('.', ''), income, expenses, cashflow: income - expenses, savingsRate: income > 0 ? ((income - expenses) / income) * 100 : 0 };
     });
-  }, [cursor, transactions]);
+  }, [cursor, scopedTransactions]);
 
   const yearTotals = useMemo(() => yearData.reduce((a, m) => ({ income: a.income + m.income, expenses: a.expenses + m.expenses, cashflow: a.cashflow + m.cashflow }), { income: 0, expenses: 0, cashflow: 0 }), [yearData]);
   const yearSavingsRate = yearTotals.income > 0 ? (yearTotals.cashflow / yearTotals.income) * 100 : 0;
 
-  const accountData = accounts.filter(a => !a.archived).map(a => ({ name: a.name, balance: accountBalances[a.id] ?? 0 }));
-  const upcomingSubs = subscriptions.filter(s => s.active).sort((a, b) => a.nextDate.localeCompare(b.nextDate)).slice(0, 6);
-  const recurringMonthly = subscriptions.filter(s => s.active).reduce((s, x) => s + (x.frequency === 'monthly' ? x.amount : x.frequency === 'yearly' ? x.amount / 12 : x.amount * 52 / 12), 0);
+  const accountData = scopedAccounts.filter(a => !a.archived).map(a => ({ name: a.name, balance: accountBalances[a.id] ?? 0 }));
+  const upcomingSubs = scopedSubscriptions.filter(s => s.active).sort((a, b) => a.nextDate.localeCompare(b.nextDate)).slice(0, 6);
+  const recurringMonthly = scopedSubscriptions.filter(s => s.active).reduce((s, x) => s + (x.frequency === 'monthly' ? x.amount : x.frequency === 'yearly' ? x.amount / 12 : x.amount * 52 / 12), 0);
 
-  const moveMonth = (delta: number) => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + delta, 1));
+
   const accountName = (accountId: string) => accounts.find(a => a.id === accountId)?.name || 'Compte supprimé';
 
   const saveTx = async () => {
     if (!tx.description || !tx.accountId || tx.amount <= 0) return toast.error('Complète la description, le compte et le montant.');
     const row = { ...tx, id: tx.id || id('tx'), amount: Math.abs(Number(tx.amount)) };
     if (tx.id) await updateRow('financeTransactions' as any, tx.id, row); else await addRow('financeTransactions' as any, row);
-    setTxOpen(false); setTx({ ...emptyTx, accountId: accounts[0]?.id || '' }); toast.success('Transaction enregistrée');
+    setTxOpen(false); setTx({ ...emptyTx, accountId: selectedAccount !== 'all' ? selectedAccount : accounts[0]?.id || '' }); toast.success('Transaction enregistrée');
   };
 
   const saveAccount = async () => {
@@ -176,7 +183,7 @@ export default function Finance() {
   };
 
   const TABS: [Tab, string, LucideIcon][] = [['overview', 'Vue d’ensemble', LayoutDashboard], ['transactions', 'Transactions', List], ['accounts', 'Comptes', Landmark], ['invest', 'Invest', TrendingUp], ['subscriptions', 'Abonnements', Repeat2], ['transfers', 'Virements', ArrowRightLeft]];
-  const openNewTx = () => { setTx({ ...emptyTx, accountId: accounts[0]?.id || '' }); setTxOpen(true); };
+  const openNewTx = () => { setTx({ ...emptyTx, accountId: selectedAccount !== 'all' ? selectedAccount : accounts[0]?.id || '' }); setTxOpen(true); };
   const prev = () => setCursor(new Date(cursor.getFullYear() + (overviewMode === 'year' ? -1 : 0), cursor.getMonth() + (overviewMode === 'month' ? -1 : 0), 1));
   const next = () => setCursor(new Date(cursor.getFullYear() + (overviewMode === 'year' ? 1 : 0), cursor.getMonth() + (overviewMode === 'month' ? 1 : 0), 1));
   const otherBalance = balance - cashBalance - investmentBalance;
@@ -184,42 +191,33 @@ export default function Finance() {
   const topCategories = categoryData.slice(0, 6);
   const expenseTotal = categoryData.reduce((s, c) => s + c.value, 0);
 
+  const accountFilter = <DashboardFilter label="Compte" ariaLabel="Compte Finance" value={selectedAccount} onChange={selectAccount} options={[{value:'all',label:'Tous les comptes'},...accounts.map(account => ({value:account.id,label:account.name}))]} />;
+
   return (
-    <div className="workspace-shell min-h-screen text-foreground relative z-10">
-      <WorkspaceRail><nav className="rail-nav" aria-label="Navigation My Finance"><SlidingRailLinks>{TABS.map(([value, label, Icon]) => <button type="button" key={value} data-rail-link aria-current={tab === value ? 'page' : undefined} onClick={() => { setTab(value); if (value === 'invest') setStatementsAccountId(undefined); }} className={`rail-link${tab === value ? ' is-current' : ''}`}><Icon className="header-nav-icon" aria-hidden="true" strokeWidth={1.8} /><span>{label}</span></button>)}</SlidingRailLinks></nav><TopNav sidebar utilitiesOnly /></WorkspaceRail>
+    <div className="workspace-shell finance-workspace min-h-screen text-foreground relative z-10">
+      <WorkspaceRail><nav className="rail-nav" aria-label="Navigation My Finance"><SlidingRailLinks>{TABS.map(([value, label, Icon]) => <button type="button" key={value} data-rail-link aria-current={tab === value ? 'page' : undefined} onClick={() => { setTab(value); if (value === 'invest') setInvestmentStart(undefined); }} className={`rail-link${tab === value ? ' is-current' : ''}`}><Icon className="header-nav-icon" aria-hidden="true" strokeWidth={1.8} /><span>{label}</span></button>)}</SlidingRailLinks></nav><TopNav sidebar utilitiesOnly /></WorkspaceRail>
 
-      {/* Barre d'outils : période à gauche (Mois / Année), actions à droite — fond carte pour rester lisible sur le noir */}
-      {tab !== 'invest' && <div className="relative z-40">
-        <div className="max-w-[1500px] mx-auto px-4 md:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-3 min-h-10">
-            {tab === 'overview' && <>
-              <div className="inline-flex items-center gap-0.5 rounded-full border border-border bg-secondary px-0.5">
-                <button onClick={prev} aria-label="Période précédente" className="h-9 w-9 inline-flex items-center justify-center rounded-full text-foreground hover:bg-accent transition-colors"><ChevronLeft className="h-4 w-4" /></button>
-                <h1 className="text-base font-semibold capitalize min-w-[140px] text-center text-foreground">{overviewMode === 'month' ? monthLabel : cursor.getFullYear()}</h1>
-                <button onClick={next} aria-label="Période suivante" className="h-9 w-9 inline-flex items-center justify-center rounded-full text-foreground hover:bg-accent transition-colors"><ChevronRight className="h-4 w-4" /></button>
-              </div>
-              <Segmented<'month' | 'year'> value={overviewMode} onChange={setOverviewMode} options={[['month', 'Mois'], ['year', 'Année']]} />
-            </>}
-            {tab !== 'overview' && (
-              <p className="text-sm text-muted-foreground">{TABS.find(([id]) => id === tab)?.[1]}</p>
-            )}
+      <main className="finance-main">
+        {tab === 'overview' && <div className="finance-toolbar">
+          <div className="dashboard-filter-controls">
+            {accountFilter}
+            {tab === 'overview' && <div className="finance-period-field"><span className="dashboard-filter-caption">Période</span><div className="finance-period">
+              <button type="button" onClick={prev} aria-label="Période précédente"><ChevronLeft className="h-4 w-4" /></button>
+              <span>{overviewMode === 'month' ? monthLabel : cursor.getFullYear()}</span>
+              <button type="button" onClick={next} aria-label="Période suivante"><ChevronRight className="h-4 w-4" /></button>
+            </div></div>}
           </div>
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" className="h-10 rounded-full gap-1.5 px-4 bg-card" onClick={() => setTab('accounts')}><Landmark className="h-4 w-4" />{accounts.length} {accounts.length > 1 ? 'comptes' : 'compte'}</Button>
-            <Button size="sm" className="h-10 rounded-full gap-1.5 px-4" onClick={openNewTx}><Plus className="h-4 w-4" />Transaction</Button>
-          </div>
-        </div>
-      </div>}
-
-      <main className="max-w-[1500px] mx-auto px-4 md:px-6 pb-10 pt-5 space-y-4">
+          {tab === 'overview' && <div className="finance-toolbar-actions"><Segmented<'month' | 'year'> value={overviewMode} onChange={setOverviewMode} options={[[ 'month','Mois'],['year','Année']]} /><Button className="gap-2" onClick={openNewTx}><Plus className="h-4 w-4" />Transaction</Button></div>}
+        </div>}
+        <div key={tab} className="finance-content">
         {tab === 'overview' && overviewMode === 'year' && <>
-          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="finance-metrics finance-metrics-four">
             <Stat label="Revenus annuels" value={eur(yearTotals.income)} icon={<ArrowDownLeft className="h-4 w-4" />} color="hsl(var(--profit))" />
-            <Stat label="Dépenses annuelles" value={eur(yearTotals.expenses)} icon={<ArrowUpRight className="h-4 w-4" />} color="hsl(var(--loss))" />
+            <Stat label="Dépenses annuelles" value={eur(-yearTotals.expenses)} icon={<ArrowUpRight className="h-4 w-4" />} color="hsl(var(--loss))" />
             <Stat label="Cash-flow annuel" value={eur(yearTotals.cashflow)} icon={<TrendingUp className="h-4 w-4" />} color={yearTotals.cashflow >= 0 ? 'hsl(var(--profit))' : 'hsl(var(--loss))'} />
-            <Stat label="Taux d’épargne annuel" value={`${yearSavingsRate.toFixed(1)} %`} icon={<PiggyBank className="h-4 w-4" />} color={PALETTE[0]} />
+            <Stat label="Taux d’épargne annuel" value={yearTotals.income > 0 ? `${yearSavingsRate.toLocaleString('fr-FR',{maximumFractionDigits:1})} %` : '—'} percent={yearSavingsRate} icon={<PiggyBank className="h-4 w-4" />} color={PALETTE[0]} />
           </div>
-          <div className="grid lg:grid-cols-[1.6fr_1fr] gap-4">
+          <div className="grid lg:grid-cols-[1.6fr_1fr] gap-8">
             <Card title={`Flux de ${cursor.getFullYear()}`} subtitle="Revenus et dépenses par mois"><div className="h-[320px]"><YearFlowBars data={yearData} /></div></Card>
             <Card title="Cash-flow mensuel" subtitle="Évolution sur l’année"><div className="h-[320px]"><CashflowChart data={yearData} /></div></Card>
           </div>
@@ -242,26 +240,22 @@ export default function Finance() {
         </>}
 
         {tab === 'overview' && overviewMode === 'month' && <>
-          <div className="grid lg:grid-cols-[1.65fr_1fr] gap-4">
-            {/* Héro : patrimoine, variation du mois, courbe, répartition */}
-            <section className="surface p-6 flex flex-col">
-              <p className="text-[13px] text-muted-foreground">Patrimoine suivi</p>
-              <p className="font-mono text-[40px] leading-[1.1] font-semibold tracking-tight mt-1">{eur(balance)}</p>
-              <div className="flex flex-wrap items-center gap-2 mt-3">
-                <DeltaPill value={income - expenses} label={`${income - expenses >= 0 ? '+' : ''}${eur(income - expenses)}`} />
-                <span className="text-[13px] text-muted-foreground">cash-flow de <span className="capitalize">{monthLabel}</span></span>
-              </div>
-              <div className="h-[220px] mt-5 -mx-2"><FlowAreaChart data={trendData} lastIndex={trendData.length - 1} /></div>
-              <div className="mt-5 pt-5 border-t border-border">
-                {balance > 0 || cashBalance > 0 || investmentBalance > 0 ? (
-                  <SplitBar parts={[
-                    { label: 'Liquidités', value: cashBalance, color: PALETTE[4] },
-                    { label: 'Investissements', value: investmentBalance, color: PALETTE[0] },
-                    ...(Math.abs(otherBalance) > 0.5 ? [{ label: 'Autres', value: otherBalance, color: PALETTE[7] }] : []),
-                  ]} />
-                ) : <p className="text-sm text-muted-foreground">Ajoute un compte pour voir la répartition de ton patrimoine.</p>}
-              </div>
-            </section>
+          <div className="finance-metrics">
+            <Stat label="Patrimoine suivi" value={eur(balance)} />
+            <Stat label="Revenus du mois" value={eur(income)} color="hsl(var(--profit))" />
+            <Stat label="Dépenses du mois" value={eur(-expenses)} color="hsl(var(--loss))" />
+            <Stat label="Cash-flow net" value={eur(income-expenses)} color={income-expenses >= 0 ? 'hsl(var(--profit))' : 'hsl(var(--loss))'} />
+            <Stat label="Taux d’épargne" value={income > 0 ? `${savingsRate.toLocaleString('fr-FR',{maximumFractionDigits:1})} %` : '—'} percent={savingsRate} />
+          </div>
+          <div className="grid lg:grid-cols-[1.65fr_1fr] gap-8">
+            <Card title="Progression du cash-flow" action={<span className="text-xs capitalize text-muted-foreground">{monthLabel}</span>}>
+              <div className="h-[300px] sm:h-[340px]"><FlowAreaChart data={trendData} lastIndex={trendData.length-1} /></div>
+              <div className="mt-5"><SplitBar parts={[
+                {label:'Liquidités',value:cashBalance,color:PALETTE[4]},
+                {label:'Investissements',value:investmentBalance,color:PALETTE[0]},
+                {label:'Autres',value:otherBalance,color:PALETTE[7]},
+              ]} /></div>
+            </Card>
 
             <Card title="Dépenses par catégorie" subtitle={<span className="capitalize">{monthLabel}</span>}>
               {categoryData.length ? <>
@@ -287,17 +281,7 @@ export default function Finance() {
             </Card>
           </div>
 
-          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-            <Stat label="Revenus du mois" value={eur(income)} icon={<ArrowDownLeft className="h-4 w-4" />} color="hsl(var(--profit))" hint={`${monthTx.filter(t => t.type === 'income').length} opération(s)`} />
-            <Stat label="Dépenses du mois" value={eur(expenses)} icon={<ArrowUpRight className="h-4 w-4" />} color="hsl(var(--loss))" hint={`${monthTx.filter(t => t.type === 'expense').length} opération(s)`} />
-            <Stat label="Épargne du mois" value={eur(Math.max(0, income - expenses))} icon={<PiggyBank className="h-4 w-4" />} color={PALETTE[1]}>
-              <div className="mt-3 h-1.5 rounded-full bg-secondary overflow-hidden"><div className="h-full rounded-full" style={{ width: `${Math.min(100, Math.max(0, savingsRate))}%`, background: PALETTE[1] }} /></div>
-              <p className="text-xs text-muted-foreground mt-2">Taux d’épargne : <span className="font-mono font-semibold text-foreground">{savingsRate.toFixed(1)} %</span></p>
-            </Stat>
-            <Stat label="Dépenses fixes" value={eur(fixedMonthly)} icon={<CalendarClock className="h-4 w-4" />} color={PALETTE[2]} hint={`par mois · ${subscriptions.filter(s => s.active).length} abonnement(s) actif(s)`} />
-          </div>
-
-          <div className="grid lg:grid-cols-[1.2fr_1fr] gap-4">
+          <div className="grid lg:grid-cols-[1.2fr_1fr] gap-8">
             <Card title="Dernières opérations" subtitle={`${monthTx.length} ce mois-ci`} action={<button onClick={() => setTab('transactions')} className="text-[13px] font-medium text-primary hover:underline">Tout voir</button>}>
               {recentTx.length ? <div className="-mx-2">{recentTx.map(t => <TxRow key={t.id} t={t} accountName={accountName(t.accountId)} />)}</div> : <Empty text="Aucune opération ce mois-ci" />}
             </Card>
@@ -314,20 +298,21 @@ export default function Finance() {
           <Card title="Répartition des comptes" subtitle="Solde actuel"><div className="h-[230px]">{accountData.length ? <AccountBars data={accountData} /> : <Empty text="Crée ton premier compte" />}</div></Card>
         </>}
 
-        {tab === 'transactions' && <TransactionsView transactions={transactions} accounts={accounts} onAdd={openNewTx} onEdit={(x) => { setTx(x); setTxOpen(true); }} onDelete={async (x) => { await deleteRow('financeTransactions' as any, x.id); toast.success('Transaction supprimée'); }} />}
-        {tab === 'accounts' && <AccountsView onStatements={(a) => { setStatementsAccountId(a.id); setTab('invest'); }} accounts={accounts.map(a => ({ ...a, balance: accountBalances[a.id] ?? Number(a.balance || 0) }))} onNew={() => { setEditingAccount(null); setAccountForm({ id: '', name: '', type: 'Compte courant', institution: '', balance: 0, currency: 'EUR' }); setAccountOpen(true); }} onEdit={(a) => { const original = accounts.find(x => x.id === a.id) || a; setEditingAccount(original); setAccountForm(a); setAccountOpen(true); }} onDelete={async a => { await deleteRow('financeAccounts' as any, a.id); toast.success('Compte supprimé'); }} />}
-        {tab === 'invest' && <InvestmentView key={statementsAccountId || 'all'} accounts={accounts} statements={statements} initialAccountId={statementsAccountId} onSave={saveStatement} onDelete={deleteStatement} onSetInitial={setInitialCapital} />}
-        {tab === 'subscriptions' && <SubscriptionsView subscriptions={subscriptions} accounts={accounts} onNew={() => { setSubForm({ ...subForm, id: '', name: '', amount: 0, accountId: accounts[0]?.id || '' }); setSubOpen(true); }} onToggle={async s => await updateRow('financeSubscriptions' as any, s.id, { active: !s.active })} onDelete={async s => { await deleteRow('financeSubscriptions' as any, s.id); toast.success('Abonnement supprimé'); }} />}
-        {tab === 'transfers' && <TransfersView transfers={transfers} accounts={accounts} onNew={() => { setTransferForm({ ...transferForm, id: '', fromAccountId: accounts[0]?.id || '', toAccountId: accounts[1]?.id || '' }); setTransferOpen(true); }} onDelete={async t => { await deleteRow('financeTransfers' as any, t.id); toast.success('Virement supprimé'); }} />}
+        {tab === 'transactions' && <TransactionsView accountFilter={accountFilter} transactions={scopedTransactions} accounts={accounts} onAdd={openNewTx} onEdit={(x) => { setTx(x); setTxOpen(true); }} onDelete={async (x) => { await deleteRow('financeTransactions' as any, x.id); toast.success('Transaction supprimée'); }} />}
+        {tab === 'accounts' && <AccountsView onStatements={(a) => { selectAccount(a.id); setInvestmentStart(a.id); setTab('invest'); }} accounts={accounts.map(a => ({ ...a, balance: accountBalances[a.id] ?? Number(a.balance || 0) }))} onNew={() => { setEditingAccount(null); setAccountForm({ id: '', name: '', type: 'Compte courant', institution: '', balance: 0, currency: 'EUR' }); setAccountOpen(true); }} onEdit={(a) => { const original = accounts.find(x => x.id === a.id) || a; setEditingAccount(original); setAccountForm(a); setAccountOpen(true); }} onDelete={async a => { await deleteRow('financeAccounts' as any, a.id); toast.success('Compte supprimé'); }} />}
+        {tab === 'invest' && <InvestmentView accounts={accounts} statements={scopedStatements} initialAccountId={investmentStart} selectedAccountId={selectedAccount} onAccountChange={selectAccount} onSave={saveStatement} onDelete={deleteStatement} onSetInitial={setInitialCapital} />}
+        {tab === 'subscriptions' && <SubscriptionsView accountFilter={accountFilter} subscriptions={scopedSubscriptions} accounts={accounts} onNew={() => { setSubForm({ ...subForm, id: '', name: '', amount: 0, accountId: selectedAccount !== 'all' ? selectedAccount : accounts[0]?.id || '' }); setSubOpen(true); }} onToggle={async s => await updateRow('financeSubscriptions' as any, s.id, { active: !s.active })} onDelete={async s => { await deleteRow('financeSubscriptions' as any, s.id); toast.success('Abonnement supprimé'); }} />}
+        {tab === 'transfers' && <TransfersView accountFilter={accountFilter} transfers={scopedTransfers} accounts={accounts} onNew={() => { setTransferForm({ ...transferForm, id: '', fromAccountId: accounts[0]?.id || '', toAccountId: accounts[1]?.id || '' }); setTransferOpen(true); }} onDelete={async t => { await deleteRow('financeTransfers' as any, t.id); toast.success('Virement supprimé'); }} />}
+        </div>
       </main>
 
-      <Dialog open={txOpen} onOpenChange={setTxOpen}><DialogContent className="bg-card border-border sm:max-w-lg rounded-2xl"><DialogHeader><DialogTitle>Nouvelle transaction</DialogTitle></DialogHeader><div className="space-y-4"><div className="grid grid-cols-2 gap-2"><button onClick={()=>setTx(x=>({...x,type:'expense',category:'Autre'}))} className={`p-3 rounded-xl border text-sm ${tx.type==='expense'?'border-loss/40 bg-loss-soft text-loss font-medium':'border-border'}`}>Dépense</button><button onClick={()=>setTx(x=>({...x,type:'income',category:'Autre'}))} className={`p-3 rounded-xl border text-sm ${tx.type==='income'?'border-profit/40 bg-profit-soft text-profit font-medium':'border-border'}`}>Revenu</button></div><div className="grid grid-cols-2 gap-3"><div><Label>Date</Label><Input type="date" value={tx.date} onChange={e=>setTx(x=>({...x,date:e.target.value}))}/></div><div><Label>Montant</Label><Input type="number" step="0.01" value={tx.amount||''} onChange={e=>setTx(x=>({...x,amount:Number(e.target.value)}))}/></div></div><div><Label>Description</Label><Input value={tx.description} onChange={e=>setTx(x=>({...x,description:e.target.value}))} placeholder="Courses, salaire, abonnement…"/></div><div className="grid grid-cols-2 gap-3"><div><Label>Compte</Label><Select value={tx.accountId} onValueChange={v=>setTx(x=>({...x,accountId:v}))}><SelectTrigger><SelectValue placeholder="Compte"/></SelectTrigger><SelectContent>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div><div><Label>Catégorie</Label><Select value={tx.category} onValueChange={v=>setTx(x=>({...x,category:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{(tx.type==='expense'?EXPENSE_CATEGORIES:INCOME_CATEGORIES).map(c=><SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div></div><div><Label>Note</Label><Input value={tx.notes||''} onChange={e=>setTx(x=>({...x,notes:e.target.value}))}/></div><Button onClick={saveTx} className="w-full"><Save className="h-4 w-4 mr-2"/>Enregistrer</Button></div></DialogContent></Dialog>
+      <Dialog open={txOpen} onOpenChange={setTxOpen}><DialogContent className="finance-editor bg-card border-border sm:max-w-xl rounded-2xl"><DialogHeader><DialogTitle>{tx.id ? 'Modifier la transaction' : 'Nouvelle transaction'}</DialogTitle></DialogHeader><div className="space-y-4"><div className="grid grid-cols-2 gap-2"><button onClick={()=>setTx(x=>({...x,type:'expense',category:'Autre'}))} className={`p-3 rounded-xl border text-sm ${tx.type==='expense'?'border-loss/40 bg-loss-soft text-loss font-medium':'border-border'}`}>Dépense</button><button onClick={()=>setTx(x=>({...x,type:'income',category:'Autre'}))} className={`p-3 rounded-xl border text-sm ${tx.type==='income'?'border-profit/40 bg-profit-soft text-profit font-medium':'border-border'}`}>Revenu</button></div><div className="grid grid-cols-2 gap-3"><div><Label>Date</Label><Input type="date" value={tx.date} onChange={e=>setTx(x=>({...x,date:e.target.value}))}/></div><div><Label>Montant</Label><Input type="number" step="0.01" value={tx.amount||''} onChange={e=>setTx(x=>({...x,amount:Number(e.target.value)}))}/></div></div><div><Label>Description</Label><Input value={tx.description} onChange={e=>setTx(x=>({...x,description:e.target.value}))} placeholder="Courses, salaire, abonnement…"/></div><div className="grid grid-cols-2 gap-3"><div><Label>Compte</Label><Select value={tx.accountId} onValueChange={v=>setTx(x=>({...x,accountId:v}))}><SelectTrigger><SelectValue placeholder="Compte"/></SelectTrigger><SelectContent>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div><div><Label>Catégorie</Label><Select value={tx.category} onValueChange={v=>setTx(x=>({...x,category:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{(tx.type==='expense'?EXPENSE_CATEGORIES:INCOME_CATEGORIES).map(c=><SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div></div><div><Label>Note</Label><Input value={tx.notes||''} onChange={e=>setTx(x=>({...x,notes:e.target.value}))}/></div><Button onClick={saveTx} className="w-full"><Save className="h-4 w-4 mr-2"/>Enregistrer</Button></div></DialogContent></Dialog>
 
-      <Dialog open={accountOpen} onOpenChange={setAccountOpen}><DialogContent className="bg-card border-border sm:max-w-lg rounded-2xl"><DialogHeader><DialogTitle>{editingAccount?'Modifier le compte':'Nouveau compte'}</DialogTitle></DialogHeader><div className="space-y-4"><div className="grid grid-cols-2 gap-3"><div><Label>Nom</Label><Input value={accountForm.name} onChange={e=>setAccountForm(x=>({...x,name:e.target.value}))} placeholder="Compte courant"/></div><div><Label>Banque / établissement</Label><Input value={accountForm.institution} onChange={e=>setAccountForm(x=>({...x,institution:e.target.value}))} placeholder="Boursobank, Fortuneo…"/></div></div><div className="grid grid-cols-2 gap-3"><div><Label>Type</Label><Select value={accountForm.type} onValueChange={v=>setAccountForm(x=>({...x,type:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{ACCOUNT_TYPES.map(x=><SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent></Select></div><div><Label>Solde actuel</Label><Input type="number" step="0.01" value={accountForm.balance||''} onChange={e=>setAccountForm(x=>({...x,balance:Number(e.target.value)}))}/></div></div><div><Label>Devise</Label><Input value={accountForm.currency} onChange={e=>setAccountForm(x=>({...x,currency:e.target.value.toUpperCase()}))}/></div><Button onClick={saveAccount} className="w-full">Enregistrer</Button></div></DialogContent></Dialog>
+      <Dialog open={accountOpen} onOpenChange={setAccountOpen}><DialogContent className="finance-editor bg-card border-border sm:max-w-xl rounded-2xl"><DialogHeader><DialogTitle>{editingAccount?'Modifier le compte':'Nouveau compte'}</DialogTitle></DialogHeader><div className="space-y-4"><div className="grid grid-cols-2 gap-3"><div><Label>Nom</Label><Input value={accountForm.name} onChange={e=>setAccountForm(x=>({...x,name:e.target.value}))} placeholder="Compte courant"/></div><div><Label>Banque / établissement</Label><Input value={accountForm.institution} onChange={e=>setAccountForm(x=>({...x,institution:e.target.value}))} placeholder="Boursobank, Fortuneo…"/></div></div><div className="grid grid-cols-2 gap-3"><div><Label>Type</Label><Select value={accountForm.type} onValueChange={v=>setAccountForm(x=>({...x,type:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{ACCOUNT_TYPES.map(x=><SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent></Select></div><div><Label>Solde actuel</Label><Input type="number" step="0.01" value={accountForm.balance||''} onChange={e=>setAccountForm(x=>({...x,balance:Number(e.target.value)}))}/></div></div><div><Label>Devise</Label><Input value={accountForm.currency} onChange={e=>setAccountForm(x=>({...x,currency:e.target.value.toUpperCase()}))}/></div><Button onClick={saveAccount} className="w-full">Enregistrer</Button></div></DialogContent></Dialog>
 
-      <Dialog open={subOpen} onOpenChange={setSubOpen}><DialogContent className="bg-card border-border sm:max-w-lg rounded-2xl"><DialogHeader><DialogTitle>Nouvel abonnement</DialogTitle></DialogHeader><div className="space-y-4"><div className="grid grid-cols-2 gap-3"><div><Label>Nom</Label><Input value={subForm.name} onChange={e=>setSubForm(x=>({...x,name:e.target.value}))} placeholder="Netflix, salle, téléphone…"/></div><div><Label>Montant</Label><Input type="number" step="0.01" value={subForm.amount||''} onChange={e=>setSubForm(x=>({...x,amount:Number(e.target.value)}))}/></div></div><div className="grid grid-cols-2 gap-3"><div><Label>Fréquence</Label><Select value={subForm.frequency} onValueChange={(v:any)=>setSubForm(x=>({...x,frequency:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="monthly">Mensuel</SelectItem><SelectItem value="yearly">Annuel</SelectItem><SelectItem value="weekly">Hebdomadaire</SelectItem></SelectContent></Select></div><div><Label>Prochain prélèvement</Label><Input type="date" value={subForm.nextDate} onChange={e=>setSubForm(x=>({...x,nextDate:e.target.value}))}/></div></div><div><Label>Compte débité</Label><Select value={subForm.accountId} onValueChange={v=>setSubForm(x=>({...x,accountId:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div><Button onClick={saveSub} className="w-full">Enregistrer</Button></div></DialogContent></Dialog>
+      <Dialog open={subOpen} onOpenChange={setSubOpen}><DialogContent className="finance-editor bg-card border-border sm:max-w-xl rounded-2xl"><DialogHeader><DialogTitle>Nouvel abonnement</DialogTitle></DialogHeader><div className="space-y-4"><div className="grid grid-cols-2 gap-3"><div><Label>Nom</Label><Input value={subForm.name} onChange={e=>setSubForm(x=>({...x,name:e.target.value}))} placeholder="Netflix, salle, téléphone…"/></div><div><Label>Montant</Label><Input type="number" step="0.01" value={subForm.amount||''} onChange={e=>setSubForm(x=>({...x,amount:Number(e.target.value)}))}/></div></div><div className="grid grid-cols-2 gap-3"><div><Label>Fréquence</Label><Select value={subForm.frequency} onValueChange={(v:any)=>setSubForm(x=>({...x,frequency:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="monthly">Mensuel</SelectItem><SelectItem value="yearly">Annuel</SelectItem><SelectItem value="weekly">Hebdomadaire</SelectItem></SelectContent></Select></div><div><Label>Prochain prélèvement</Label><Input type="date" value={subForm.nextDate} onChange={e=>setSubForm(x=>({...x,nextDate:e.target.value}))}/></div></div><div><Label>Compte débité</Label><Select value={subForm.accountId} onValueChange={v=>setSubForm(x=>({...x,accountId:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div><Button onClick={saveSub} className="w-full">Enregistrer</Button></div></DialogContent></Dialog>
 
-      <Dialog open={transferOpen} onOpenChange={setTransferOpen}><DialogContent className="bg-card border-border sm:max-w-lg rounded-2xl"><DialogHeader><DialogTitle>Virement automatique / ponctuel</DialogTitle></DialogHeader><div className="space-y-4"><div className="grid grid-cols-2 gap-3"><div><Label>Compte source</Label><Select value={transferForm.fromAccountId} onValueChange={v=>setTransferForm(x=>({...x,fromAccountId:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div><div><Label>Compte destination</Label><Select value={transferForm.toAccountId} onValueChange={v=>setTransferForm(x=>({...x,toAccountId:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div></div><div className="grid grid-cols-2 gap-3"><div><Label>Montant</Label><Input type="number" step="0.01" value={transferForm.amount||''} onChange={e=>setTransferForm(x=>({...x,amount:Number(e.target.value)}))}/></div><div><Label>Date</Label><Input type="date" value={transferForm.date} onChange={e=>setTransferForm(x=>({...x,date:e.target.value}))}/></div></div><div className="flex items-center gap-2 p-3 rounded-xl border border-border"><Checkbox checked={transferForm.recurring} onCheckedChange={v=>setTransferForm(x=>({...x,recurring:Boolean(v)}))}/><div><p className="text-xs font-medium">Virement récurrent</p><p className="text-[10px] text-muted-foreground">Suivi d’un virement automatique vers ton épargne / investissement.</p></div></div>{transferForm.recurring&&<div className="grid grid-cols-2 gap-3"><div><Label>Fréquence</Label><Select value={transferForm.frequency} onValueChange={(v:any)=>setTransferForm(x=>({...x,frequency:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="monthly">Mensuel</SelectItem><SelectItem value="weekly">Hebdomadaire</SelectItem><SelectItem value="yearly">Annuel</SelectItem></SelectContent></Select></div><div><Label>Prochaine date</Label><Input type="date" value={transferForm.nextDate} onChange={e=>setTransferForm(x=>({...x,nextDate:e.target.value}))}/></div></div>}<Button onClick={saveTransfer} className="w-full">Enregistrer</Button></div></DialogContent></Dialog>
+      <Dialog open={transferOpen} onOpenChange={setTransferOpen}><DialogContent className="finance-editor bg-card border-border sm:max-w-xl rounded-2xl"><DialogHeader><DialogTitle>Virement automatique / ponctuel</DialogTitle></DialogHeader><div className="space-y-4"><div className="grid grid-cols-2 gap-3"><div><Label>Compte source</Label><Select value={transferForm.fromAccountId} onValueChange={v=>setTransferForm(x=>({...x,fromAccountId:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div><div><Label>Compte destination</Label><Select value={transferForm.toAccountId} onValueChange={v=>setTransferForm(x=>({...x,toAccountId:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div></div><div className="grid grid-cols-2 gap-3"><div><Label>Montant</Label><Input type="number" step="0.01" value={transferForm.amount||''} onChange={e=>setTransferForm(x=>({...x,amount:Number(e.target.value)}))}/></div><div><Label>Date</Label><Input type="date" value={transferForm.date} onChange={e=>setTransferForm(x=>({...x,date:e.target.value}))}/></div></div><div className="flex items-center gap-2 p-3 rounded-xl border border-border"><Checkbox checked={transferForm.recurring} onCheckedChange={v=>setTransferForm(x=>({...x,recurring:Boolean(v)}))}/><div><p className="text-xs font-medium">Virement récurrent</p><p className="text-[10px] text-muted-foreground">Suivi d’un virement automatique vers ton épargne / investissement.</p></div></div>{transferForm.recurring&&<div className="grid grid-cols-2 gap-3"><div><Label>Fréquence</Label><Select value={transferForm.frequency} onValueChange={(v:any)=>setTransferForm(x=>({...x,frequency:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="monthly">Mensuel</SelectItem><SelectItem value="weekly">Hebdomadaire</SelectItem><SelectItem value="yearly">Annuel</SelectItem></SelectContent></Select></div><div><Label>Prochaine date</Label><Input type="date" value={transferForm.nextDate} onChange={e=>setTransferForm(x=>({...x,nextDate:e.target.value}))}/></div></div>}<Button onClick={saveTransfer} className="w-full">Enregistrer</Button></div></DialogContent></Dialog>
     </div>
   );
 }
@@ -355,17 +340,17 @@ function TxRow({ t, accountName, onEdit, onDelete }: { t: FinanceTransaction; ac
 
 const dayLabel = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-function TransactionsView({ transactions, accounts, onAdd, onEdit, onDelete }: { transactions: FinanceTransaction[]; accounts: FinanceAccount[]; onAdd: () => void; onEdit: (x: FinanceTransaction) => void; onDelete: (x: FinanceTransaction) => void }) {
+function TransactionsView({ accountFilter, transactions, accounts, onAdd, onEdit, onDelete }: { accountFilter: ReactNode; transactions: FinanceTransaction[]; accounts: FinanceAccount[]; onAdd: () => void; onEdit: (x: FinanceTransaction) => void; onDelete: (x: FinanceTransaction) => void }) {
   const [filter, setFilter] = useState('');
   const [kind, setKind] = useState<'all' | 'expense' | 'income'>('all');
   const [limit, setLimit] = useState(80);
+  const [period, setPeriod] = useState('all');
   const q = filter.trim().toLowerCase();
   const list = useMemo(() => transactions
     .filter(t => kind === 'all' || t.type === kind)
+    .filter(t => period === 'all' || (period === 'month' ? monthKey(t.date) === monthKeyOf(new Date()) : dateKey(t.date).slice(0,4) === String(new Date().getFullYear())))
     .filter(t => !q || t.description.toLowerCase().includes(q) || t.category.toLowerCase().includes(q))
-    .sort((a, b) => b.date.localeCompare(a.date)), [transactions, kind, q]);
-  const income = list.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
-  const expenses = list.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
+    .sort((a, b) => b.date.localeCompare(a.date)), [transactions, kind, q, period]);
   const shown = list.slice(0, limit);
   const groups = useMemo(() => {
     const map = new Map<string, FinanceTransaction[]>();
@@ -376,17 +361,13 @@ function TransactionsView({ transactions, accounts, onAdd, onEdit, onDelete }: {
 
   return (
     <div className="space-y-4">
-      <SectionHeader title="Transactions" subtitle={`${transactions.length} opérations enregistrées · soldes mis à jour en temps réel`} action={<Button size="sm" className="rounded-full h-10 px-4" onClick={onAdd}><Plus className="h-4 w-4 mr-1" />Ajouter</Button>} />
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative w-full sm:w-[320px]">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-          <Input value={filter} onChange={e => { setFilter(e.target.value); setLimit(80); }} placeholder="Rechercher une transaction…" className="h-10 pl-10 rounded-full bg-card" />
-        </div>
-        <Segmented<'all' | 'expense' | 'income'> value={kind} onChange={(v) => { setKind(v); setLimit(80); }} options={[['all', 'Tout'], ['expense', 'Dépenses'], ['income', 'Revenus']]} />
-        <div className="ml-auto flex items-center gap-4 text-[13px]">
-          <span className="text-muted-foreground">Revenus <span className="font-mono font-semibold text-profit">{eur(income)}</span></span>
-          <span className="text-muted-foreground">Dépenses <span className="font-mono font-semibold text-foreground">{eur(expenses)}</span></span>
-        </div>
+      <h1 className="text-xl font-semibold tracking-tight">Transactions</h1>
+      <div className="finance-list-filters dashboard-filter-controls">
+        {accountFilter}
+        <DashboardFilter label="Mouvement" ariaLabel="Type de transaction" value={kind} onChange={value => { setKind(value as typeof kind); setLimit(80); }} options={[{value:'all',label:'Tous les mouvements'},{value:'expense',label:'Dépenses'},{value:'income',label:'Revenus'}]} />
+        <DashboardFilter label="Période" ariaLabel="Période des transactions" value={period} onChange={value=>{setPeriod(value);setLimit(80);}} options={[{value:'all',label:'Tout l’historique'},{value:'month',label:'Ce mois-ci'},{value:'year',label:'Cette année'}]} />
+        <div className="finance-search"><label className="dashboard-filter-caption" htmlFor="finance-transaction-search">Recherche</label><div className="relative"><Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground pointer-events-none" /><Input id="finance-transaction-search" value={filter} onChange={event=>{setFilter(event.target.value);setLimit(80);}} placeholder="Description ou catégorie…" className="pl-9" /></div></div>
+        <Button className="ml-auto h-[42px] gap-2" onClick={onAdd}><Plus className="h-4 w-4" />Ajouter</Button>
       </div>
 
       <div className="surface overflow-hidden">
@@ -394,7 +375,7 @@ function TransactionsView({ transactions, accounts, onAdd, onEdit, onDelete }: {
           const net = items.reduce((s, t) => s + (t.type === 'income' ? Number(t.amount) : -Number(t.amount)), 0);
           return (
             <div key={date} className="border-t border-border first:border-t-0">
-              <div className="flex items-center justify-between px-5 py-2.5 bg-secondary/60 text-xs text-muted-foreground">
+              <div className="flex items-center justify-between px-5 py-2.5 text-xs text-muted-foreground">
                 <span className="capitalize font-medium">{dayLabel(date)}</span>
                 <span className="font-mono">{net >= 0 ? '+' : ''}{eur(net)}</span>
               </div>
@@ -409,88 +390,64 @@ function TransactionsView({ transactions, accounts, onAdd, onEdit, onDelete }: {
   );
 }
 
+function formatAccountBalance(account: FinanceAccount) {
+  try { return new Intl.NumberFormat('fr-FR', {style:'currency',currency:account.currency || 'EUR'}).format(account.balance); }
+  catch { return `${account.balance.toLocaleString('fr-FR', {minimumFractionDigits:2,maximumFractionDigits:2})} ${account.currency}`; }
+}
+
 function AccountsView({ accounts, onNew, onEdit, onDelete, onStatements }: { accounts: FinanceAccount[]; onNew: () => void; onEdit: (a: FinanceAccount) => void; onDelete: (a: FinanceAccount) => void; onStatements: (a: FinanceAccount) => void }) {
-  const total = accounts.filter(a => !a.archived).reduce((s, a) => s + a.balance, 0);
-  return (
-    <div className="space-y-4">
-      <SectionHeader title="Comptes & patrimoine" subtitle={`${eur(total)} au total · tous tes comptes au même endroit`} action={<Button size="sm" className="rounded-full h-10 px-4" onClick={onNew}><Plus className="h-4 w-4 mr-1" />Nouveau compte</Button>} />
-      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {accounts.map((a, i) => {
-          const color = a.color || PALETTE[i % PALETTE.length];
-          return (
-            <div key={a.id} className="surface p-5 flex flex-col">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-3 min-w-0">
-                  <Tile color={color} size="lg"><Landmark className="h-5 w-5" /></Tile>
-                  <div className="min-w-0"><p className="font-semibold text-[15px] truncate">{a.name}</p><p className="text-xs text-muted-foreground truncate">{a.type} · {a.institution || '—'}</p></div>
-                </div>
-                <div className="flex gap-0.5 shrink-0">
-                  <button className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors" onClick={() => onEdit(a)} aria-label="Modifier"><Settings2 className="h-4 w-4" /></button>
-                  <button className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-loss hover:bg-loss-soft transition-colors" onClick={() => onDelete(a)} aria-label="Supprimer"><X className="h-4 w-4" /></button>
-                </div>
-              </div>
-              <p className="font-mono text-[28px] leading-none font-semibold tracking-tight mt-6">{eur(a.balance)}</p>
-              <div className="flex items-center justify-between mt-3">
-                <p className="text-xs text-muted-foreground">{a.currency}</p>
-                <button className="text-[13px] font-medium text-primary hover:underline" onClick={() => onStatements(a)}>Relevés & évolution</button>
-              </div>
-            </div>
-          );
-        })}
-        {!accounts.length && <div className="md:col-span-2 xl:col-span-3 surface"><Empty text="Crée ton premier compte bancaire, épargne ou investissement." /></div>}
-      </div>
+  const [status,setStatus] = useState('active');
+  const [type,setType] = useState('all');
+  const [search,setSearch] = useState('');
+  const filtered=accounts.filter(account => (status==='all' || Boolean(account.archived)===(status==='archived')) && (type==='all' || account.type===type) && `${account.name} ${account.institution}`.toLocaleLowerCase('fr-FR').includes(search.toLocaleLowerCase('fr-FR')));
+  return <div className="space-y-6">
+    <SectionHeader title="Comptes" subtitle="" action={<Button className="gap-2" onClick={onNew}><Plus className="h-4 w-4" />Nouveau compte</Button>} />
+    <div className="finance-list-filters dashboard-filter-controls">
+      <DashboardFilter label="Statut" ariaLabel="Statut des comptes Finance" value={status} onChange={setStatus} options={[{value:'all',label:'Tous les comptes'},{value:'active',label:'Actifs'},{value:'archived',label:'Archivés'}]} />
+      <DashboardFilter label="Type" ariaLabel="Type de compte Finance" value={type} onChange={setType} options={[{value:'all',label:'Tous les types'},...ACCOUNT_TYPES.map(value=>({value,label:value}))]} />
+      <div className="finance-search"><label className="dashboard-filter-caption" htmlFor="finance-account-search">Recherche</label><Input id="finance-account-search" value={search} onChange={event=>setSearch(event.target.value)} placeholder="Nom ou établissement…" /></div>
     </div>
-  );
+    <div className="finance-account-list">
+      <div className="finance-account-row finance-list-heading" aria-hidden="true"><span>Compte</span><span>Établissement</span><span>Solde actuel</span><span /></div>
+      {filtered.map((account,index)=><div key={account.id} className="finance-account-row">
+        <div className="flex min-w-0 items-center gap-3"><span className="h-2 w-2 shrink-0 rounded-full" style={{background:account.color||PALETTE[index%PALETTE.length]}} /><div className="min-w-0"><p className="truncate text-sm font-semibold">{account.name}</p><p className="mt-1 text-xs text-muted-foreground">{account.type}{account.archived ? ' · Archivé' : ''}</p></div></div>
+        <span className="text-xs text-muted-foreground">{account.institution || '—'}</span>
+        <span className="finance-list-amount">{formatAccountBalance(account)}</span>
+        <div className="finance-row-actions"><Button variant="ghost" size="sm" onClick={()=>onStatements(account)}>Voir l’évolution</Button><Button variant="ghost" size="icon" onClick={()=>onEdit(account)} aria-label={`Modifier ${account.name}`}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" onClick={()=>onDelete(account)} aria-label={`Supprimer ${account.name}`}><X className="h-4 w-4" /></Button></div>
+      </div>)}
+      {!filtered.length && <Empty text={accounts.length ? 'Aucun compte ne correspond aux filtres.' : 'Ajoute ton premier compte.'} />}
+    </div>
+  </div>;
 }
 
-function SubscriptionsView({ subscriptions, accounts, onNew, onToggle, onDelete }: { subscriptions: FinanceSubscription[]; accounts: FinanceAccount[]; onNew: () => void; onToggle: (s: FinanceSubscription) => void; onDelete: (s: FinanceSubscription) => void }) {
-  const monthly = subscriptions.filter(s => s.active).reduce((s, x) => s + (x.frequency === 'monthly' ? x.amount : x.frequency === 'yearly' ? x.amount / 12 : x.amount * 52 / 12), 0);
-  const freq = { monthly: 'par mois', yearly: 'par an', weekly: 'par semaine' } as const;
-  return (
-    <div className="space-y-4">
-      <SectionHeader title="Abonnements" subtitle={`${eur(monthly)} / mois estimés · ${subscriptions.filter(x => x.active).length} actif(s)`} action={<Button size="sm" className="rounded-full h-10 px-4" onClick={onNew}><Plus className="h-4 w-4 mr-1" />Ajouter</Button>} />
-      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {subscriptions.map(s => (
-          <div key={s.id} className={`surface p-5 transition-opacity ${s.active ? '' : 'opacity-60'}`}>
-            <div className="flex items-center gap-3">
-              <CategoryTile category={s.category} size="lg" />
-              <div className="min-w-0 flex-1"><p className="font-semibold text-[15px] truncate">{s.name}</p><p className="text-xs text-muted-foreground truncate">{s.category} · {accounts.find(a => a.id === s.accountId)?.name || '—'}</p></div>
-            </div>
-            <p className="font-mono text-[26px] leading-none font-semibold tracking-tight mt-5">{eur(s.amount)} <span className="text-xs font-normal text-muted-foreground font-sans">{freq[s.frequency]}</span></p>
-            <div className="flex items-center justify-between mt-4 text-xs">
-              <span className="text-muted-foreground">Prochain : {s.nextDate}</span>
-              <div className="flex gap-3 font-medium">
-                <button onClick={() => onToggle(s)} className="text-primary hover:underline">{s.active ? 'Désactiver' : 'Réactiver'}</button>
-                <button onClick={() => onDelete(s)} className="text-loss hover:underline">Supprimer</button>
-              </div>
-            </div>
-          </div>
-        ))}
-        {!subscriptions.length && <div className="md:col-span-2 xl:col-span-3 surface"><Empty text="Aucun abonnement suivi pour le moment." /></div>}
-      </div>
-    </div>
-  );
+function SubscriptionsView({ accountFilter, subscriptions, accounts, onNew, onToggle, onDelete }: { accountFilter: ReactNode; subscriptions: FinanceSubscription[]; accounts: FinanceAccount[]; onNew: () => void; onToggle: (s: FinanceSubscription) => void; onDelete: (s: FinanceSubscription) => void }) {
+  const [status,setStatus]=useState('all');
+  const [search,setSearch]=useState('');
+  const list=subscriptions.filter(item=>(status==='all'||item.active===(status==='active')) && item.name.toLocaleLowerCase('fr-FR').includes(search.toLocaleLowerCase('fr-FR')));
+  const monthly=list.filter(item=>item.active).reduce((sum,item)=>sum+item.amount*(item.frequency==='yearly'?1/12:item.frequency==='weekly'?52/12:1),0);
+  const freq={monthly:'mois',yearly:'an',weekly:'semaine'};
+  return <div className="space-y-6">
+    <h1 className="text-xl font-semibold tracking-tight">Abonnements</h1>
+    <div className="finance-list-filters dashboard-filter-controls">{accountFilter}<DashboardFilter label="Statut" ariaLabel="Statut des abonnements" value={status} onChange={setStatus} options={[{value:'all',label:'Tous les abonnements'},{value:'active',label:'Actifs'},{value:'inactive',label:'En pause'}]} /><div className="finance-search"><label className="dashboard-filter-caption" htmlFor="finance-sub-search">Recherche</label><Input id="finance-sub-search" value={search} onChange={event=>setSearch(event.target.value)} placeholder="Rechercher un abonnement…" /></div><Button className="ml-auto h-[42px] gap-2" onClick={onNew}><Plus className="h-4 w-4" />Ajouter</Button></div><p className="text-xs text-muted-foreground">Budget mensuel <span className="ml-2 text-sm font-semibold tabular-nums text-foreground">{eur(monthly)}</span></p>
+    <div>{list.map(item=><div key={item.id} className={`finance-subscription-row ${item.active?'':'opacity-60'}`}>
+      <div className="flex min-w-0 items-center gap-3"><CategoryTile category={item.category} /><div className="min-w-0"><p className="truncate text-sm font-semibold">{item.name}</p><p className="mt-1 text-xs text-muted-foreground">{accounts.find(account=>account.id===item.accountId)?.name || '—'}</p></div></div>
+      <div><p className="text-sm font-semibold tabular-nums">{eur(item.amount)} <span className="text-xs font-normal text-muted-foreground">/ {freq[item.frequency]}</span></p><p className="mt-1 text-xs text-muted-foreground">{item.active ? `Prochain : ${new Date(`${item.nextDate}T12:00:00`).toLocaleDateString('fr-FR')}`:'En pause'}</p></div>
+      <div className="finance-row-actions"><Button variant="ghost" size="sm" onClick={()=>onToggle(item)}>{item.active?'Mettre en pause':'Réactiver'}</Button><Button variant="ghost" size="icon" onClick={()=>onDelete(item)} aria-label={`Supprimer ${item.name}`}><X className="h-4 w-4" /></Button></div>
+    </div>)}{!list.length&&<Empty text="Aucun abonnement pour ces filtres." />}</div>
+  </div>;
 }
 
-function TransfersView({ transfers, accounts, onNew, onDelete }: { transfers: FinanceTransfer[]; accounts: FinanceAccount[]; onNew: () => void; onDelete: (t: FinanceTransfer) => void }) {
-  const name = (id: string) => accounts.find(a => a.id === id)?.name || '—';
-  return (
-    <div className="space-y-4">
-      <SectionHeader title="Virements" subtitle="Transferts ponctuels et virements automatiques à suivre" action={<Button size="sm" className="rounded-full h-10 px-4" onClick={onNew}><Plus className="h-4 w-4 mr-1" />Nouveau virement</Button>} />
-      <div className="surface px-3 py-1">
-        {transfers.map(t => (
-          <div key={t.id} className="group flex items-center gap-3 px-2 py-3 border-t border-border first:border-t-0">
-            <Tile color={PALETTE[0]}><ArrowRightLeft className="h-[18px] w-[18px]" /></Tile>
-            <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-medium truncate">{name(t.fromAccountId)} <span className="text-muted-foreground">→</span> {name(t.toAccountId)}</p>
-              <p className="text-xs text-muted-foreground">{t.date}{t.recurring ? ` · ${t.frequency} · prochain ${t.nextDate}` : ''}</p>
-            </div>
-            <span className="font-mono text-[13px] font-semibold">{eur(t.amount)}</span>
-            <button onClick={() => onDelete(t)} className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-loss hover:bg-loss-soft transition-colors" aria-label="Supprimer"><X className="h-4 w-4" /></button>
-          </div>
-        ))}
-        {!transfers.length && <Empty text="Aucun virement enregistré." />}
-      </div>
-    </div>
-  );
+function TransfersView({ accountFilter, transfers, accounts, onNew, onDelete }: { accountFilter: ReactNode; transfers: FinanceTransfer[]; accounts: FinanceAccount[]; onNew: () => void; onDelete: (t: FinanceTransfer) => void }) {
+  const [kind,setKind]=useState('all');
+  const name=(id:string)=>accounts.find(account=>account.id===id)?.name||'—';
+  const frequency={monthly:'Mensuel',weekly:'Hebdomadaire',yearly:'Annuel'};
+  const list=[...transfers].filter(item=>kind==='all'||item.recurring===(kind==='recurring')).sort((a,b)=>b.date.localeCompare(a.date));
+  return <div className="space-y-6">
+    <h1 className="text-xl font-semibold tracking-tight">Virements</h1>
+    <div className="dashboard-filter-controls">{accountFilter}<DashboardFilter label="Fréquence" ariaLabel="Type de virement" value={kind} onChange={setKind} options={[{value:'all',label:'Tous les virements'},{value:'once',label:'Ponctuels'},{value:'recurring',label:'Récurrents'}]} /><Button className="ml-auto h-[42px] gap-2" onClick={onNew}><Plus className="h-4 w-4" />Nouveau virement</Button></div>
+    <div>{list.map(item=><div key={item.id} className="finance-transfer-row">
+      <div className="min-w-0"><p className="text-sm font-medium">{name(item.fromAccountId)} <span className="mx-2 text-muted-foreground">→</span> {name(item.toAccountId)}</p><p className="mt-1.5 text-xs text-muted-foreground">{new Date(`${item.date}T12:00:00`).toLocaleDateString('fr-FR')}{item.recurring ? ` · ${frequency[item.frequency||'monthly']}`:''}</p></div>
+      <span className="finance-list-amount">{eur(item.amount)}</span><Button variant="ghost" size="icon" onClick={()=>onDelete(item)} aria-label="Supprimer le virement"><X className="h-4 w-4" /></Button>
+    </div>)}{!list.length&&<Empty text="Aucun virement pour ces filtres." />}</div>
+  </div>;
 }

@@ -1,12 +1,11 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import {
   ArrowDownRight, ArrowUpRight, Banknote, Briefcase, Car, CandlestickChart, GraduationCap, Gamepad2, HeartPulse,
   Home, MoreHorizontal, Percent, Receipt, Repeat2, ShoppingBag, ShoppingBasket, Tag, Undo2, Users, Inbox,
 } from 'lucide-react';
 import { PALETTE } from './financeCharts';
 
-/* ── Briques d'interface de My Finance (DA type Finary) ───────────────────
-   Cartes blanches à bordure fine, pastilles d'icônes teintées, segmented control clair. */
+/* Shared Finance primitives: flat sections, aligned metrics and quiet controls. */
 
 export const eur = (n: number) => `${n < 0 ? '-' : ''}${Math.abs(n).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
 export const eurShort = (n: number) => `${n < 0 ? '-' : ''}${Math.abs(Math.round(n)).toLocaleString('fr-FR')} €`;
@@ -51,11 +50,11 @@ export function CategoryTile({ category, color, size }: { category: string; colo
 
 export function Card({ title, subtitle, action, children, className = '' }: { title?: string; subtitle?: ReactNode; action?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={`app-panel surface p-5 ${className}`}>
+    <section className={`finance-section min-w-0 ${className}`}>
       {(title || action) && (
-        <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="flex items-start justify-between gap-3 mb-5">
           <div className="min-w-0">
-            {title && <h2 className="text-[15px] font-semibold">{title}</h2>}
+            {title && <h2 className="text-sm font-semibold">{title}</h2>}
             {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
           </div>
           {action}
@@ -66,19 +65,18 @@ export function Card({ title, subtitle, action, children, className = '' }: { ti
   );
 }
 
-/** Indicateur clé : pastille d'icône, libellé, gros montant, mention optionnelle. */
-export function Stat({ label, value, icon, color, hint, children }: { label: string; value: string; icon: ReactNode; color: string; hint?: string; children?: ReactNode }) {
-  return (
-    <div className="app-panel surface p-5">
-      <div className="flex items-center gap-2.5">
-        <Tile color={color} size="sm">{icon}</Tile>
-        <span className="text-[13px] text-muted-foreground">{label}</span>
-      </div>
-      <p className="font-mono text-[26px] leading-none font-semibold tracking-tight mt-4">{value}</p>
-      {hint && <p className="text-xs text-muted-foreground mt-2">{hint}</p>}
-      {children}
+/** Same aligned, unframed metrics as the trading dashboard. */
+export function Stat({ label, value, color, percent }: { label: string; value: string; icon?: ReactNode; color?: string; hint?: string; children?: ReactNode; percent?: number }) {
+  return <div className="finance-stat min-w-0 text-center">
+    <p className="text-xs text-muted-foreground">{label}</p>
+    <div className="dashboard-metric-body">
+      {percent !== undefined && <svg viewBox="0 0 120 70" className="dashboard-metric-gauge" role="img" aria-label={`${label} : ${value}`}>
+        <path d="M 10 60 A 50 50 0 0 1 110 60" fill="none" stroke="hsl(var(--secondary))" strokeWidth="9" strokeLinecap="round" />
+        <path d="M 10 60 A 50 50 0 0 1 110 60" fill="none" stroke="hsl(var(--primary))" strokeWidth="9" strokeLinecap="round" pathLength="100" strokeDasharray={`${Math.max(0,Math.min(100,percent))} 100`} visibility={percent > 0 ? 'visible' : 'hidden'} />
+      </svg>}
+      <p className="dashboard-metric-value" style={percent === undefined ? { color } : undefined}>{value}</p>
     </div>
-  );
+  </div>;
 }
 
 /** Variation : pastille verte / rouge avec flèche. */
@@ -94,16 +92,12 @@ export function DeltaPill({ value, label }: { value: number; label: string }) {
 
 /** Segmented control clair : fond gris, option active en carte blanche. */
 export function Segmented<T extends string>({ value, onChange, options }: { value: T; onChange: (v: T) => void; options: [T, string][] }) {
-  return (
-    <div role="tablist" className="inline-flex flex-wrap items-center gap-1.5 w-fit">
-      {options.map(([v, label]) => (
-        <button key={v} role="tab" aria-selected={value === v} onClick={() => onChange(v)}
-          className={`h-8 px-4 rounded-[10px] border text-[13px] font-medium whitespace-nowrap transition-colors ${value === v ? 'selected-tab border-transparent' : 'border-border/70 bg-background/90 text-muted-foreground hover:text-foreground'}`}>
-          {label}
-        </button>
-      ))}
-    </div>
-  );
+  const id = useId();
+  const index = Math.max(0,options.findIndex(([key]) => key === value));
+  return <div role="group" className="finance-segments dashboard-switch" style={{ gridTemplateColumns: `repeat(${options.length},minmax(0,1fr))` }}>
+    <span aria-hidden="true" className="finance-segments-indicator" style={{ width: `calc((100% - 8px) / ${options.length})`, transform: `translateX(${index*100}%)` }} />
+    {options.map(([key,label]) => <button type="button" key={key} id={`${id}-${key}`} aria-pressed={value === key} onClick={() => onChange(key)}>{label}</button>)}
+  </div>;
 }
 
 export function Empty({ text, icon }: { text: string; icon?: ReactNode }) {
@@ -115,12 +109,12 @@ export function Empty({ text, icon }: { text: string; icon?: ReactNode }) {
   );
 }
 
-export function SectionHeader({ title, subtitle, action }: { title: string; subtitle: string; action?: ReactNode }) {
+export function SectionHeader({ title, action }: { title: string; subtitle: string; action?: ReactNode }) {
   return (
     <div className="flex items-end justify-between gap-3 flex-wrap">
       <div>
-        <h1 className="text-2xl font-semibold">{title}</h1>
-        <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
+        <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
+
       </div>
       {action}
     </div>

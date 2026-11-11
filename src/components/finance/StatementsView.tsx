@@ -1,3 +1,4 @@
+import DashboardFilter from '@/components/trading/DashboardFilter';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,6 +39,8 @@ interface Props {
   statements: FinanceStatement[];
   /** Compte présélectionné (ex: depuis le bouton « Relevés » d'une carte compte) */
   initialAccountId?: string;
+  selectedAccountId?: string;
+  onAccountChange?: (id: string) => void;
   onSave: (statement: FinanceStatement, isEdit: boolean, applyBalance: boolean) => Promise<void>;
   onDelete: (statement: FinanceStatement) => Promise<void>;
   /** Définit (ou supprime avec null) le capital initial et sa date pour un compte */
@@ -90,7 +93,7 @@ interface Draft {
 const emptyHolding = (): HoldingDraft => ({ id: uid('h'), name: '', quantity: '', unitPrice: '', value: '' });
 
 /* ───────────── Composant principal ───────────── */
-export function StatementsView({ accounts, statements, initialAccountId, onSave, onDelete, onSetInitial }: Props) {
+export function StatementsView({ accounts, statements, initialAccountId, selectedAccountId, onAccountChange, onSave, onDelete, onSetInitial }: Props) {
   const safeStatements = useMemo(
     () => (statements || []).map(s => ({ ...s, holdings: Array.isArray(s.holdings) ? s.holdings : [] })),
     [statements],
@@ -116,13 +119,15 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
     try { return localStorage.getItem('finance-selected-account') || ''; } catch { return ''; }
   });
   const setSelectedRaw = (id: string) => {
+    if (onAccountChange) { onAccountChange(id); return; }
     setSelectedState(id);
     try { localStorage.setItem('finance-selected-account', id); } catch { /* Selection remains usable without browser storage. */ }
   };
-  const selected = selectedRaw && (selectedRaw === 'all' || accounts.some(a => a.id === selectedRaw)) ? selectedRaw : defaultSelected;
+  const selected = selectedAccountId ?? (selectedRaw && (selectedRaw === 'all' || accounts.some(a => a.id === selectedRaw)) ? selectedRaw : defaultSelected);
   useEffect(() => {
+    if (selectedAccountId !== undefined) return;
     try { localStorage.setItem('finance-selected-account', selected); } catch { /* Browser storage is optional. */ }
-  }, [selected]);
+  }, [selected, selectedAccountId]);
 
   const initial = useMemo(() => (selected === 'all' ? null : initialOfAccount(accounts.find(a => a.id === selected))), [selected, accounts]);
   const [initialOpen, setInitialOpen] = useState(false);
@@ -450,13 +455,7 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
           <p className="text-xs text-muted-foreground mt-1">Valorisation, répartition et évolution de tes placements.</p>
         </div>
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <Select value={selected} onValueChange={setSelectedRaw}>
-            <SelectTrigger aria-label="Compte des investissements" className="w-full sm:w-[220px] h-10 text-xs rounded-[10px] bg-background/60 border-border/60"><SelectValue placeholder="Compte" /></SelectTrigger>
-            <SelectContent className="dashboard-filter-menu-account">
-              <SelectItem value="all">Tous les comptes</SelectItem>
-              {orderedAccounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}{byAccount[a.id]?.length ? ` · ${byAccount[a.id].length} relevé${byAccount[a.id].length > 1 ? 's' : ''}` : ''}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          {selectedAccountId === undefined && <DashboardFilter label="Compte" ariaLabel="Compte des investissements" value={selected} onChange={setSelectedRaw} options={[{value:'all',label:'Tous les comptes'},...orderedAccounts.map(account=>({value:account.id,label:account.name}))]} />}
           {selected !== 'all' && <Button size="sm" variant="outline" onClick={openInitial}><Banknote className="h-4 w-4 mr-1" />{initial ? `Capital initial : ${eurShort(initial.capital)}` : 'Définir le capital initial'}</Button>}
           <Button size="sm" onClick={openNew} disabled={!accounts.length}><Plus className="h-4 w-4 mr-1" />Nouveau relevé</Button>
         </div>
@@ -775,7 +774,7 @@ export function StatementsView({ accounts, statements, initialAccountId, onSave,
 /* ───────────── Petits composants ───────────── */
 function Box({ title, subtitle, children }: { title?: string; subtitle?: string; children: React.ReactNode }) {
   return (
-    <section className="app-panel surface min-w-0 p-4 md:p-5">
+    <section className="finance-section min-w-0 py-4">
       {title && (
         <div className="mb-3.5">
           <h2 className="text-[13px] font-semibold tracking-tight">{title}</h2>
@@ -786,17 +785,12 @@ function Box({ title, subtitle, children }: { title?: string; subtitle?: string;
     </section>
   );
 }
-function Metric({ title, value, sub, toneClass, icon }: { title: string; value: string; sub?: string; toneClass?: string; icon?: React.ReactNode }) {
-  return (
-    <div className="app-panel metric-card">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-medium text-muted-foreground tracking-tight">{title}</span>
-        {icon && <span className={`${toneClass || ''} opacity-80`}>{icon}</span>}
-      </div>
-      <p className={`font-mono text-[17px] font-semibold mt-2.5 tracking-tight ${toneClass || ''}`}>{value}</p>
-      {sub && <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">{sub}</p>}
-    </div>
-  );
+function Metric({ title, value, sub, toneClass }: { title: string; value: string; sub?: string; toneClass?: string; icon?: React.ReactNode }) {
+  return <div className="finance-stat min-w-0 text-center">
+    <p className="text-xs text-muted-foreground">{title}</p>
+    <div className="dashboard-metric-body"><p className={`dashboard-metric-value ${toneClass || ''}`}>{value}</p></div>
+    {sub && <p className="min-h-5 text-[11px] leading-relaxed text-muted-foreground">{sub}</p>}
+  </div>;
 }
 function Empty({ text }: { text: string }) {
   return (
