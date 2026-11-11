@@ -1266,3 +1266,12 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 .rail-links-gooey .rail-link:hover { background: hsl(var(--secondary) / .35); }
 .rail-links-gooey .rail-link.is-current { color: hsl(var(--foreground)); }
 @media (prefers-reduced-motion: reduce) { .rail-links-gooey .rail-selection-slider { transition: none; } .rail-gooey-layer { filter: none !important; } }
+/* An elastic shared pill accompanies changes between the two workspaces. */
+.rail-workspaces-animated { position: relative; isolation: isolate; gap: 0; }
+.rail-workspace-pill { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / 2); border-radius: 9px; background: hsl(var(--card)); box-shadow: 0 1px 5px hsl(0 0% 0% / .06); pointer-events: none; }
+.rail-workspaces-animated button { position: relative; z-index: 1; background: transparent; }
+.rail-workspaces-animated button.is-active { background: transparent; box-shadow: none; }
+.rail-workspaces-animated button > span { display: inline-block; transition: transform 200ms cubic-bezier(.22,1,.36,1), opacity 180ms ease; }
+.rail-workspaces-animated button:hover > span { transform: translateY(-1px); }
+.rail-workspaces-animated button:active > span { transform: scale(.94); }
+@media (prefers-reduced-motion: reduce) { .rail-workspaces-animated button > span { transition: none; transform: none !important; } }
