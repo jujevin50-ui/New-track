@@ -21,3 +21,19 @@ describe('performance history periods',()=>{
     expect(result).toHaveLength(1);expect(result[0]).toMatchObject({trades:1,winRate:0,performance:null});
   });
 });
+
+describe('cumulative realized R',()=>{
+  it('uses each trade account capital, not the global capital',()=>{
+    const rows=periodPerformance([{...trade('a','2026-01-02',210,10),riskPercent:1},{...trade('b','2026-01-02',-40,10),accountId:'b',riskPercent:2}],30000,'month',[{id:'a',initialBalance:10000},{id:'b',initialBalance:20000}]);
+    expect(rows[0].rr).toBeCloseTo(1.875);expect(rows[0].rrTrades).toBe(2);
+  });
+  it('does not display a partial total when a trade risk is missing',()=>{
+    const rows=periodPerformance([{...trade('a','2026-01-02',100),riskPercent:1},trade('b','2026-01-02',50)],10000,'week',[{id:'a',initialBalance:10000}]);
+    expect(rows[0].rr).toBeNull();expect(rows[0].rrTrades).toBe(1);
+  });
+  it('keeps a valid zero R total and excludes missing/zero account capital',()=>{
+    const trades=[{...trade('a','2026-01-02',0),riskPercent:1}];
+    expect(periodPerformance(trades,10000,'week',[{id:'a',initialBalance:10000}])[0].rr).toBe(0);
+    expect(periodPerformance(trades,10000,'week',[{id:'a',initialBalance:0}])[0].rr).toBeNull();
+  });
+});

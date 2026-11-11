@@ -70,8 +70,10 @@ export default function Dashboard({ activeAccount, accounts, onSelectAccount }: 
   const percentageAvailable = capital > 0;
   const chartUnit = view === 'global' ? 'percent' : percentageAvailable ? unit : 'amount';
   const [disciplineDate, setDisciplineDate] = useState(today);
-  const weeklyPeriods=periodPerformance(stats.closedTrades,capital,'week');
-  const monthlyPeriods=periodPerformance(stats.closedTrades,capital,'month');
+  const weeklyPeriods=periodPerformance(stats.closedTrades,capital,'week',scopeAccounts);
+  const monthlyPeriods=periodPerformance(stats.closedTrades,capital,'month',scopeAccounts);
+  const rrKnown=weeklyPeriods.reduce((sum,row)=>sum+row.rrTrades,0);
+  const totalRR=stats.totalTrades&&rrKnown===stats.totalTrades?weeklyPeriods.reduce((sum,row)=>sum+(row.rr??0),0):null;
   const monthly = stats.monthly.map(month => ({ ...month, performance: capital > 0 ? month.net / capital * 100 : null }));
 
   return <div className="dashboard-redesign mx-auto w-full space-y-8 pb-10">
@@ -88,14 +90,15 @@ export default function Dashboard({ activeAccount, accounts, onSelectAccount }: 
       {period === 'custom' && <div className="flex w-full flex-wrap items-center gap-3"><label className="flex items-center gap-2 text-xs text-muted-foreground">Du<Input aria-label="Début de la période" type="date" value={custom.from} onChange={event => setCustom(previous => ({ ...previous, from: event.target.value }))} className="h-8 w-auto" /></label><label className="flex items-center gap-2 text-xs text-muted-foreground">Au<Input aria-label="Fin de la période" type="date" value={custom.to} max={today} onChange={event => setCustom(previous => ({ ...previous, to: event.target.value }))} className="h-8 w-auto" /></label>{invalidRange && <p role="alert" className="text-xs text-loss">La fin doit être postérieure au début.</p>}</div>}
     </div>
     {!scopeAccounts.length ? <div className="py-16 text-center"><p className="mb-4 text-sm text-muted-foreground">{ambiguousCurrency ? 'Renseigne la devise de ces comptes pour comparer leurs résultats.' : accounts.length ? 'Aucun compte dans cette sélection.' : 'Ajoute un compte pour commencer à suivre ta progression.'}</p><Link to="/accounts" className="dashboard-text-link">{accounts.length ? 'Gérer mes comptes' : 'Ajouter mon premier compte'} →</Link></div> : <>
-    <div className="dashboard-metrics ui-rule-after grid grid-cols-2 gap-x-5 gap-y-6 md:grid-cols-3 xl:grid-cols-5">
+    <div className={`dashboard-metrics ui-rule-after grid grid-cols-2 gap-x-5 gap-y-6 md:grid-cols-3 ${view==='global'?'xl:grid-cols-6':'xl:grid-cols-5'}`}>
       {[
         {label: 'Résultat net réalisé', value: money(stats.netProfit, currency, true), color: tone(stats.netProfit)},
         {label: 'Espérance par trade', value: stats.expectancy === null ? '—' : money(stats.expectancy, currency, true)},
         {label: 'Profit factor', value: ratio(stats.profitFactor)},
         {label: 'Win rate', value: pct(stats.winRate), gauge: true, percent: stats.winRate},
         {label: 'Stratégie respectée', value: pct(stats.strategyRate), gauge: true, percent: stats.strategyRate},
-      ].map(metric => <div key={metric.label} className="min-w-0 text-center">
+        ...(view==='global'?[{label:'RR cumulés',value:totalRR===null?'—':`${totalRR>0?'+':''}${totalRR.toLocaleString('fr-FR',{maximumFractionDigits:2})} R`,color:totalRR===null?'':tone(totalRR)}]:[]),
+      ].map(metric => <div key={metric.label} className="min-w-0 text-center" title={metric.label==='RR cumulés' ? !stats.totalTrades?'Aucun trade clôturé sur cette période.':totalRR===null?`Risque ou capital manquant pour ${stats.totalTrades-rrKnown} trade(s)`:'Somme des R nets de chaque trade, calculés sur le capital de son compte':undefined}>
         <p className="text-xs text-muted-foreground">{metric.label}</p>
         <div className="dashboard-metric-body">
           {metric.gauge && <svg viewBox="0 0 120 70" className="dashboard-metric-gauge" role="img" aria-label={`${metric.label} : ${metric.value}`}>

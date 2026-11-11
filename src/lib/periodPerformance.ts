@@ -1,14 +1,16 @@
 import { tradeClosingDay } from './dashboardAnalytics';
-import { getNetResult, type Trade } from '@/types/trade';
+import type { Account } from '@/types/account';
+import { getNetResult, getTradeR, type Trade } from '@/types/trade';
 
 export interface PeriodPerformance {
   start: string; end: string; year: number; week?: number;
-  net: number; trades: number; wins: number; performance: number | null; winRate: number;
+  net: number; trades: number; wins: number; performance: number | null; winRate: number; rr: number | null; rrTrades: number;
 }
 const dayKey = (date: Date) => date.toISOString().slice(0,10);
 
 /** Aggregate an already account/currency/period-scoped selection by closing date. */
-export function periodPerformance(trades: readonly Trade[], capital: number, kind: 'week'|'month'): PeriodPerformance[] {
+export function periodPerformance(trades: readonly Trade[], capital: number, kind: 'week'|'month', accounts: readonly Pick<Account,'id'|'initialBalance'>[] = []): PeriodPerformance[] {
+  const balances=new Map(accounts.map(account=>[account.id,account.initialBalance]));
   const periods=new Map<string,PeriodPerformance>();
   for (const trade of trades) {
     const closing=tradeClosingDay(trade),net=getNetResult(trade);
@@ -24,7 +26,12 @@ export function periodPerformance(trades: readonly Trade[], capital: number, kin
     } else {
       start=closing.slice(0,7)+'-01';end=dayKey(new Date(Date.UTC(year,date.getUTCMonth()+1,0,12)));
     }
-    const row=periods.get(start)??{start,end,year,week,net:0,trades:0,wins:0,performance:null,winRate:0};
+    const row=periods.get(start)??{start,end,year,week,net:0,trades:0,wins:0,performance:null,winRate:0,rr:0,rrTrades:0};
+    const balance=balances.get(trade.accountId);
+    const risk=trade.riskPercent;
+    const r=balance!==undefined&&Number.isFinite(balance)&&balance>0&&typeof risk==='number'&&Number.isFinite(risk)&&risk>0&&risk<=100?getTradeR(trade,balance):null;
+    if (r!==null&&Number.isFinite(r)) {if(row.rr!==null)row.rr+=r;row.rrTrades++;}
+    else row.rr=null;
     row.net+=net;row.trades++;if(net>0)row.wins++;
     row.performance=Number.isFinite(capital)&&capital>0?row.net/capital*100:null;
     row.winRate=row.wins/row.trades*100;
