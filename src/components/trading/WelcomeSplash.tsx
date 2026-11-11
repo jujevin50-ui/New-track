@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef } from 'react';
 
 interface WelcomeSplashProps { name: string; onDone: () => void; }
 
-/** Letters and the soft reveal mask follow the same expanding spiral. */
+/** Letters gather into a ribbon, travel to the top left, then unveil the page row by row. */
 export function WelcomeSplash({ name, onDone }: WelcomeSplashProps) {
   const text = `Welcome back, ${name || 'Trader'}`;
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -66,13 +66,31 @@ export function WelcomeSplash({ name, onDone }: WelcomeSplashProps) {
       if (!context) { backdrop.style.opacity = '1'; fade(); return; }
       const width = window.innerWidth, height = window.innerHeight;
       const centerX = width / 2, centerY = height / 2;
-      const reach = Math.hypot(width, height) * 0.72;
-      const direction = Math.random() < 0.5 ? -1 : 1;
-      const particles = Array.from(line.querySelectorAll<HTMLElement>('[data-welcome-letter]')).map(element => {
+      const smooth = (value: number) => value * value * (3 - 2 * value);
+      const bezier = (p: number, a: number, b: number, c: number, d: number) =>
+        (1-p)**3*a + 3*(1-p)**2*p*b + 3*(1-p)*p*p*c + p**3*d;
+      const rows = Math.max(3, Math.ceil(height / 210));
+      const stream = (time: number) => {
+        if (time < 1000) {
+          const p = smooth(Math.max(0, time / 1000));
+          return { x: centerX + (width * .88 - centerX) * p, y: centerY - 30 * Math.sin(p * Math.PI), reveal: false };
+        }
+        if (time < 2100) {
+          const p = (time - 1000) / 1100;
+          return { x: bezier(p, width*.88, width*1.02, width*.3, 40), y: bezier(p, centerY, height*.13, 24, 48), reveal: false };
+        }
+        const progress = Math.min(1, (time - 2100) / 3200);
+        const sweep = progress * rows;
+        const row = Math.min(rows - 1, Math.floor(sweep));
+        const p = smooth(Math.min(1, sweep - row));
+        return { x: row % 2 === 0 ? 40 + (width-80)*p : width-40-(width-80)*p,
+          y: 48 + (height-48) * (row + p) / rows, reveal: true };
+      };
+      const particles = Array.from(line.querySelectorAll<HTMLElement>('[data-welcome-letter]')).map((element, index) => {
         const rect = element.getBoundingClientRect();
         const x = rect.left + rect.width / 2, y = rect.top + rect.height / 2;
         element.style.animation = 'none';
-        return { element, x, y, lastX: x, lastY: y, angle: Math.random() * Math.PI * 2, turns: 1.1 + Math.random() * 0.7, delay: Math.random() * 180 };
+        return { element, x, y, lastX: x, lastY: y, index, delay: index * 16 };
       });
       const brush = document.createElement('canvas');
       brush.width = brush.height = 128;
@@ -86,27 +104,31 @@ export function WelcomeSplash({ name, onDone }: WelcomeSplashProps) {
         brushContext.fillRect(0, 0, 128, 128);
       }
       context.globalCompositeOperation = 'destination-out';
-      const start = performance.now(), duration = 2600;
+      const start = performance.now(), duration = 6100;
       const animate = (now: number) => {
         if (finished || fading) return;
         const elapsed = now - start;
         for (const particle of particles) {
-          const p = Math.max(0, Math.min(1, (elapsed - particle.delay) / 2400));
-          const radius = reach * Math.pow(p, 1.75);
-          const angle = particle.angle + direction * particle.turns * Math.PI * 2 * (p - 0.15 * p * p);
-          const x = centerX + (particle.x - centerX) * (1 - p) + Math.cos(angle) * radius;
-          const y = centerY + (particle.y - centerY) * (1 - p) + Math.sin(angle) * radius;
-          particle.element.style.transform = `translate3d(${x - particle.x}px,${y - particle.y}px,0) rotate(${direction * p * 140}deg) scale(${1 - p * 0.65})`;
-          particle.element.style.opacity = String(Math.pow(1 - p, 0.8));
-          particle.element.style.filter = `blur(${p * p * 3}px)`;
-          const size = 24 + p * Math.min(width, height) * 0.12;
-          const distance = Math.hypot(x - particle.lastX, y - particle.lastY);
-          const steps = Math.min(16, Math.max(1, Math.ceil(distance / (size * 0.45))));
-          context.globalAlpha = 0.6;
-          for (let step = 1; step <= steps; step++) {
-            const bx = particle.lastX + (x - particle.lastX) * step / steps;
-            const by = particle.lastY + (y - particle.lastY) * step / steps;
-            context.drawImage(brush, bx - size, by - size, size * 2, size * 2);
+          const time = Math.max(0, elapsed - particle.delay);
+          const target = stream(time);
+          const gathering = smooth(Math.min(1, time / 950));
+          const ripple = Math.sin(time / 150 + particle.index * .45);
+          const x = particle.x + (target.x - particle.x) * gathering;
+          const y = particle.y + (target.y + ripple * 9 - particle.y) * gathering;
+          const end = smooth(Math.max(0, Math.min(1, (elapsed - 5350) / 700)));
+          particle.element.style.transform = `translate3d(${x - particle.x}px,${y - particle.y}px,0) rotate(${ripple * gathering * 8}deg) scale(${1 - gathering * .64})`;
+          particle.element.style.opacity = String(1 - end);
+          particle.element.style.filter = `blur(${gathering * .25}px)`;
+          if (target.reveal) {
+            const size = Math.max(100, height / rows * 1.1);
+            const distance = Math.hypot(x - particle.lastX, y - particle.lastY);
+            const steps = Math.min(24, Math.max(1, Math.ceil(distance / (size * .25))));
+            context.globalAlpha = .28;
+            for (let step = 1; step <= steps; step++) {
+              const bx = particle.lastX + (x - particle.lastX) * step / steps;
+              const by = particle.lastY + (y - particle.lastY) * step / steps;
+              context.drawImage(brush, bx - size, by - size, size * 2, size * 2);
+            }
           }
           particle.lastX = x; particle.lastY = y;
         }
