@@ -1,4 +1,8 @@
-import { useState, useRef, useEffect, KeyboardEvent, MouseEvent } from 'react';
+import { dashboardAnalytics } from '@/lib/dashboardAnalytics';
+import { localDay } from '@/lib/discipline';
+import DashboardFilter from '@/components/trading/DashboardFilter';
+import { accountScope } from '@/lib/accountScope';
+import { useState, useRef, useEffect, useMemo, KeyboardEvent, MouseEvent } from 'react';
 import { useTrades } from '@/hooks/useTrades';
 import { useAiSettings } from '@/hooks/useAiSettings';
 import { useAiConversations, ChatMessage, AiConversation } from '@/hooks/useAiConversations';
@@ -9,11 +13,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Send, Bot, User, Sparkles, Settings, Loader2, Plus, Trash2, History } from 'lucide-react';
+import { Send, Settings, Loader2, Plus, Trash2 } from 'lucide-react';
 
 interface Props {
   activeAccount: Account | null;
   accounts: Account[];
+  onSelectAccount: (id:string)=>void;
 }
 
 const SUGGESTIONS = [
@@ -43,54 +48,65 @@ const makeWelcome = (label: string): ChatMessage => ({
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
-export default function AiAssistant({ activeAccount }: Props) {
-  const initialBalance = activeAccount?.initialBalance ?? 0;
-  const { trades } = useTrades(activeAccount?.id ?? null, initialBalance);
-  const accountLabel = activeAccount?.name ?? 'votre compte';
+export default function AiAssistant({ activeAccount, accounts, onSelectAccount }: Props) {
+  const [preferredCurrency,setPreferredCurrency] = useState('');
+  const scope = useMemo(()=>accountScope(accounts,activeAccount?.id ?? 'all',preferredCurrency || activeAccount?.currency || accounts[0]?.currency),[accounts,activeAccount?.id,activeAccount?.currency,preferredCurrency]);
+  const initialBalance = scope.capital;
+  const { allTrades } = useTrades(activeAccount?.id ?? null, initialBalance);
+  const trades = dashboardAnalytics(allTrades,{accountIds:scope.accounts.map(account=>account.id),to:localDay(),startingCapital:scope.capital}).closedTrades;
+  const accountLabel = activeAccount?.id === 'all' ? `Tous les comptes${scope.currency ? ` · ${scope.currency}` : ''}` : activeAccount?.name ?? 'votre compte';
+  const scopeKey = `${activeAccount?.id}:${scope.currency}`;
+  const liveScope = useRef(scopeKey);
+  liveScope.current = scopeKey;
   const { apiKey, setApiKey } = useAiSettings();
   const { conversations, saveConversation, deleteConversation } = useAiConversations();
 
-  const [activeConversationId, setActiveConversationId] = useState(() => crypto.randomUUID());
+  const [activeConversationId, setActiveConversationId] = useState<string>(() => crypto.randomUUID());
   const [messages, setMessages] = useState<ChatMessage[]>(() => [makeWelcome(accountLabel)]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [keyInput, setKeyInput] = useState(apiKey);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const prevAccountId = useRef(activeAccount?.id ?? null);
+  const prevScope = useRef(scopeKey);
+  const pendingConversation = useRef<AiConversation | null>(null);
+  const [conversationScope,setConversationScope] = useState(scopeKey);
+  const [historyQuery,setHistoryQuery] = useState('');
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const viewport = bottomRef.current?.closest<HTMLElement>('[data-radix-scroll-area-viewport]');
+    viewport?.scrollTo({top:viewport.scrollHeight, behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
   }, [messages, isLoading]);
 
-  // Switching accounts refreshes the chat with a fresh conversation for the new account
   useEffect(() => {
-    const currentId = activeAccount?.id ?? null;
-    if (prevAccountId.current === currentId) return;
-    prevAccountId.current = currentId;
-    setActiveConversationId(crypto.randomUUID());
-    setMessages([makeWelcome(accountLabel)]);
+    if(prevScope.current===scopeKey) return;
+    prevScope.current=scopeKey;
+    const pending=pendingConversation.current;
+    pendingConversation.current=null;
+    setConversationScope(scopeKey);
+    if(pending && pending.accountId===activeAccount?.id) {setActiveConversationId(pending.id);setMessages(pending.messages);} else {setActiveConversationId(crypto.randomUUID());setMessages([makeWelcome(accountLabel)]);}
     setInput('');
-  }, [activeAccount?.id, accountLabel]);
+  },[scopeKey,activeAccount?.id,accountLabel]);
 
   // Persist the conversation (keeps only the 5 most recent overall)
   useEffect(() => {
-    if (messages.length <= 1) return;
+    if (messages.length <= 1 || conversationScope !== scopeKey) return;
     const firstUser = messages.find(m => m.role === 'user');
     const title = firstUser ? firstUser.content.slice(0, 60) : 'Conversation';
     saveConversation({
       id: activeConversationId,
       accountId: activeAccount?.id ?? 'none',
       accountLabel,
+      currency:scope.currency,
       title,
       messages,
       updatedAt: new Date().toISOString(),
     });
-  }, [messages, activeConversationId, activeAccount?.id, accountLabel, saveConversation]);
+  }, [messages, activeConversationId, activeAccount?.id, accountLabel, saveConversation, scope.currency, conversationScope, scopeKey]);
 
   const send = async (text?: string) => {
     const content = (text ?? input).trim();
-    if (!content || isLoading) return;
+    if (!content || isLoading || !scope.accounts.length) return;
 
     const userMsg: ChatMessage = { id: crypto.randomUUID(), role: 'user', content };
     setMessages(prev => [...prev, userMsg]);
@@ -103,14 +119,17 @@ export default function AiAssistant({ activeAccount }: Props) {
     }
 
     setIsLoading(true);
+    const requestScope=scopeKey;
     try {
       const history = [...messages, userMsg]
         .filter(m => m.id !== 'welcome')
         .map(m => ({ role: m.role === 'user' ? ('user' as const) : ('model' as const), content: m.content }));
       const systemInstruction = SYSTEM_PERSONA + buildDataContext(trades, initialBalance, accountLabel);
       const reply = await askGemini(apiKey, systemInstruction, history);
+      if(liveScope.current !== requestScope) return;
       setMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'assistant', content: reply }]);
     } catch (e) {
+      if(liveScope.current !== requestScope) return;
       const fallback = generateAssistantResponse(content, { trades, initialBalance, accountLabel });
       const message = e instanceof Error ? e.message : 'inconnue';
       setMessages(prev => [...prev, {
@@ -140,10 +159,20 @@ export default function AiAssistant({ activeAccount }: Props) {
   const newConversation = () => {
     setActiveConversationId(crypto.randomUUID());
     setMessages([makeWelcome(accountLabel)]);
+    setConversationScope(scopeKey);
     setInput('');
   };
 
   const loadConversation = (conv: AiConversation) => {
+    if(isLoading) return;
+    const known=conv.accountId==='all' || accounts.some(account=>account.id===conv.accountId);
+    if(known && (conv.accountId!==activeAccount?.id || conv.currency && conv.currency!==scope.currency)) {
+      pendingConversation.current=conv;
+      setPreferredCurrency(conv.currency ?? '');
+      onSelectAccount(conv.accountId);
+      return;
+    }
+    setConversationScope(scopeKey);
     setActiveConversationId(conv.id);
     setMessages(conv.messages);
   };
@@ -154,133 +183,18 @@ export default function AiAssistant({ activeAccount }: Props) {
     if (id === activeConversationId) newConversation();
   };
 
+  const history = conversations.filter(conversation => (activeAccount?.id==='all' || conversation.accountId===activeAccount?.id) && `${conversation.title} ${conversation.accountLabel}`.toLocaleLowerCase('fr-FR').includes(historyQuery.trim().toLocaleLowerCase('fr-FR')));
   return (
-    <div className="flex gap-4 h-[calc(100vh-11rem)] max-w-6xl mx-auto">
-      <div className="w-60 shrink-0 flex flex-col border border-border rounded-xl bg-card/40 overflow-hidden">
-        <div className="p-3 border-b border-border flex items-center justify-between shrink-0">
-          <span className="text-sm font-medium flex items-center gap-2">
-            <History className="h-4 w-4 text-muted-foreground" />
-            Historique
-          </span>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={newConversation} title="Nouvelle conversation">
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-        <ScrollArea className="flex-1">
-          <div className="p-2 flex flex-col gap-1">
-            {conversations.length === 0 && (
-              <p className="text-xs text-muted-foreground p-2">Aucune conversation enregistrée.</p>
-            )}
-            {conversations.map(c => (
-              <div
-                key={c.id}
-                onClick={() => loadConversation(c)}
-                className={`group flex items-start gap-2 rounded-lg p-2 cursor-pointer text-xs transition-colors border ${
-                  c.id === activeConversationId
-                    ? 'bg-primary/10 border-primary/30'
-                    : 'border-transparent hover:bg-muted'
-                }`}
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="truncate font-medium text-foreground">{c.title || 'Conversation'}</p>
-                  <p className="text-[10px] text-muted-foreground truncate">{c.accountLabel} · {formatDate(c.updatedAt)}</p>
-                </div>
-                <button
-                  onClick={e => handleDelete(e, c.id)}
-                  className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0 p-1 rounded-md -m-1"
-                  title="Supprimer"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        </ScrollArea>
-      </div>
-
-      <div className="flex-1 flex flex-col min-w-0">
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-semibold flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              Assistant IA
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {apiKey
-                ? 'Réponses générées par Google Gemini, basées sur vos données de trading.'
-                : 'Analyse locale de vos données — configurez une clé Gemini pour des réponses plus développées.'}
-            </p>
-          </div>
-          <Button variant="outline" size="icon" onClick={openSettings} className="shrink-0">
-            <Settings className="h-4 w-4" />
-          </Button>
-        </div>
-
-        <ScrollArea className="flex-1 rounded-xl border border-border bg-card/40 p-4">
-          <div className="flex flex-col gap-4">
-            {messages.map(m => (
-              <div key={m.id} className={`flex gap-3 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                {m.role === 'assistant' && (
-                  <div className="h-8 w-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-                    <Bot className="h-4 w-4 text-primary" />
-                  </div>
-                )}
-                <div className={`max-w-[90%] rounded-lg px-4 py-3 text-sm whitespace-pre-line ${
-                  m.role === 'user'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-card border border-border'
-                }`}>
-                  {m.content}
-                </div>
-                {m.role === 'user' && (
-                  <div className="h-8 w-8 rounded-lg bg-muted border border-border flex items-center justify-center shrink-0">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                )}
-              </div>
-            ))}
-            {isLoading && (
-              <div className="flex gap-3 justify-start">
-                <div className="h-8 w-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-                  <Bot className="h-4 w-4 text-primary" />
-                </div>
-                <div className="rounded-lg px-3.5 py-2.5 text-sm bg-card border border-border flex items-center gap-2 text-muted-foreground">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Analyse en cours...
-                </div>
-              </div>
-            )}
-            <div ref={bottomRef} />
-          </div>
-        </ScrollArea>
-
-        {messages.length <= 1 && (
-          <div className="flex flex-wrap gap-2 mt-3">
-            {SUGGESTIONS.map(s => (
-              <button
-                key={s}
-                onClick={() => send(s)}
-                className="text-xs px-3 py-1.5 rounded-full border border-border bg-card hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        )}
-
-        <div className="flex items-center gap-2 mt-3">
-          <Input
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Posez votre question, ex: fais-moi une analyse de mes datas..."
-            className="h-11"
-            disabled={isLoading}
-          />
-          <Button onClick={() => send()} size="icon" className="h-11 w-11 shrink-0" disabled={!input.trim() || isLoading}>
-            <Send className="h-4 w-4" />
-          </Button>
-        </div>
+    <div className="assistant-page w-full space-y-8 pb-10">
+      <header className="flex flex-wrap items-center justify-between gap-4"><h1 className="text-2xl font-semibold tracking-tight">Assistant IA</h1><div className="flex items-center gap-2"><Button variant="outline" aria-label="Paramètres de l’assistant" onClick={openSettings} className="h-10 rounded-[10px]"><Settings className="h-4 w-4"/></Button><Button disabled={isLoading} onClick={newConversation} className="h-10 gap-2 rounded-[10px] text-xs"><Plus className="h-4 w-4"/>Nouvelle conversation</Button></div></header>
+      <div className="dashboard-filter-controls"><DashboardFilter label="Compte" ariaLabel="Compte de l’assistant" value={activeAccount?.id ?? 'all'} onChange={onSelectAccount} disabled={isLoading} options={[{value:'all',label:'Tous les comptes'},...accounts.map(account=>({value:account.id,label:account.name}))]}/>{scope.groups.length>1 && <DashboardFilter label="Devise" ariaLabel="Devise de l’assistant" value={scope.currency || 'UNKNOWN'} onChange={setPreferredCurrency} disabled={isLoading} options={scope.groups.map(group=>({value:group.currency,label:group.currency}))}/>}<p className="self-end pb-3 text-[11px] text-muted-foreground">{apiKey ? 'Gemini' : 'Analyse locale'} · Trades clôturés</p></div>
+      {!scope.accounts.length && <p className="text-sm text-muted-foreground">{accounts.length ? 'Choisis un compte dont la devise est renseignée.' : 'Ajoute un compte pour commencer.'}</p>}
+      <div className="assistant-layout grid min-w-0 items-start gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <aside className="min-w-0 space-y-4" aria-label="Historique des conversations"><h2 className="text-sm font-semibold">Conversations</h2><Input aria-label="Rechercher une conversation" placeholder="Rechercher…" value={historyQuery} onChange={event=>setHistoryQuery(event.target.value)} className="h-10 rounded-[10px] bg-transparent text-xs"/><div className="reports-period-list">{history.length ? history.map(conversation=><div key={conversation.id} className={`assistant-history-item flex items-start gap-2 rounded-[10px] px-3 py-4 ${conversation.id===activeConversationId ? 'bg-primary/10' : 'hover:bg-secondary/40'}`}><button disabled={isLoading} onClick={()=>loadConversation(conversation)} className="min-w-0 flex-1 text-left"><span className="block truncate text-xs font-medium">{conversation.title || 'Conversation'}</span><span className="mt-2 block text-[10px] text-muted-foreground">{conversation.accountLabel} · {formatDate(conversation.updatedAt)}</span></button><button disabled={isLoading} onClick={event=>handleDelete(event,conversation.id)} aria-label={`Supprimer la conversation ${conversation.title}`} className="shrink-0 rounded p-1 text-muted-foreground hover:text-loss"><Trash2 className="h-3.5 w-3.5"/></button></div>) : <p className="py-8 text-center text-xs text-muted-foreground">Aucune conversation dans cette sélection.</p>}</div></aside>
+        <section className="assistant-chat flex min-w-0 flex-col" aria-label="Conversation avec l’assistant"><ScrollArea className="min-h-0 flex-1"><div className="flex flex-col gap-6 pr-4">{messages.map(message=><div key={message.id} className={`flex ${message.role==='user' ? 'justify-end' : 'justify-start'}`}><div className={`max-w-[90%] whitespace-pre-wrap break-words rounded-xl text-sm leading-7 ${message.role==='user' ? 'bg-secondary/60 px-4 py-3' : 'py-2'}`}>{message.content}</div></div>)}{isLoading && <p role="status" className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin"/>Analyse en cours…</p>}<div ref={bottomRef}/></div></ScrollArea>
+          {messages.length<=1 && <div className="mt-5 flex flex-wrap gap-2">{SUGGESTIONS.slice(0,3).map(suggestion=><button disabled={isLoading || !scope.accounts.length} key={suggestion} onClick={()=>send(suggestion)} className="rounded-[10px] bg-secondary/40 px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:bg-secondary">{suggestion}</button>)}</div>}
+          <div className="mt-5 flex items-center gap-2"><Input aria-label="Message à l’assistant" value={input} onChange={event=>setInput(event.target.value)} onKeyDown={handleKeyDown} placeholder="Pose ta question…" className="h-11 rounded-[10px] bg-transparent text-sm" disabled={isLoading || !scope.accounts.length}/><Button onClick={()=>send()} aria-label="Envoyer le message" className="h-11 w-11 shrink-0 rounded-[10px]" disabled={!input.trim() || isLoading || !scope.accounts.length}><Send className="h-4 w-4"/></Button></div>
+        </section>
       </div>
 
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>

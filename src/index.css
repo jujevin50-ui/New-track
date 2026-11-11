@@ -1179,3 +1179,15 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 @media (min-width: 1024px) { .reports-browser { position: sticky; top: 24px; } }
 @media (max-width: 1023px) { .reports-period-list { max-height: 240px; } }
 @media (prefers-reduced-motion: reduce) { .reports-period-item { transition: none; } }
+
+.assistant-chat { height: max(520px, calc(100dvh - 280px)); }
+.assistant-page [data-radix-scroll-area-viewport] > div { min-width: 0; display: block !important; }
+.assistant-history-item button { overflow-wrap: anywhere; }
+.account-editor :is(input,select) { height: 42px; border-radius: 10px; background: transparent; font-size: 12px; }
+.account-editor label { display: block; min-height: 32px; font-size: 11px; font-weight: 400; color: hsl(var(--muted-foreground)); }
+.account-editor form > .grid-cols-4 { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.account-editor form > div:last-of-type > .flex { flex-wrap: wrap; }
+.accounts-page td { vertical-align: middle; }
+.accounts-page tbody tr:hover { background: hsl(var(--secondary) / 0.3); }
+@media (max-width: 639px) { .assistant-chat { height: 560px; } .accounts-page .dashboard-filter-controls, .strategy-page > .dashboard-filter-controls { width: 100%; } .accounts-page .dashboard-filter-field, .strategy-page > .dashboard-filter-controls .dashboard-filter-field { width: 100%; } }
+@media (max-width: 639px) { .account-editor form > div:last-of-type > .flex { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); } .account-editor form button { white-space: normal; } }

@@ -40,7 +40,7 @@ export function AppLayout({ children, accounts, activeAccountId, onSelectAccount
       <WorkspaceRail><TopNav sidebar /></WorkspaceRail>
 
       {/* Filtres de comptes : descendus sous le menu, alignés à droite */}
-      {accounts.length > 0 && location.pathname !== '/' && location.pathname !== '/discipline' && location.pathname !== '/calendar' && location.pathname !== '/trades' && location.pathname !== '/reports' && (
+      {accounts.length > 0 && location.pathname !== '/' && location.pathname !== '/discipline' && location.pathname !== '/calendar' && location.pathname !== '/trades' && location.pathname !== '/reports' && !['/strategy','/ai-assistant','/accounts'].includes(location.pathname) && (
         <div className="relative z-40 px-3 md:px-5 pt-3 pb-1 max-w-[1800px] w-full mx-auto flex justify-end">
           <div className="flex flex-wrap items-center justify-end gap-1 min-h-9 px-1.5 py-1 rounded-xl bg-background/90 border border-border/70">
             <div className="flex flex-wrap items-center gap-0.5">

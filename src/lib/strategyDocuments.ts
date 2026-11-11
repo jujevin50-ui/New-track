@@ -1,4 +1,5 @@
 export interface StrategyDocument {
+  accountId?: string;
   id: string;
   name: string;
   kind: 'pdf' | 'docx' | 'html';

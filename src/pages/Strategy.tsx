@@ -1,3 +1,6 @@
+import DashboardFilter from '@/components/trading/DashboardFilter';
+import { Input } from '@/components/ui/input';
+import type { Account } from '@/types/account';
 import { useEffect, useRef, useState, lazy, Suspense } from 'react';
 import { BookOpen, Download, FileText, Loader2, Plus, Trash2 } from 'lucide-react';
 import { useData } from '@/contexts/DataContext';
@@ -8,9 +11,12 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 const StrategyPdfViewer = lazy(() => import('@/components/trading/StrategyPdfViewer'));
 
-export default function Strategy() {
+export default function Strategy({ accounts, activeAccountId, onSelectAccount }: {accounts:Account[]; activeAccountId:string | null; onSelectAccount:(id:string)=>void}) {
   const { data, addRow, deleteRow } = useData();
-  const documents = data.strategyDocuments;
+  const [query, setQuery] = useState('');
+  const [kind, setKind] = useState('all');
+  const [order, setOrder] = useState('recent');
+  const documents = data.strategyDocuments.filter(document => (!document.accountId || activeAccountId === 'all' || document.accountId === activeAccountId) && (kind === 'all' || document.kind === kind) && document.name.toLocaleLowerCase('fr-FR').includes(query.trim().toLocaleLowerCase('fr-FR'))).sort((a,b) => order === 'name' ? a.name.localeCompare(b.name,'fr') : b.createdAt.localeCompare(a.createdAt));
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = documents.find(document => document.id === selectedId) || documents[0];
   const [preview, setPreview] = useState<{ id: string; url: string; html?: string } | null>(null);
@@ -44,8 +50,8 @@ export default function Strategy() {
     setBusy(true); setError('');
     try {
       const document = await importStrategyDocument(file);
-      await addRow('strategyDocuments', document);
-      setSelectedId(document.id);
+      await addRow('strategyDocuments', {...document, ...(activeAccountId && activeAccountId !== 'all' ? {accountId:activeAccountId} : {})});
+      setKind('all'); setQuery(''); setSelectedId(document.id);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Impossible d’enregistrer le document.');
     } finally { setBusy(false); }
@@ -62,7 +68,7 @@ export default function Strategy() {
   const currentPreview = preview?.id === selected?.id ? preview : null;
 
   return (
-    <div className="mx-auto w-full max-w-[1480px] space-y-5 pb-8">
+    <div className="strategy-page mx-auto w-full space-y-8 pb-10">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">Stratégie</h1>
         <Button className="gap-2 rounded-xl" disabled={busy} onClick={() => input.current?.click()}>
@@ -70,23 +76,24 @@ export default function Strategy() {
         </Button>
         <input ref={input} type="file" accept=".html,.htm,text/html,.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" aria-label="Importer un document de stratégie" className="sr-only" tabIndex={-1} disabled={busy} onChange={event => { void importFile(event.target.files?.[0]); event.target.value = ''; }} />
       </header>
+      <div className="dashboard-filter-controls"><DashboardFilter label="Compte" ariaLabel="Compte des stratégies" disabled={busy} value={activeAccountId ?? 'all'} onChange={onSelectAccount} options={[{value:'all',label:'Tous les comptes'},...accounts.map(account=>({value:account.id,label:account.name}))]}/><DashboardFilter label="Format" ariaLabel="Format des documents" disabled={busy} value={kind} onChange={setKind} options={[{value:'all',label:'Tous les formats'},{value:'pdf',label:'PDF'},{value:'docx',label:'Word'},{value:'html',label:'HTML'}]}/><DashboardFilter label="Trier" ariaLabel="Tri des documents" disabled={busy} value={order} onChange={setOrder} options={[{value:'recent',label:'Plus récents'},{value:'name',label:'Nom du document'}]}/><div className="min-w-0 flex-1 basis-48"><label htmlFor="strategy-search" className="dashboard-filter-caption">Recherche</label><Input id="strategy-search" placeholder="Nom du document…" value={query} onChange={event=>setQuery(event.target.value)} className="h-[42px] rounded-[10px] bg-transparent text-xs"/></div></div>
       {error && <p role="alert" className="rounded-xl border border-loss/20 bg-loss/5 p-3 text-sm text-loss">{error}</p>}
       {!documents.length ? (
-        <div className="flex min-h-[55vh] flex-col items-center justify-center gap-5 rounded-xl border border-dashed border-border bg-card/40 p-8 text-center">
+        <div className="flex min-h-[55vh] flex-col items-center justify-center gap-5 p-8 text-center">
           <BookOpen className="h-10 w-10 text-muted-foreground" strokeWidth={1.4} />
-          <div><h2 className="text-lg font-semibold">Votre stratégie, à portée de main</h2><p className="mt-2 text-sm text-muted-foreground">PDF, Word (.docx) ou HTML</p></div>
+          <div><h2 className="text-lg font-semibold">Aucun document dans cette sélection</h2><p className="mt-2 text-sm text-muted-foreground">PDF, Word (.docx) ou HTML</p></div>
           <Button variant="outline" className="rounded-xl" disabled={busy} onClick={() => input.current?.click()}>Choisir un fichier</Button>
         </div>
       ) : (
-        <div className="grid items-start gap-4 lg:grid-cols-[250px_minmax(0,1fr)]">
-          <nav aria-label="Documents de stratégie" className="flex min-w-0 gap-2 overflow-x-auto app-panel rounded-xl border border-border/60 bg-card p-2 lg:max-h-[75vh] lg:flex-col lg:overflow-y-auto">
-            {documents.map(document => <button key={document.id} type="button" aria-current={selected?.id === document.id ? 'true' : undefined} onClick={() => setSelectedId(document.id)} className={`flex min-w-[190px] shrink-0 items-center gap-3 rounded-xl px-3 py-4 text-left lg:min-w-0 ${selected?.id === document.id ? 'selected-tab' : 'hover:bg-secondary/60'}`}>
+        <div className="grid items-start gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
+          <nav aria-label="Documents de stratégie" className="reports-period-list min-w-0 lg:sticky lg:top-6">
+            {documents.map(document => <button key={document.id} type="button" aria-current={selected?.id === document.id ? 'true' : undefined} onClick={() => setSelectedId(document.id)} aria-pressed={selected?.id === document.id} className="reports-period-item flex min-w-0 items-center gap-3">
               <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium" title={document.name}>{document.name}</span><span className="mt-1 block text-xs text-muted-foreground">{document.kind === 'pdf' ? 'PDF' : document.kind === 'html' ? 'HTML' : 'Word'} · {Math.max(1, Math.round(document.size / 1024))} Ko</span></span>
+              <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium" title={document.name}>{document.name}</span><span className="mt-1 block text-xs text-muted-foreground">{document.kind === 'pdf' ? 'PDF' : document.kind === 'html' ? 'HTML' : 'Word'} · {document.accountId ? accounts.find(account=>account.id===document.accountId)?.name ?? 'Compte supprimé' : 'Commun'}</span></span>
             </button>)}
           </nav>
-          <section aria-label="Lecteur de stratégie" className="min-w-0 overflow-hidden app-panel rounded-xl border border-border/60 bg-card">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 px-4 py-3">
+          <section aria-label="Lecteur de stratégie" className="min-w-0 overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-5">
               <h2 className="min-w-0 max-w-full truncate text-sm font-medium">{selected?.name}</h2>
               <div className="flex items-center gap-2">
                 {currentPreview && <Button asChild variant="outline" size="sm" className="gap-1.5 rounded-lg"><a href={currentPreview.url} download={selected.name}><Download className="h-3.5 w-3.5" />Télécharger</a></Button>}

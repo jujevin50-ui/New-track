@@ -129,7 +129,7 @@ const AppContent = () => {
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route path="/discipline" element={<Discipline activeAccount={displayAccount} accounts={accounts} onSelectAccount={setActiveAccountId} />} />
-                <Route path="/strategy" element={<Strategy />} />
+                <Route path="/strategy" element={<Strategy accounts={accounts} activeAccountId={activeAccountId} onSelectAccount={setActiveAccountId} />} />
                 <Route path="/tasks" element={<Navigate to="/" replace />} />
                 <Route path="/" element={<Dashboard activeAccount={displayAccount} accounts={accounts} onSelectAccount={setActiveAccountId} />} />
                 <Route path="/calendar" element={<CalendarView activeAccount={displayAccount} accounts={accounts} onSelectAccount={setActiveAccountId} />} />
@@ -137,7 +137,7 @@ const AppContent = () => {
                 <Route path="/reports" element={<Reports activeAccount={displayAccount} accounts={accounts} onSelectAccount={setActiveAccountId} />} />
                 <Route path="/weekly-report" element={<Navigate to="/reports" replace />} />
                 <Route path="/daily-report" element={<Navigate to="/calendar#daily-review" replace />} />
-                <Route path="/ai-assistant" element={<AiAssistant activeAccount={displayAccount} accounts={accounts} />} />
+                <Route path="/ai-assistant" element={<AiAssistant activeAccount={displayAccount} accounts={accounts} onSelectAccount={setActiveAccountId} />} />
                 <Route path="/accounts" element={<Accounts accounts={accounts} activeAccountId={activeAccountId} onSelectAccount={setActiveAccountId} onAdd={addAccount} onUpdate={updateAccount} onDelete={deleteAccount} categories={categories} allTrades={allTrades} />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

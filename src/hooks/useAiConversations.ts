@@ -10,6 +10,7 @@ export interface ChatMessage {
 }
 
 export interface AiConversation {
+  currency?: string;
   id: string;
   accountId: string;
   accountLabel: string;
