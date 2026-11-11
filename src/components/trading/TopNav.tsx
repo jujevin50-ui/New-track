@@ -55,7 +55,7 @@ export function TopNav({ sidebar = false, utilitiesOnly = false }: { sidebar?: b
         {!utilitiesOnly && (sidebar ? <SlidingRailLinks>{links}</SlidingRailLinks> : <HeaderNavLinks activeKey={location.pathname}>{links}</HeaderNavLinks>)}
         <div className={sidebar ? 'rail-actions' : 'header-nav-actions'}>
           <button onClick={() => setSettingsOpen(true)} className={sidebar ? 'rail-settings-pill' : 'header-action'} aria-label="Settings">
-            <Settings className="h-4 w-4" />{sidebar && <span>{userName || 'Paramètres'}</span>}
+            <Settings className="h-4 w-4" />{sidebar && <span>{userName.trim() || 'Mon profil'}</span>}
           </button>
 
         </div>

@@ -81,11 +81,11 @@ export function WelcomeSplash({ name, onDone }: WelcomeSplashProps) {
       const path = (time: number) => {
         if (time < 950) {
           const p = smooth(Math.max(0, time / 950));
-          return { x: width/2 + width*.38*p, y: height/2, alpha: 1 };
+          return { x: width/2 + (width/2-2)*p, y: height/2, alpha: 1 };
         }
         if (time < 2050) {
           const p = (time-950)/1100;
-          return { x: bezier(p,width*.88,width*1.02,width*.3,0),
+          return { x: bezier(p,width-2,width,width*.3,0),
             y: bezier(p,height/2,height*.1,0,rowHeight/2), alpha: 1 };
         }
         const sweep = Math.min(rows, (time-2050)/3500*rows);
@@ -94,6 +94,40 @@ export function WelcomeSplash({ name, onDone }: WelcomeSplashProps) {
         // Hide the return between rows: every visible pass is perfectly horizontal.
         return { x: width*smooth(p), y: (row+.5)*rowHeight,
           alpha: Math.min(1,p*18,(1-p)*18) };
+      };
+      // Impacts follow the actual edge contacts, independently of frame rate.
+      const impacts=[{time:950,x:width-2,y:height/2,direction:Math.PI}];
+      for(let row=0;row<rows;row++) {
+        impacts.push({time:2050+row*3500/rows,x:2,y:(row+.5)*rowHeight,direction:0});
+        impacts.push({time:2050+(row+1)*3500/rows,x:width-2,y:(row+.5)*rowHeight,direction:Math.PI});
+      }
+      type Spark={x:number;y:number;vx:number;vy:number;born:number;life:number;length:number};
+      let impactIndex=0,sparks:Spark[]=[];
+      const sparkColor=document.documentElement.classList.contains('dark')?'#f8cf6b':'#b47612';
+      const drawSparks=(elapsed:number)=>{
+        while(impactIndex<impacts.length&&elapsed>=impacts[impactIndex].time) {
+          const impact=impacts[impactIndex++];
+          for(let index=0;index<12;index++) {
+            const angle=impact.direction+(Math.random()-.5)*2.5;
+            const speed=100+Math.random()*140;
+            sparks.push({x:impact.x,y:impact.y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,
+              born:impact.time,life:380+Math.random()*220,length:3+Math.random()*5});
+          }
+        }
+        sparks=sparks.filter(spark=>elapsed-spark.born<spark.life).slice(-72);
+        inkContext.strokeStyle=sparkColor;
+        inkContext.lineWidth=1.5;
+        for(const spark of sparks) {
+          const age=(elapsed-spark.born)/1000,p=(elapsed-spark.born)/spark.life;
+          const travel=age*(1-.4*p);
+          const x=spark.x+spark.vx*travel,y=spark.y+spark.vy*travel+90*age*age;
+          const speed=Math.hypot(spark.vx,spark.vy),length=spark.length*(1-p);
+          inkContext.globalAlpha=(1-p)**1.5;
+          inkContext.beginPath();inkContext.moveTo(x,y);
+          inkContext.lineTo(x-spark.vx/speed*length,y-spark.vy/speed*length);
+          inkContext.stroke();
+        }
+        inkContext.globalAlpha=1;
       };
       const letters = Array.from(line.querySelectorAll<HTMLElement>('[data-welcome-letter]')).map(element => {
         const rect = element.getBoundingClientRect();
@@ -138,6 +172,7 @@ export function WelcomeSplash({ name, onDone }: WelcomeSplashProps) {
           else inkContext.lineTo(point.x,point.y);
         }
         inkContext.stroke();
+        drawSparks(elapsed);
         if (revealStarted) {
           const sweep = Math.min(rows,(elapsed-2050)/3500*rows);
           const row = Math.min(rows-1,Math.floor(sweep));
