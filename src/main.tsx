@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import "./styles/interaction-system.css";
 import { initTheme } from "./hooks/useTheme";
 
 initTheme();

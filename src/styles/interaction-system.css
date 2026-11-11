@@ -1,0 +1,94 @@
+/* Interaction tokens are separate from financial/brand colors and persisted data. */
+:root {
+  --ui-space-1: 4px;
+  --ui-space-2: 8px;
+  --ui-space-3: 12px;
+  --ui-space-4: 16px;
+  --ui-space-6: 24px;
+  --ui-space-8: 32px;
+  --ui-control: 44px;
+  --ui-radius-control: 10px;
+  --ui-radius-dialog: 16px;
+  --ui-duration-fast: 150ms;
+  --ui-duration-normal: 220ms;
+  --ui-duration-navigation: 280ms;
+  --ui-ease-enter: cubic-bezier(.22,1,.36,1);
+  --ui-ease-exit: cubic-bezier(.4,0,1,1);
+}
+.ui-button { min-height: var(--ui-control); touch-action: manipulation; transition: transform var(--ui-duration-fast) var(--ui-ease-enter); }
+.ui-button:active:not(:disabled):not([aria-disabled=true]) { transform: scale(.98); }
+.ui-button[aria-busy=true] { cursor: progress; }
+.ui-input, .ui-select-trigger { min-height: var(--ui-control); }
+.ui-input, .ui-textarea, .ui-select-trigger { border-radius: var(--ui-radius-control); }
+.ui-input[aria-invalid=true], .ui-textarea[aria-invalid=true], .ui-select-trigger[aria-invalid=true] { border-color: hsl(var(--loss)); }
+.ui-textarea { line-height: 1.6; }
+.ui-select-option, .ui-menu-option { min-height: var(--ui-control); }
+:where(button, a, input, textarea, select, [tabindex]):focus-visible { outline: 2px solid hsl(var(--foreground)); outline-offset: 3px; }
+.ui-skip-link { position: fixed; left: 16px; top: 12px; z-index: 250; padding: 12px 20px; border-radius: 10px; background: hsl(var(--foreground)); color: hsl(var(--background)); transform: translateY(-180%); }
+.ui-skip-link:focus { transform: translateY(0); }
+#main-content:focus { outline: none; }
+.ui-dialog { max-height: calc(100dvh - 32px); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.ui-dialog[data-state=open] { animation: ui-dialog-in var(--ui-duration-normal) var(--ui-ease-enter); }
+.ui-dialog[data-state=closed] { animation: ui-dialog-out var(--ui-duration-fast) var(--ui-ease-exit); }
+.ui-dialog-overlay[data-state=open] { animation: ui-fade-in var(--ui-duration-normal) ease-out; }
+.ui-dialog-overlay[data-state=closed] { animation: ui-fade-out var(--ui-duration-fast) ease-in; }
+.ui-dialog > :first-child:has([id]) { padding-right: 28px; }
+.ui-dialog-close { min-height: 44px; min-width: 44px; }
+.ui-floating { animation-duration: var(--ui-duration-normal); animation-timing-function: var(--ui-ease-enter); }
+.ui-floating[data-state=closed] { animation-duration: var(--ui-duration-fast); animation-timing-function: var(--ui-ease-exit); }
+.ui-page-enter, .finance-content { animation: ui-page-in var(--ui-duration-normal) var(--ui-ease-enter) both; }
+.ui-page-loader { min-height: 480px; padding-block: 24px; }
+.ui-skeleton { animation: ui-skeleton 1.4s ease-in-out infinite; }
+.ui-loading-icon { animation: ui-spin 800ms linear infinite; }
+.rail-links-gooey .rail-selection-slider { transition-duration: var(--ui-duration-navigation); }
+.rail-link { min-height: 44px; }
+.dashboard-filter-trigger { min-height: 44px; }
+.dashboard-switch > button, .page-segments > button { min-height: 44px; }
+.dashboard-filter-caption { font-size: 12px; line-height: 1.4; }
+.ui-field-error { display: flex; gap: 6px; align-items: flex-start; margin-top: 8px; font-size: 12px; line-height: 1.5; color: hsl(var(--loss)); }
+.ui-form-progress { display: flex; flex-wrap: wrap; gap: 8px 20px; padding: 12px 20px; font-size: 12px; color: hsl(var(--muted-foreground)); }
+.ui-form-progress a { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; border-radius: 6px; }
+.ui-form-progress a > span { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: hsl(var(--secondary)); font-size: 11px; color: hsl(var(--foreground)); }
+.ui-draft-status { flex: 1; min-width: 180px; font-size: 11px; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+.ui-form-footer { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 12px; }
+@keyframes ui-dialog-in { from { opacity: 0; transform: translate(-50%,calc(-50% + 8px)) scale(.98); } to { opacity: 1; transform: translate(-50%,-50%) scale(1); } }
+@keyframes ui-dialog-out { from { opacity: 1; transform: translate(-50%,-50%) scale(1); } to { opacity: 0; transform: translate(-50%,calc(-50% + 4px)) scale(.99); } }
+@keyframes ui-page-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes ui-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ui-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes ui-skeleton { 0%,100% { opacity: .45; } 50% { opacity: .85; } }
+@keyframes ui-spin { to { transform: rotate(360deg); } }
+@media (max-width: 639px), (pointer: coarse) {
+  :root { --ui-control: 48px; }
+  .ui-input, .ui-textarea, .ui-select-trigger { font-size: 16px; }
+  .workspace-shell main .ui-input, .workspace-shell main .ui-select-trigger { font-size: 16px; }
+  .rail-link, .rail-workspaces button, .rail-settings-pill, .settings-menu button { min-height: 48px; }
+  .rail-workspaces-animated .rail-workspace-pill { bottom: 4px; }
+  .ui-switch, .ui-checkbox { position: relative; }
+  .ui-switch::before, .ui-checkbox::before { content: ''; position: absolute; left: 50%; top: 50%; width: 48px; height: 48px; transform: translate(-50%,-50%); }
+  .ui-dialog .grid-cols-2 { gap: 16px; }
+  .ui-dialog .ui-form-footer { position: sticky; bottom: 0; background: hsl(var(--background)); padding-block: 12px; }
+  .dashboard-switch > button, .page-segments > button { min-height: 48px; }
+  .ui-form-progress { gap: 8px 12px; }
+  .ui-form-progress a { min-height: 44px; }
+  .ui-page-loader { min-height: 540px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  .ui-button:active { transform: none; }
+  .ui-page-enter, .finance-content, .ui-skeleton, .ui-loading-icon { animation: none !important; }
+}
+/* Keep user-selected accents on graphics, but provide a readable ink for small text. */
+:root { --ui-primary-ink: color-mix(in srgb, hsl(var(--primary)) 25%, hsl(var(--foreground)) 75%); }
+.text-primary { color: var(--ui-primary-ink); }
+@media (max-width: 639px), (pointer: coarse) {
+  .workspace-shell :is(button, a[role=button]):not([role=switch],[role=checkbox]), .ui-dialog button:not([role=switch],[role=checkbox]) { min-height: 48px; min-width: 44px; }
+  .dashboard-switch, .page-segments { height: auto !important; }
+  .trade-editor [role=group] { height: auto; min-height: 56px; }
+  .finance-toolbar-actions { align-items: stretch; }
+  .finance-transfer-row { grid-template-columns: minmax(0,1fr) auto 48px; }
+}
+/* Color states change immediately; movement stays on compositor-friendly properties. */
+.ui-sheet, .rail-link, .rail-workspaces button, .settings-menu button, .dashboard-switch button, .dashboard-filter-trigger, .dashboard-filter-option, .finance-period button, .finance-account-row, .finance-subscription-row, .finance-transfer-row { transition-property: transform, opacity; }
+.rail-links-gooey .rail-selection-slider { transition-property: transform; }
+.rail-link:focus-visible, .rail-workspaces button:focus-visible, .rail-settings-pill:focus-visible { outline: 2px solid hsl(var(--foreground)); outline-offset: -3px; }

@@ -74,7 +74,7 @@ function DisciplineSession({ date, existing, trades, currency, onDirty, onSaving
       <section className="min-w-0">
         <div className="pb-5">
           <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><h2 className="text-sm font-semibold">Mes missions du jour</h2></div><span className="text-xs font-medium tabular-nums text-muted-foreground">{missions.length * 20} / 100 XP</span></div>
-          <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-secondary" role="progressbar" aria-label="Missions accomplies" aria-valuemin={0} aria-valuemax={5} aria-valuenow={missions.length}><div className="h-full rounded-full bg-primary transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${missions.length * 20}%` }} /></div>
+          <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-secondary" role="progressbar" aria-label="Missions accomplies" aria-valuemin={0} aria-valuemax={5} aria-valuenow={missions.length}><div className="h-full w-full origin-left rounded-full bg-primary transition-transform duration-200 motion-reduce:transition-none" style={{ transform: `scaleX(${missions.length / 5})` }} /></div>
 
         </div>
         <div className="space-y-2">{DISCIPLINE_MISSIONS.map((mission, index) => {

@@ -30,7 +30,7 @@ export default function WorkspaceRail({ children }: { children: ReactNode }) {
       { transform: `translateX(${(from+to)/2}%) scale(1.22,.88)`, offset: .42 },
       { transform: `translateX(${to}%) scale(.96,1.04)`, offset: .78 },
       { transform: `translateX(${to}%) scale(1,1)` },
-    ], { duration: 580, easing: 'cubic-bezier(.22,1,.36,1)' });
+    ], { duration: 280, easing: 'cubic-bezier(.22,1,.36,1)' });
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
     const stop = () => { if (media.matches) animation.cancel(); };
     media.addEventListener('change', stop);

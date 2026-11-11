@@ -1,3 +1,4 @@
+import { foregroundForHsl } from '@/lib/colorContrast';
 import { useState, useEffect, useCallback } from 'react';
 
 const THEME_KEY = 'trading-journal-theme';
@@ -49,6 +50,7 @@ function applyTheme(config: ThemeConfig) {
   const root = document.documentElement;
   const hsl = `${config.primaryHue} ${config.primarySat}% ${config.primaryLight}%`;
   root.style.setProperty('--primary', hsl);
+  root.style.setProperty('--primary-foreground', foregroundForHsl(config.primaryHue,config.primarySat,config.primaryLight));
   root.style.setProperty('--ring', hsl);
   root.style.setProperty('--balance', hsl);
   root.style.setProperty('--chart-balance', hsl);

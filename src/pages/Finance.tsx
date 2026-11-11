@@ -1,8 +1,10 @@
+import { useDialogDraft } from '@/hooks/useDialogDraft';
+import { FormField } from '@/components/ui/form-field';
 import DashboardFilter from '@/components/trading/DashboardFilter';
 import { useFinanceAccount } from '@/hooks/useFinanceAccount';
 import SlidingRailLinks from '@/components/trading/SlidingRailLinks';
 import type { LucideIcon } from 'lucide-react';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, useRef, useEffect, type ReactNode, type FormEvent } from 'react';
 import WorkspaceRail from '@/components/trading/WorkspaceRail';
 import { TopNav } from '@/components/trading/TopNav';
 import { InvestmentView } from '@/components/finance/InvestmentView';
@@ -44,14 +46,14 @@ const emptyTx: FinanceTransaction = { id: '', date: todayStr(), description: '',
 
 export default function Finance() {
   const { data, addRow, updateRow, deleteRow } = useData();
-  const accounts = (Array.isArray((data as any)?.financeAccounts) ? (data as any).financeAccounts : []) as FinanceAccount[];
-  const transactions = (Array.isArray((data as any)?.financeTransactions) ? (data as any).financeTransactions : []) as FinanceTransaction[];
-  const subscriptions = (Array.isArray((data as any)?.financeSubscriptions) ? (data as any).financeSubscriptions : []) as FinanceSubscription[];
-  const transfers = (Array.isArray((data as any)?.financeTransfers) ? (data as any).financeTransfers : []) as FinanceTransfer[];
-  const statements = (Array.isArray((data as any)?.financeStatements) ? (data as any).financeStatements : []) as FinanceStatement[];
+  const accounts = useMemo(() => Array.isArray(data?.financeAccounts) ? data.financeAccounts : [], [data?.financeAccounts]) as FinanceAccount[];
+  const transactions = useMemo(() => Array.isArray(data?.financeTransactions) ? data.financeTransactions : [], [data?.financeTransactions]) as FinanceTransaction[];
+  const subscriptions = useMemo(() => Array.isArray(data?.financeSubscriptions) ? data.financeSubscriptions : [], [data?.financeSubscriptions]) as FinanceSubscription[];
+  const transfers = useMemo(() => Array.isArray(data?.financeTransfers) ? data.financeTransfers : [], [data?.financeTransfers]) as FinanceTransfer[];
+  const statements = useMemo(() => Array.isArray(data?.financeStatements) ? data.financeStatements : [], [data?.financeStatements]) as FinanceStatement[];
   const [selectedAccount, selectAccount] = useFinanceAccount(accounts);
   const scopedAccounts = selectedAccount === 'all' ? accounts : accounts.filter(account => account.id === selectedAccount);
-  const scopedTransactions = transactions.filter(transaction => selectedAccount === 'all' || transaction.accountId === selectedAccount);
+  const scopedTransactions = useMemo(()=>transactions.filter(transaction => selectedAccount === 'all' || transaction.accountId === selectedAccount),[transactions,selectedAccount]);
   const scopedSubscriptions = subscriptions.filter(subscription => selectedAccount === 'all' || subscription.accountId === selectedAccount);
   const scopedTransfers = transfers.filter(transfer => selectedAccount === 'all' || transfer.fromAccountId === selectedAccount || transfer.toAccountId === selectedAccount);
   const scopedStatements = statements.filter(statement => selectedAccount === 'all' || statement.accountId === selectedAccount);
@@ -62,12 +64,28 @@ export default function Finance() {
   const [txOpen, setTxOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [subOpen, setSubOpen] = useState(false);
+  const [financeAttempt,setFinanceAttempt] = useState('');
+  const [financeBusy,setFinanceBusy] = useState(false);
+  const [financeError,setFinanceError] = useState('');
+  const financeLock = useRef(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [tx, setTx] = useState<FinanceTransaction>({ ...emptyTx });
   const [editingAccount, setEditingAccount] = useState<FinanceAccount | null>(null);
   const [accountForm, setAccountForm] = useState<FinanceAccount>({ id: '', name: '', type: 'Compte courant', institution: '', balance: 0, currency: 'EUR' });
   const [subForm, setSubForm] = useState<FinanceSubscription>({ id: '', name: '', amount: 0, frequency: 'monthly', nextDate: todayStr(), accountId: '', category: 'Abonnements', active: true });
   const [transferForm, setTransferForm] = useState<FinanceTransfer>({ id: '', date: todayStr(), fromAccountId: '', toAccountId: '', amount: 0, recurring: false, frequency: 'monthly', nextDate: todayStr(), active: true });
+
+  const accountSignature = accounts.map(account=>account.id).sort().join(',');
+  const [draftScope,setDraftScope] = useState(accountSignature);
+  useEffect(()=>{
+    // A successful account creation changes the account list. Keep the draft namespace
+    // stable until the dialog has closed so its saved draft can be cleared exactly once.
+    if (!txOpen && !accountOpen && !subOpen && !transferOpen) setDraftScope(accountSignature);
+  },[accountSignature,txOpen,accountOpen,subOpen,transferOpen]);
+  const txDraft = useDialogDraft(`finance:${draftScope}:transaction:${tx.id||'new'}`,txOpen,tx,setTx);
+  const accountDraft = useDialogDraft(`finance:${draftScope}:account:${editingAccount?.id||'new'}`,accountOpen,accountForm,setAccountForm);
+  const subDraft = useDialogDraft(`finance:${draftScope}:subscription:${subForm.id||'new'}`,subOpen,subForm,setSubForm);
+  const transferDraft = useDialogDraft(`finance:${draftScope}:transfer`,transferOpen,transferForm,setTransferForm);
 
   const key = monthKeyOf(cursor);
   const monthLabel = cursor.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
@@ -136,7 +154,7 @@ export default function Finance() {
   const saveTx = async () => {
     if (!tx.description || !tx.accountId || tx.amount <= 0) return toast.error('Complète la description, le compte et le montant.');
     const row = { ...tx, id: tx.id || id('tx'), amount: Math.abs(Number(tx.amount)) };
-    if (tx.id) await updateRow('financeTransactions' as any, tx.id, row); else await addRow('financeTransactions' as any, row);
+    if (tx.id) await updateRow('financeTransactions', tx.id, row); else await addRow('financeTransactions', row);
     setTxOpen(false); setTx({ ...emptyTx, accountId: selectedAccount !== 'all' ? selectedAccount : accounts[0]?.id || '' }); toast.success('Transaction enregistrée');
   };
 
@@ -146,25 +164,25 @@ export default function Finance() {
     const transferNet = editingAccount ? transfers.reduce((sum, t) => sum + (t.toAccountId === editingAccount.id ? Number(t.amount) : t.fromAccountId === editingAccount.id ? -Number(t.amount) : 0), 0) : 0;
     const openingBalance = editingAccount ? Number(accountForm.balance) - txNet - transferNet : Number(accountForm.balance);
     const row = { ...accountForm, id: accountForm.id || id('acc'), balance: Number(accountForm.balance), openingBalance };
-    if (editingAccount) await updateRow('financeAccounts' as any, editingAccount.id, row); else await addRow('financeAccounts' as any, row);
+    if (editingAccount) await updateRow('financeAccounts', editingAccount.id, row); else await addRow('financeAccounts', row);
     setAccountOpen(false); setEditingAccount(null); toast.success('Compte enregistré');
   };
 
   const saveSub = async () => {
     if (!subForm.name || !subForm.accountId || subForm.amount <= 0) return toast.error('Complète les informations de l’abonnement.');
     const row = { ...subForm, id: subForm.id || id('sub'), amount: Math.abs(Number(subForm.amount)) };
-    if (subForm.id) await updateRow('financeSubscriptions' as any, subForm.id, row); else await addRow('financeSubscriptions' as any, row);
+    if (subForm.id) await updateRow('financeSubscriptions', subForm.id, row); else await addRow('financeSubscriptions', row);
     setSubOpen(false); setSubForm({ ...subForm, id: '', name: '', amount: 0 }); toast.success('Abonnement enregistré');
   };
 
   const saveTransfer = async () => {
     if (!transferForm.fromAccountId || !transferForm.toAccountId || transferForm.fromAccountId === transferForm.toAccountId || transferForm.amount <= 0) return toast.error('Choisis deux comptes différents et un montant valide.');
-    await addRow('financeTransfers' as any, { ...transferForm, id: id('trf'), amount: Math.abs(Number(transferForm.amount)) });
+    await addRow('financeTransfers', { ...transferForm, id: id('trf'), amount: Math.abs(Number(transferForm.amount)) });
     setTransferOpen(false); toast.success('Virement enregistré');
   };
 
   const saveStatement = async (statement: FinanceStatement, isEdit: boolean, applyBalance: boolean) => {
-    if (isEdit) await updateRow('financeStatements' as any, statement.id, statement); else await addRow('financeStatements' as any, statement);
+    if (isEdit) await updateRow('financeStatements', statement.id, statement); else await addRow('financeStatements', statement);
     if (!applyBalance) return;
     // Applique la valeur au solde du compte seulement si c'est le relevé le plus récent
     const latest = [...statements.filter(x => x.accountId === statement.accountId && x.id !== statement.id), statement].sort((a, b) => a.date.localeCompare(b.date)).pop();
@@ -173,13 +191,38 @@ export default function Finance() {
     if (!acc) return;
     const txNet = transactions.filter(t => t.accountId === acc.id).reduce((sum, t) => sum + (t.type === 'income' ? Number(t.amount) : -Number(t.amount)), 0);
     const transferNet = transfers.reduce((sum, t) => sum + (t.toAccountId === acc.id ? Number(t.amount) : t.fromAccountId === acc.id ? -Number(t.amount) : 0), 0);
-    await updateRow('financeAccounts' as any, acc.id, { balance: statement.totalValue, openingBalance: statement.totalValue - txNet - transferNet });
+    await updateRow('financeAccounts', acc.id, { balance: statement.totalValue, openingBalance: statement.totalValue - txNet - transferNet });
   };
 
-  const deleteStatement = async (statement: FinanceStatement) => { await deleteRow('financeStatements' as any, statement.id); };
+  const deleteStatement = async (statement: FinanceStatement) => { await deleteRow('financeStatements', statement.id); };
 
   const setInitialCapital = async (accountId: string, capital: number | null, date: string | null) => {
-    await updateRow('financeAccounts' as any, accountId, { initialCapital: capital, initialDate: date });
+    await updateRow('financeAccounts', accountId, { initialCapital: capital, initialDate: date });
+  };
+
+  const financeErrors = {
+    tx: { description: !tx.description ? 'Indique une description.' : '', account: !tx.accountId ? 'Choisis un compte.' : '', amount: !(tx.amount > 0) ? 'Indique un montant supérieur à zéro.' : '' },
+    account: { name: !accountForm.name ? 'Donne un nom au compte.' : '' },
+    sub: { name: !subForm.name ? 'Indique le nom de l’abonnement.' : '', account: !subForm.accountId ? 'Choisis le compte débité.' : '', amount: !(subForm.amount > 0) ? 'Indique un montant supérieur à zéro.' : '' },
+    transfer: { from: !transferForm.fromAccountId ? 'Choisis le compte source.' : '', to: !transferForm.toAccountId ? 'Choisis le compte destination.' : transferForm.toAccountId === transferForm.fromAccountId ? 'Choisis un compte différent de la source.' : '', amount: !(transferForm.amount > 0) ? 'Indique un montant supérieur à zéro.' : '' },
+  };
+  const fieldError = (kind: keyof typeof financeErrors, key: string) => financeAttempt === kind ? (financeErrors[kind] as Record<string,string>)[key] : undefined;
+  const submitFinance = async (event: FormEvent<HTMLFormElement>, kind: keyof typeof financeErrors, action: () => Promise<unknown>) => {
+    event.preventDefault(); if (financeLock.current) return;
+    setFinanceAttempt(kind); setFinanceError('');
+    if (Object.values(financeErrors[kind]).some(Boolean)) {
+      const form = event.currentTarget;
+      requestAnimationFrame(()=>form.querySelector<HTMLElement>('[aria-invalid=true]')?.focus());
+      return;
+    }
+    financeLock.current=true; setFinanceBusy(true);
+    try { await action(); ({tx:txDraft,account:accountDraft,sub:subDraft,transfer:transferDraft}[kind]).clear(); setFinanceAttempt(''); }
+    catch (error) { setFinanceError(error instanceof Error ? error.message : 'L’enregistrement a échoué. La saisie est conservée ; réessaie.'); }
+    finally { financeLock.current=false; setFinanceBusy(false); }
+  };
+  const closeFinance = (setter: (open:boolean)=>void, value:boolean) => {
+    if (financeLock.current) return;
+    setter(value); setFinanceError(''); setFinanceAttempt('');
   };
 
   const TABS: [Tab, string, LucideIcon][] = [['overview', 'Vue d’ensemble', LayoutDashboard], ['transactions', 'Transactions', List], ['accounts', 'Comptes', Landmark], ['invest', 'Invest', TrendingUp], ['subscriptions', 'Abonnements', Repeat2], ['transfers', 'Virements', ArrowRightLeft]];
@@ -195,9 +238,10 @@ export default function Finance() {
 
   return (
     <div className="workspace-shell finance-workspace min-h-screen text-foreground relative z-10">
+      <a href="#main-content" className="ui-skip-link">Aller au contenu</a>
       <WorkspaceRail><nav className="rail-nav" aria-label="Navigation My Finance"><SlidingRailLinks>{TABS.map(([value, label, Icon]) => <button type="button" key={value} data-rail-link aria-current={tab === value ? 'page' : undefined} onClick={() => { setTab(value); if (value === 'invest') setInvestmentStart(undefined); }} className={`rail-link${tab === value ? ' is-current' : ''}`}><Icon className="header-nav-icon" aria-hidden="true" strokeWidth={1.8} /><span>{label}</span></button>)}</SlidingRailLinks></nav><TopNav sidebar utilitiesOnly /></WorkspaceRail>
 
-      <main className="finance-main">
+      <main id="main-content" tabIndex={-1} className="finance-main">
         {tab === 'overview' && <div className="finance-toolbar">
           <div className="dashboard-filter-controls">
             {accountFilter}
@@ -298,23 +342,95 @@ export default function Finance() {
           <Card title="Répartition des comptes" subtitle="Solde actuel"><div className="h-[230px]">{accountData.length ? <AccountBars data={accountData} /> : <Empty text="Crée ton premier compte" />}</div></Card>
         </>}
 
-        {tab === 'transactions' && <TransactionsView accountFilter={accountFilter} transactions={scopedTransactions} accounts={accounts} onAdd={openNewTx} onEdit={(x) => { setTx(x); setTxOpen(true); }} onDelete={async (x) => { await deleteRow('financeTransactions' as any, x.id); toast.success('Transaction supprimée'); }} />}
-        {tab === 'accounts' && <AccountsView onStatements={(a) => { selectAccount(a.id); setInvestmentStart(a.id); setTab('invest'); }} accounts={accounts.map(a => ({ ...a, balance: accountBalances[a.id] ?? Number(a.balance || 0) }))} onNew={() => { setEditingAccount(null); setAccountForm({ id: '', name: '', type: 'Compte courant', institution: '', balance: 0, currency: 'EUR' }); setAccountOpen(true); }} onEdit={(a) => { const original = accounts.find(x => x.id === a.id) || a; setEditingAccount(original); setAccountForm(a); setAccountOpen(true); }} onDelete={async a => { await deleteRow('financeAccounts' as any, a.id); toast.success('Compte supprimé'); }} />}
+        {tab === 'transactions' && <TransactionsView accountFilter={accountFilter} transactions={scopedTransactions} accounts={accounts} onAdd={openNewTx} onEdit={(x) => { setTx(x); setTxOpen(true); }} onDelete={async (x) => { await deleteRow('financeTransactions', x.id); toast.success('Transaction supprimée'); }} />}
+        {tab === 'accounts' && <AccountsView onStatements={(a) => { selectAccount(a.id); setInvestmentStart(a.id); setTab('invest'); }} accounts={accounts.map(a => ({ ...a, balance: accountBalances[a.id] ?? Number(a.balance || 0) }))} onNew={() => { setEditingAccount(null); setAccountForm({ id: '', name: '', type: 'Compte courant', institution: '', balance: 0, currency: 'EUR' }); setAccountOpen(true); }} onEdit={(a) => { const original = accounts.find(x => x.id === a.id) || a; setEditingAccount(original); setAccountForm(a); setAccountOpen(true); }} onDelete={async a => { await deleteRow('financeAccounts', a.id); toast.success('Compte supprimé'); }} />}
         {tab === 'invest' && <InvestmentView accounts={accounts} statements={scopedStatements} initialAccountId={investmentStart} selectedAccountId={selectedAccount} onAccountChange={selectAccount} onSave={saveStatement} onDelete={deleteStatement} onSetInitial={setInitialCapital} />}
-        {tab === 'subscriptions' && <SubscriptionsView accountFilter={accountFilter} subscriptions={scopedSubscriptions} accounts={accounts} onNew={() => { setSubForm({ ...subForm, id: '', name: '', amount: 0, accountId: selectedAccount !== 'all' ? selectedAccount : accounts[0]?.id || '' }); setSubOpen(true); }} onToggle={async s => await updateRow('financeSubscriptions' as any, s.id, { active: !s.active })} onDelete={async s => { await deleteRow('financeSubscriptions' as any, s.id); toast.success('Abonnement supprimé'); }} />}
-        {tab === 'transfers' && <TransfersView accountFilter={accountFilter} transfers={scopedTransfers} accounts={accounts} onNew={() => { setTransferForm({ ...transferForm, id: '', fromAccountId: accounts[0]?.id || '', toAccountId: accounts[1]?.id || '' }); setTransferOpen(true); }} onDelete={async t => { await deleteRow('financeTransfers' as any, t.id); toast.success('Virement supprimé'); }} />}
+        {tab === 'subscriptions' && <SubscriptionsView accountFilter={accountFilter} subscriptions={scopedSubscriptions} accounts={accounts} onNew={() => { setSubForm({ ...subForm, id: '', name: '', amount: 0, accountId: selectedAccount !== 'all' ? selectedAccount : accounts[0]?.id || '' }); setSubOpen(true); }} onToggle={async s => await updateRow('financeSubscriptions', s.id, { active: !s.active })} onDelete={async s => { await deleteRow('financeSubscriptions', s.id); toast.success('Abonnement supprimé'); }} />}
+        {tab === 'transfers' && <TransfersView accountFilter={accountFilter} transfers={scopedTransfers} accounts={accounts} onNew={() => { setTransferForm({ ...transferForm, id: '', fromAccountId: accounts[0]?.id || '', toAccountId: accounts[1]?.id || '' }); setTransferOpen(true); }} onDelete={async t => { await deleteRow('financeTransfers', t.id); toast.success('Virement supprimé'); }} />}
         </div>
       </main>
 
-      <Dialog open={txOpen} onOpenChange={setTxOpen}><DialogContent className="finance-editor bg-card border-border sm:max-w-xl rounded-2xl"><DialogHeader><DialogTitle>{tx.id ? 'Modifier la transaction' : 'Nouvelle transaction'}</DialogTitle></DialogHeader><div className="space-y-4"><div className="grid grid-cols-2 gap-2"><button onClick={()=>setTx(x=>({...x,type:'expense',category:'Autre'}))} className={`p-3 rounded-xl border text-sm ${tx.type==='expense'?'border-loss/40 bg-loss-soft text-loss font-medium':'border-border'}`}>Dépense</button><button onClick={()=>setTx(x=>({...x,type:'income',category:'Autre'}))} className={`p-3 rounded-xl border text-sm ${tx.type==='income'?'border-profit/40 bg-profit-soft text-profit font-medium':'border-border'}`}>Revenu</button></div><div className="grid grid-cols-2 gap-3"><div><Label>Date</Label><Input type="date" value={tx.date} onChange={e=>setTx(x=>({...x,date:e.target.value}))}/></div><div><Label>Montant</Label><Input type="number" step="0.01" value={tx.amount||''} onChange={e=>setTx(x=>({...x,amount:Number(e.target.value)}))}/></div></div><div><Label>Description</Label><Input value={tx.description} onChange={e=>setTx(x=>({...x,description:e.target.value}))} placeholder="Courses, salaire, abonnement…"/></div><div className="grid grid-cols-2 gap-3"><div><Label>Compte</Label><Select value={tx.accountId} onValueChange={v=>setTx(x=>({...x,accountId:v}))}><SelectTrigger><SelectValue placeholder="Compte"/></SelectTrigger><SelectContent>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div><div><Label>Catégorie</Label><Select value={tx.category} onValueChange={v=>setTx(x=>({...x,category:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{(tx.type==='expense'?EXPENSE_CATEGORIES:INCOME_CATEGORIES).map(c=><SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div></div><div><Label>Note</Label><Input value={tx.notes||''} onChange={e=>setTx(x=>({...x,notes:e.target.value}))}/></div><Button onClick={saveTx} className="w-full"><Save className="h-4 w-4 mr-2"/>Enregistrer</Button></div></DialogContent></Dialog>
+      <Dialog open={txOpen} onOpenChange={value=>closeFinance(setTxOpen,value)}>
+        <DialogContent className="finance-editor bg-background sm:max-w-xl" aria-describedby={undefined}>
+          <DialogHeader><DialogTitle>{tx.id ? 'Modifier la transaction' : 'Nouvelle transaction'}</DialogTitle></DialogHeader>
+          <FinanceForm draftStatus={txDraft.status} busy={financeBusy} error={financeError} onSubmit={event=>submitFinance(event,'tx',saveTx)}>
+            <div className="dashboard-switch w-full" role="group" aria-label="Nature de l’opération">
+              <button type="button" aria-pressed={tx.type==='expense'} onClick={()=>setTx(x=>({...x,type:'expense',category:'Autre'}))}>Dépense</button>
+              <button type="button" aria-pressed={tx.type==='income'} onClick={()=>setTx(x=>({...x,type:'income',category:'Autre'}))}>Revenu</button>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <FormField label="Date">{field=><Input {...field} type="date" value={tx.date} onChange={event=>setTx(x=>({...x,date:event.target.value}))} />}</FormField>
+              <FormField label="Montant" required error={fieldError('tx','amount')}>{field=><Input {...field} type="number" inputMode="decimal" step="0.01" min="0.01" value={tx.amount||''} onChange={event=>setTx(x=>({...x,amount:Number(event.target.value)}))} />}</FormField>
+            </div>
+            <FormField label="Description" required error={fieldError('tx','description')}>{field=><Input {...field} autoComplete="off" value={tx.description} onChange={event=>setTx(x=>({...x,description:event.target.value}))} placeholder="Courses, salaire, abonnement…" />}</FormField>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <FormField label="Compte" required error={fieldError('tx','account')}>{field=><Select value={tx.accountId} onValueChange={value=>setTx(x=>({...x,accountId:value}))}><SelectTrigger {...field}><SelectValue placeholder="Choisir un compte" /></SelectTrigger><SelectContent className="dashboard-filter-menu-account">{accounts.map(account=><SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>)}</SelectContent></Select>}</FormField>
+              <FormField label="Catégorie">{field=><Select value={tx.category} onValueChange={value=>setTx(x=>({...x,category:value}))}><SelectTrigger {...field}><SelectValue /></SelectTrigger><SelectContent>{(tx.type==='expense'?EXPENSE_CATEGORIES:INCOME_CATEGORIES).map(category=><SelectItem key={category} value={category}>{category}</SelectItem>)}</SelectContent></Select>}</FormField>
+            </div>
+            <FormField label="Note (facultatif)">{field=><Input {...field} value={tx.notes||''} onChange={event=>setTx(x=>({...x,notes:event.target.value}))} />}</FormField>
+          </FinanceForm>
+        </DialogContent>
+      </Dialog>
 
-      <Dialog open={accountOpen} onOpenChange={setAccountOpen}><DialogContent className="finance-editor bg-card border-border sm:max-w-xl rounded-2xl"><DialogHeader><DialogTitle>{editingAccount?'Modifier le compte':'Nouveau compte'}</DialogTitle></DialogHeader><div className="space-y-4"><div className="grid grid-cols-2 gap-3"><div><Label>Nom</Label><Input value={accountForm.name} onChange={e=>setAccountForm(x=>({...x,name:e.target.value}))} placeholder="Compte courant"/></div><div><Label>Banque / établissement</Label><Input value={accountForm.institution} onChange={e=>setAccountForm(x=>({...x,institution:e.target.value}))} placeholder="Boursobank, Fortuneo…"/></div></div><div className="grid grid-cols-2 gap-3"><div><Label>Type</Label><Select value={accountForm.type} onValueChange={v=>setAccountForm(x=>({...x,type:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{ACCOUNT_TYPES.map(x=><SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent></Select></div><div><Label>Solde actuel</Label><Input type="number" step="0.01" value={accountForm.balance||''} onChange={e=>setAccountForm(x=>({...x,balance:Number(e.target.value)}))}/></div></div><div><Label>Devise</Label><Input value={accountForm.currency} onChange={e=>setAccountForm(x=>({...x,currency:e.target.value.toUpperCase()}))}/></div><Button onClick={saveAccount} className="w-full">Enregistrer</Button></div></DialogContent></Dialog>
+      <Dialog open={accountOpen} onOpenChange={value=>closeFinance(setAccountOpen,value)}>
+        <DialogContent className="finance-editor bg-background sm:max-w-xl" aria-describedby={undefined}>
+          <DialogHeader><DialogTitle>{editingAccount?'Modifier le compte':'Nouveau compte'}</DialogTitle></DialogHeader>
+          <FinanceForm draftStatus={accountDraft.status} busy={financeBusy} error={financeError} onSubmit={event=>submitFinance(event,'account',saveAccount)}>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <FormField label="Nom" required error={fieldError('account','name')}>{field=><Input {...field} value={accountForm.name} onChange={event=>setAccountForm(x=>({...x,name:event.target.value}))} placeholder="Compte courant" />}</FormField>
+              <FormField label="Banque / établissement">{field=><Input {...field} value={accountForm.institution} onChange={event=>setAccountForm(x=>({...x,institution:event.target.value}))} placeholder="Boursobank, Fortuneo…" />}</FormField>
+              <FormField label="Type">{field=><Select value={accountForm.type} onValueChange={value=>setAccountForm(x=>({...x,type:value}))}><SelectTrigger {...field}><SelectValue /></SelectTrigger><SelectContent>{ACCOUNT_TYPES.map(type=><SelectItem key={type} value={type}>{type}</SelectItem>)}</SelectContent></Select>}</FormField>
+              <FormField label="Solde actuel">{field=><Input {...field} type="number" inputMode="decimal" step="0.01" value={accountForm.balance||''} onChange={event=>setAccountForm(x=>({...x,balance:Number(event.target.value)}))} />}</FormField>
+            </div>
+            <FormField label="Devise">{field=><Input {...field} autoCapitalize="characters" value={accountForm.currency} onChange={event=>setAccountForm(x=>({...x,currency:event.target.value.toUpperCase()}))} />}</FormField>
+          </FinanceForm>
+        </DialogContent>
+      </Dialog>
 
-      <Dialog open={subOpen} onOpenChange={setSubOpen}><DialogContent className="finance-editor bg-card border-border sm:max-w-xl rounded-2xl"><DialogHeader><DialogTitle>Nouvel abonnement</DialogTitle></DialogHeader><div className="space-y-4"><div className="grid grid-cols-2 gap-3"><div><Label>Nom</Label><Input value={subForm.name} onChange={e=>setSubForm(x=>({...x,name:e.target.value}))} placeholder="Netflix, salle, téléphone…"/></div><div><Label>Montant</Label><Input type="number" step="0.01" value={subForm.amount||''} onChange={e=>setSubForm(x=>({...x,amount:Number(e.target.value)}))}/></div></div><div className="grid grid-cols-2 gap-3"><div><Label>Fréquence</Label><Select value={subForm.frequency} onValueChange={(v:any)=>setSubForm(x=>({...x,frequency:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="monthly">Mensuel</SelectItem><SelectItem value="yearly">Annuel</SelectItem><SelectItem value="weekly">Hebdomadaire</SelectItem></SelectContent></Select></div><div><Label>Prochain prélèvement</Label><Input type="date" value={subForm.nextDate} onChange={e=>setSubForm(x=>({...x,nextDate:e.target.value}))}/></div></div><div><Label>Compte débité</Label><Select value={subForm.accountId} onValueChange={v=>setSubForm(x=>({...x,accountId:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div><Button onClick={saveSub} className="w-full">Enregistrer</Button></div></DialogContent></Dialog>
+      <Dialog open={subOpen} onOpenChange={value=>closeFinance(setSubOpen,value)}>
+        <DialogContent className="finance-editor bg-background sm:max-w-xl" aria-describedby={undefined}>
+          <DialogHeader><DialogTitle>{subForm.id?'Modifier l’abonnement':'Nouvel abonnement'}</DialogTitle></DialogHeader>
+          <FinanceForm draftStatus={subDraft.status} busy={financeBusy} error={financeError} onSubmit={event=>submitFinance(event,'sub',saveSub)}>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <FormField label="Nom" required error={fieldError('sub','name')}>{field=><Input {...field} value={subForm.name} onChange={event=>setSubForm(x=>({...x,name:event.target.value}))} placeholder="Netflix, salle, téléphone…" />}</FormField>
+              <FormField label="Montant" required error={fieldError('sub','amount')}>{field=><Input {...field} type="number" inputMode="decimal" step="0.01" min="0.01" value={subForm.amount||''} onChange={event=>setSubForm(x=>({...x,amount:Number(event.target.value)}))} />}</FormField>
+              <FormField label="Fréquence">{field=><Select value={subForm.frequency} onValueChange={(value:FinanceSubscription['frequency'])=>setSubForm(x=>({...x,frequency:value}))}><SelectTrigger {...field}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="monthly">Mensuel</SelectItem><SelectItem value="yearly">Annuel</SelectItem><SelectItem value="weekly">Hebdomadaire</SelectItem></SelectContent></Select>}</FormField>
+              <FormField label="Prochain prélèvement">{field=><Input {...field} type="date" value={subForm.nextDate} onChange={event=>setSubForm(x=>({...x,nextDate:event.target.value}))} />}</FormField>
+            </div>
+            <FormField label="Compte débité" required error={fieldError('sub','account')}>{field=><Select value={subForm.accountId} onValueChange={value=>setSubForm(x=>({...x,accountId:value}))}><SelectTrigger {...field}><SelectValue placeholder="Choisir un compte" /></SelectTrigger><SelectContent className="dashboard-filter-menu-account">{accounts.map(account=><SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>)}</SelectContent></Select>}</FormField>
+          </FinanceForm>
+        </DialogContent>
+      </Dialog>
 
-      <Dialog open={transferOpen} onOpenChange={setTransferOpen}><DialogContent className="finance-editor bg-card border-border sm:max-w-xl rounded-2xl"><DialogHeader><DialogTitle>Virement automatique / ponctuel</DialogTitle></DialogHeader><div className="space-y-4"><div className="grid grid-cols-2 gap-3"><div><Label>Compte source</Label><Select value={transferForm.fromAccountId} onValueChange={v=>setTransferForm(x=>({...x,fromAccountId:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div><div><Label>Compte destination</Label><Select value={transferForm.toAccountId} onValueChange={v=>setTransferForm(x=>({...x,toAccountId:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div></div><div className="grid grid-cols-2 gap-3"><div><Label>Montant</Label><Input type="number" step="0.01" value={transferForm.amount||''} onChange={e=>setTransferForm(x=>({...x,amount:Number(e.target.value)}))}/></div><div><Label>Date</Label><Input type="date" value={transferForm.date} onChange={e=>setTransferForm(x=>({...x,date:e.target.value}))}/></div></div><div className="flex items-center gap-2 p-3 rounded-xl border border-border"><Checkbox checked={transferForm.recurring} onCheckedChange={v=>setTransferForm(x=>({...x,recurring:Boolean(v)}))}/><div><p className="text-xs font-medium">Virement récurrent</p><p className="text-[10px] text-muted-foreground">Suivi d’un virement automatique vers ton épargne / investissement.</p></div></div>{transferForm.recurring&&<div className="grid grid-cols-2 gap-3"><div><Label>Fréquence</Label><Select value={transferForm.frequency} onValueChange={(v:any)=>setTransferForm(x=>({...x,frequency:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="monthly">Mensuel</SelectItem><SelectItem value="weekly">Hebdomadaire</SelectItem><SelectItem value="yearly">Annuel</SelectItem></SelectContent></Select></div><div><Label>Prochaine date</Label><Input type="date" value={transferForm.nextDate} onChange={e=>setTransferForm(x=>({...x,nextDate:e.target.value}))}/></div></div>}<Button onClick={saveTransfer} className="w-full">Enregistrer</Button></div></DialogContent></Dialog>
+      <Dialog open={transferOpen} onOpenChange={value=>closeFinance(setTransferOpen,value)}>
+        <DialogContent className="finance-editor bg-background sm:max-w-xl" aria-describedby={undefined}>
+          <DialogHeader><DialogTitle>Nouveau virement</DialogTitle></DialogHeader>
+          <FinanceForm draftStatus={transferDraft.status} busy={financeBusy} error={financeError} onSubmit={event=>submitFinance(event,'transfer',saveTransfer)}>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <FormField label="Compte source" required error={fieldError('transfer','from')}>{field=><Select value={transferForm.fromAccountId} onValueChange={value=>setTransferForm(x=>({...x,fromAccountId:value}))}><SelectTrigger {...field}><SelectValue placeholder="Choisir un compte" /></SelectTrigger><SelectContent className="dashboard-filter-menu-account">{accounts.map(account=><SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>)}</SelectContent></Select>}</FormField>
+              <FormField label="Compte destination" required error={fieldError('transfer','to')}>{field=><Select value={transferForm.toAccountId} onValueChange={value=>setTransferForm(x=>({...x,toAccountId:value}))}><SelectTrigger {...field}><SelectValue placeholder="Choisir un compte" /></SelectTrigger><SelectContent className="dashboard-filter-menu-account">{accounts.map(account=><SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>)}</SelectContent></Select>}</FormField>
+              <FormField label="Montant" required error={fieldError('transfer','amount')}>{field=><Input {...field} type="number" inputMode="decimal" step="0.01" min="0.01" value={transferForm.amount||''} onChange={event=>setTransferForm(x=>({...x,amount:Number(event.target.value)}))} />}</FormField>
+              <FormField label="Date">{field=><Input {...field} type="date" value={transferForm.date} onChange={event=>setTransferForm(x=>({...x,date:event.target.value}))} />}</FormField>
+            </div>
+            <div className="flex min-h-12 items-center gap-3"><Checkbox id="finance-recurring" checked={transferForm.recurring} onCheckedChange={value=>setTransferForm(x=>({...x,recurring:Boolean(value)}))} /><Label htmlFor="finance-recurring" className="mb-0">Virement récurrent</Label></div>
+            {transferForm.recurring && <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <FormField label="Fréquence">{field=><Select value={transferForm.frequency} onValueChange={(value:FinanceTransfer['frequency'])=>setTransferForm(x=>({...x,frequency:value}))}><SelectTrigger {...field}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="monthly">Mensuel</SelectItem><SelectItem value="weekly">Hebdomadaire</SelectItem><SelectItem value="yearly">Annuel</SelectItem></SelectContent></Select>}</FormField>
+              <FormField label="Prochaine date">{field=><Input {...field} type="date" value={transferForm.nextDate} onChange={event=>setTransferForm(x=>({...x,nextDate:event.target.value}))} />}</FormField>
+            </div>}
+          </FinanceForm>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
+}
+
+function FinanceForm({ children, busy, error, draftStatus, onSubmit }: {children:ReactNode;busy:boolean;error:string;draftStatus:'saved'|'memory'|null;onSubmit:(event:FormEvent<HTMLFormElement>)=>void}) {
+  return <form noValidate onSubmit={onSubmit} className="space-y-6">
+    <fieldset disabled={busy} className="space-y-5">{children}</fieldset>
+    {error && <p role="alert" className="ui-field-error">{error}</p>}
+    <div className="ui-form-footer"><p className="ui-draft-status" role="status">{draftStatus==='memory'?'Brouillon en mémoire · gardez cet onglet ouvert.':'Brouillon conservé dans cet onglet.'}</p><Button type="submit" loading={busy} className="w-full sm:w-auto">{busy?'Enregistrement…':'Enregistrer'}</Button></div>
+  </form>;
 }
 
 /* ── Ligne d'opération réutilisée (vue d'ensemble + liste) ─────────────── */

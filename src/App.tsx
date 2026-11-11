@@ -1,3 +1,4 @@
+import { PageSkeleton } from '@/components/ui/page-skeleton';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -35,13 +36,7 @@ const Finance = lazyWithReload(() => import("./pages/Finance"));
 const AiAssistant = lazyWithReload(() => import("./pages/AiAssistant"));
 import NotFound from "./pages/NotFound";
 
-const PageLoader = () => (
-  <div className="flex-1 flex items-center justify-center">
-    <div className="h-8 w-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center animate-pulse">
-      <BarChart3 className="h-4 w-4 text-primary" />
-    </div>
-  </div>
-);
+const PageLoader = PageSkeleton;
 
 const queryClient = new QueryClient();
 

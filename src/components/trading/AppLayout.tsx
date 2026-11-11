@@ -37,6 +37,7 @@ export function AppLayout({ children, accounts, activeAccountId, onSelectAccount
 
   return (
     <div className="workspace-shell min-h-screen flex flex-col w-full relative z-10">
+      <a href="#main-content" className="ui-skip-link">Aller au contenu</a>
       <WorkspaceRail><TopNav sidebar /></WorkspaceRail>
 
       {/* Filtres de comptes : descendus sous le menu, alignés à droite */}
@@ -81,7 +82,7 @@ export function AppLayout({ children, accounts, activeAccountId, onSelectAccount
       )}
 
       <div className="flex-1 flex flex-col min-w-0">
-        <main key={location.pathname} className="flex-1 overflow-auto px-4 md:px-6 pb-4 md:pb-6 pt-3 md:pt-4 animate-rb-blur-in">{children}</main>
+        <main id="main-content" tabIndex={-1} key={location.pathname} className="flex-1 overflow-auto px-4 md:px-6 pb-4 md:pb-6 pt-3 md:pt-4 ui-page-enter">{children}</main>
       </div>
     </div>
   );

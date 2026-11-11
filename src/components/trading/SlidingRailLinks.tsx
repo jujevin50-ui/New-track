@@ -31,11 +31,11 @@ export default function SlidingRailLinks({ children }: { children: ReactNode }) 
       const from = rect ? rect.top - root.getBoundingClientRect().top : old.top;
       const distance = next.top - from;
       body.animate([
-        { transform: `translateY(${from}px) scale(1,1)`, borderRadius: '12px' },
-        { transform: `translateY(${from + distance * .45}px) scale(.88,1.35)`, borderRadius: '22px', offset: .42 },
-        { transform: `translateY(${next.top}px) scale(1.025,.96)`, borderRadius: '14px', offset: .8 },
-        { transform: `translateY(${next.top}px) scale(1,1)`, borderRadius: '12px' },
-      ], { duration: 650, easing: 'cubic-bezier(.22,1,.36,1)' });
+        { transform: `translateY(${from}px) scale(1,1)` },
+        { transform: `translateY(${from + distance * .45}px) scale(.88,1.35)`, offset: .42 },
+        { transform: `translateY(${next.top}px) scale(1.025,.96)`, offset: .8 },
+        { transform: `translateY(${next.top}px) scale(1,1)` },
+      ], { duration: 280, easing: 'cubic-bezier(.22,1,.36,1)' });
       for (let index = 0; index < 15; index++) {
         const drop = document.createElement('span');
         drop.className = 'rail-gooey-drop';
@@ -50,7 +50,7 @@ export default function SlidingRailLinks({ children }: { children: ReactNode }) 
           { transform: `translate(0,${from + old.height / 2 - radius}px) scale(.65)` },
           { transform: `translate(${spread}px,${from + distance * .55 + next.height / 2 - radius}px) scale(1)`, offset: .45 },
           { transform: `translate(0,${next.top + next.height / 2 - radius}px) scale(.2)` },
-        ], { duration: 600 + Math.random() * 220, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'both' });
+        ], { duration: 220 + Math.random() * 70, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'both' });
         animation.onfinish = () => drop.remove();
       }
     };

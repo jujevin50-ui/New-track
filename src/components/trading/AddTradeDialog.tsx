@@ -1,3 +1,4 @@
+import { readFormDraft, saveFormDraft, removeFormDraft } from '@/lib/formDrafts';
 import { useState, useEffect, useCallback, useId, useRef } from 'react';
 import { Trade, TradeFormData, PAIRS, EXIT_TYPES, ExitType, SetupQuality } from '@/types/trade';
 import { Account } from '@/types/account';
@@ -126,11 +127,24 @@ const normalizeAiTrade = (raw: AiTrade, accountId: string): TradeFormData => {
   };
 };
 
+interface TradeDraft { form: TradeFormData; resultText: string; commissionText: string; swapText: string; riskText: string; feesOpen: boolean; }
+const isTradeDraft = (value: unknown): value is TradeDraft => {
+  if (!value || typeof value !== 'object') return false;
+  const draft = value as TradeDraft;
+  return Boolean(draft.form && typeof draft.form.accountId === 'string' && typeof draft.form.pair === 'string' &&
+    typeof draft.form.date === 'string' && typeof draft.form.result === 'number' &&
+    ['Buy','Sell'].includes(draft.form.type) && ['resultText','commissionText','swapText','riskText'].every(key=>typeof Reflect.get(draft,key)==='string'));
+};
+
 const AddTradeDialog = ({ open, onOpenChange, onSubmit, editTrade, accounts, activeAccountId }: AddTradeDialogProps) => {
   const { apiKey } = useAiSettings();
   const fieldId = useId();
   const imageInput = useRef<HTMLInputElement>(null);
   const defaultAccountId = accounts.find(a => a.id === activeAccountId)?.id || accounts[0]?.id || '';
+  const draftKey = `trade:${accounts.map(account=>account.id).sort().join(',')}:${defaultAccountId}:${editTrade?.id || 'new'}`;
+  const draftReady = useRef(false);
+  const draftCompleted = useRef(false);
+  const [draftStatus,setDraftStatus] = useState<'saved' | 'memory' | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [imageError, setImageError] = useState('');
@@ -156,10 +170,19 @@ const AddTradeDialog = ({ open, onOpenChange, onSubmit, editTrade, accounts, act
     clipboardSession.current++;
     clipboardBusy.current = false;
     setPastingImage(false);
+    draftReady.current = false;
     if (!open) return;
+    draftCompleted.current = false;
+    setDraftStatus(null);
     setFormError('');
     setImageError('');
-    if (editTrade) {
+    const recovered = readFormDraft(draftKey,isTradeDraft);
+    if (recovered) {
+      setForm(recovered.form); setFeesOpen(recovered.feesOpen);
+      setResultText(recovered.resultText); setCommissionText(recovered.commissionText);
+      setSwapText(recovered.swapText); setRiskText(recovered.riskText);
+      setDraftStatus(saveFormDraft(draftKey,recovered));
+    } else if (editTrade) {
       const { id, tradeNumber, ...rest } = editTrade;
       const screenshots = rest.screenshots?.length ? rest.screenshots : rest.screenshot ? [rest.screenshot] : [];
       setForm({ ...rest, commission: Math.abs(rest.commission || 0), screenshot: undefined, screenshots });
@@ -170,13 +193,16 @@ const AddTradeDialog = ({ open, onOpenChange, onSubmit, editTrade, accounts, act
       setRiskText(fmtNum(rest.riskPercent || 0));
     } else {
       setForm(makeDefaultForm(defaultAccountId));
-      setFeesOpen(false);
-      setResultText('');
-      setCommissionText('');
-      setSwapText('');
-      setRiskText('');
+      setFeesOpen(false); setResultText(''); setCommissionText(''); setSwapText(''); setRiskText('');
     }
-  }, [editTrade, open, defaultAccountId]);
+    // Restoration must commit before the draft can be saved again.
+    queueMicrotask(()=>{ draftReady.current = true; });
+  }, [editTrade, open, defaultAccountId, draftKey]);
+
+  useEffect(() => {
+    if (!open || !draftReady.current || draftCompleted.current) return;
+    setDraftStatus(saveFormDraft(draftKey,{form,resultText,commissionText,swapText,riskText,feesOpen} satisfies TradeDraft));
+  }, [open,editTrade,draftKey,form,resultText,commissionText,swapText,riskText,feesOpen]);
 
   const set = <K extends keyof TradeFormData>(field: K, value: TradeFormData[K]) => {
     setFormError('');
@@ -445,8 +471,8 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
     event.preventDefault();
     if (saving || clipboardBusy.current) return;
     if (!selectedAccount) { setFormError('Sélectionnez un compte.'); return; }
-    if (form.endDate && form.endDate < form.date) { setFormError('La clôture doit suivre la date d’ouverture.'); return; }
-    if ((form.riskPercent || 0) > 100) { setFormError('Le risque ne peut pas dépasser 100 %.'); return; }
+    if (form.endDate && form.endDate < form.date) { setFormError('La clôture doit suivre la date d’ouverture.'); document.getElementById(`${fieldId}-end`)?.focus(); return; }
+    if ((form.riskPercent || 0) > 100) { setFormError('Le risque ne peut pas dépasser 100 %.'); document.getElementById(`${fieldId}-risk`)?.focus(); return; }
     if (![form.result, form.commission, form.swap, form.riskPercent || 0].every(Number.isFinite)) {
       setFormError('Vérifiez les montants saisis.'); return;
     }
@@ -454,6 +480,8 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
     setSaving(true);
     try {
       await onSubmit(form);
+      draftCompleted.current = true;
+      removeFormDraft(draftKey);
       onOpenChange(false);
     } catch (error) {
       setFormError(error instanceof Error ? error.message : 'Impossible d’enregistrer le trade.');
@@ -462,6 +490,8 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
     }
   };
 
+  const invalidEnd = Boolean(form.endDate && form.endDate < form.date);
+  const invalidRisk = (form.riskPercent || 0) > 100;
   const inputClass = 'h-11 rounded-xl bg-secondary/50 border-border/60 font-mono text-sm';
   const screenshots = form.screenshots || [];
   const signedDecimal = '-?[0-9]+([.,][0-9]+)?';
@@ -475,6 +505,7 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
             <DialogTitle className="text-xl tracking-tight">{editTrade ? 'Modifier le trade' : 'Nouveau trade'}</DialogTitle>
             {!editTrade && <Button type="button" variant="ghost" size="sm" className="h-8 gap-1.5 rounded-full text-muted-foreground" onClick={() => setAiOpen(true)}><Sparkles className="h-3.5 w-3.5" />Import IA</Button>}
           </DialogHeader>
+          <nav className="ui-form-progress" aria-label="Sections du trade">{['Position','Résultat','Journal'].map((title,index)=><a key={title} href={`#${fieldId}-${['position','result-section','journal'][index]}`}><span>{index+1}</span>{title}</a>)}</nav>
           <form onSubmit={handleSubmit} onPaste={handlePasteEvent} className="flex min-h-0 flex-1 flex-col">
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
               <fieldset disabled={saving} className="grid min-w-0 gap-6 p-5 sm:p-7 md:grid-cols-[minmax(0,1fr)_230px] md:gap-8">
@@ -503,7 +534,7 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
                     </div>
                     <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2">
                       <div className="space-y-2"><Label htmlFor={`${fieldId}-date`}>Ouverture</Label><Input id={`${fieldId}-date`} type="date" required value={form.date} onChange={e => set('date', e.target.value)} className={`${inputClass} block min-w-0 w-full`} /></div>
-                      <div className="space-y-2"><Label htmlFor={`${fieldId}-end`}>Clôture</Label><Input id={`${fieldId}-end`} type="date" min={form.date} value={form.endDate || ''} onChange={e => set('endDate', e.target.value)} className={`${inputClass} block min-w-0 w-full`} /></div>
+                      <div className="space-y-2"><Label htmlFor={`${fieldId}-end`}>Clôture</Label><Input aria-invalid={invalidEnd || undefined} aria-describedby={invalidEnd ? `${fieldId}-end-error` : undefined} id={`${fieldId}-end`} type="date" min={form.date} value={form.endDate || ''} onChange={e => set('endDate', e.target.value)} className={`${inputClass} block min-w-0 w-full`} />{invalidEnd && <p id={`${fieldId}-end-error`} className="ui-field-error">La clôture doit suivre l’ouverture.</p>}</div>
                     </div>
                   </section>
 
@@ -511,7 +542,7 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
                     <h3 id={`${fieldId}-result-section`} className="text-sm font-semibold">Résultat</h3>
                     <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,0.7fr)] gap-4">
                       <div className="space-y-2"><Label htmlFor={`${fieldId}-result`}>P&amp;L brut ({currency})</Label><Input id={`${fieldId}-result`} type="text" inputMode="decimal" pattern={signedDecimal} required placeholder="0,00" value={resultText} onChange={decimalHandler('result', setResultText, true)} className={`${inputClass} h-12 text-lg font-semibold`} /></div>
-                      <div className="space-y-2"><Label htmlFor={`${fieldId}-risk`}>Risque (%)</Label><Input id={`${fieldId}-risk`} type="text" inputMode="decimal" pattern={decimal} placeholder="0" value={riskText} onChange={decimalHandler('riskPercent', setRiskText, false)} className={`${inputClass} h-12`} /></div>
+                      <div className="space-y-2"><Label htmlFor={`${fieldId}-risk`}>Risque (%)</Label><Input aria-invalid={invalidRisk || undefined} aria-describedby={invalidRisk ? `${fieldId}-risk-error` : undefined} id={`${fieldId}-risk`} type="text" inputMode="decimal" pattern={decimal} placeholder="0" value={riskText} onChange={decimalHandler('riskPercent', setRiskText, false)} className={`${inputClass} h-12`} />{invalidRisk && <p id={`${fieldId}-risk-error`} className="ui-field-error">Le risque ne peut pas dépasser 100 %.</p>}</div>
                     </div>
                     <details open={feesOpen} onToggle={e => setFeesOpen(e.currentTarget.open)} className="group rounded-xl border border-border/60 px-3.5">
                       <summary className="flex cursor-pointer list-none items-center justify-between py-3 text-sm text-muted-foreground [&::-webkit-details-marker]:hidden"><span>Commission &amp; swap</span><ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" /></summary>
@@ -572,9 +603,10 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
                 </aside>
               </fieldset>
             </div>
-            <footer className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-border/60 bg-background/80 px-5 py-4 sm:px-7">
+            <footer className="ui-form-footer flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-border/60 bg-background/80 px-5 py-4 sm:px-7">
               {formError && <p role="alert" className="w-full text-sm text-loss">{formError}</p>}
-              <Button type="button" variant="ghost" disabled={saving} className="rounded-xl" onClick={() => onOpenChange(false)}>Annuler</Button>
+              <div className="ui-draft-status">{draftStatus === 'memory' ? 'Brouillon en mémoire · gardez cet onglet ouvert.' : draftStatus === 'saved' ? 'Brouillon sauvegardé dans cet onglet.' : 'La saisie sera conservée à la fermeture.'}</div>
+              <Button type="button" variant="ghost" disabled={saving} className="rounded-xl" onClick={() => onOpenChange(false)}>Fermer</Button>
               <Button type="submit" disabled={saving || pastingImage || !accounts.length} className="gap-2 rounded-xl px-5">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}{editTrade ? 'Enregistrer' : 'Ajouter le trade'}</Button>
             </footer>
           </form>
