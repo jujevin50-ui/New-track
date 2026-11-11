@@ -92,3 +92,6 @@
 .ui-sheet, .rail-link, .rail-workspaces button, .settings-menu button, .dashboard-switch button, .dashboard-filter-trigger, .dashboard-filter-option, .finance-period button, .finance-account-row, .finance-subscription-row, .finance-transfer-row { transition-property: transform, opacity; }
 .rail-links-gooey .rail-selection-slider { transition-property: transform; }
 .rail-link:focus-visible, .rail-workspaces button:focus-visible, .rail-settings-pill:focus-visible { outline: 2px solid hsl(var(--foreground)); outline-offset: -3px; }
+.app-update-prompt { position: fixed; right: 24px; bottom: max(24px,env(safe-area-inset-bottom)); z-index: 80; width: min(390px,calc(100vw - 32px)); padding: 20px; border: 1px solid hsl(var(--border)); border-radius: 16px; background: hsl(var(--popover)); color: hsl(var(--popover-foreground)); box-shadow: var(--shadow-pop); animation: ui-page-in var(--ui-duration-normal) var(--ui-ease-enter); }
+@media (max-width: 639px) { .app-update-prompt { right: 16px; bottom: max(16px,env(safe-area-inset-bottom)); } }
+@media (prefers-reduced-motion: reduce) { .app-update-prompt { animation: none; } }

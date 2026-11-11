@@ -1,3 +1,4 @@
+import AppUpdatePrompt from '@/components/AppUpdatePrompt';
 import { PageSkeleton } from '@/components/ui/page-skeleton';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -153,6 +154,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <AppUpdatePrompt />
       <BrowserRouter>
         <AppBackground />
         <LogoTransitionProvider>
