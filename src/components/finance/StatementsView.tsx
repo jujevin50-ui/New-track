@@ -600,7 +600,7 @@ export function StatementsView({ accounts, statements, initialAccountId, selecte
 
           {assetEvolution.names.length > 0 && list.length > 1 && (
             <Box title="Évolution des actifs en %" subtitle="Performance de chaque actif depuis sa 1re apparition (base 0 %)">
-              <div className="h-[320px]">
+              <div className="finance-asset-evolution">
                 <MultiLineChart
                   unit="pct"
                   rows={assetEvolution.rowsPct}
