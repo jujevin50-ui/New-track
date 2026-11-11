@@ -2,10 +2,11 @@ import { useLayoutEffect, useRef } from 'react';
 
 interface WelcomeSplashProps { name: string; onDone: () => void; }
 
-/** Letters gather into a ribbon, travel to the top left, then unveil the page row by row. */
+/** Letters gather into a ribbon, travel to the top left, then unveil the page in straight horizontal bands. */
 export function WelcomeSplash({ name, onDone }: WelcomeSplashProps) {
   const text = `Welcome back, ${name || 'Trader'}`;
   const canvas = useRef<HTMLCanvasElement>(null);
+  const ribbon = useRef<HTMLCanvasElement>(null);
   const underlay = useRef<HTMLDivElement>(null);
   const word = useRef<HTMLDivElement>(null);
   const onDoneRef = useRef(onDone);
@@ -46,7 +47,7 @@ export function WelcomeSplash({ name, onDone }: WelcomeSplashProps) {
       fading = true;
       cancelAnimationFrame(frame);
       timers.forEach(timer => window.clearTimeout(timer));
-      for (const element of [surface, backdrop, line]) {
+      for (const element of [surface, backdrop, line, ribbon.current!]) {
         element.style.transition = 'opacity 300ms ease';
         element.style.opacity = '0';
       }
@@ -65,77 +66,99 @@ export function WelcomeSplash({ name, onDone }: WelcomeSplashProps) {
       backdrop.style.opacity = '0';
       if (!context) { backdrop.style.opacity = '1'; fade(); return; }
       const width = window.innerWidth, height = window.innerHeight;
-      const centerX = width / 2, centerY = height / 2;
-      const smooth = (value: number) => value * value * (3 - 2 * value);
+      const ink = ribbon.current;
+      const inkContext = ink?.getContext('2d');
+      if (!ink || !inkContext) { fade(); return; }
+      const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
+      ink.width = Math.ceil(width * ratio); ink.height = Math.ceil(height * ratio);
+      inkContext.setTransform(ratio, 0, 0, ratio, 0, 0);
+      const color = getComputedStyle(line).color;
+      const smooth = (p: number) => p * p * (3 - 2 * p);
       const bezier = (p: number, a: number, b: number, c: number, d: number) =>
         (1-p)**3*a + 3*(1-p)**2*p*b + 3*(1-p)*p*p*c + p**3*d;
       const rows = Math.max(3, Math.ceil(height / 210));
-      const stream = (time: number) => {
-        if (time < 1000) {
-          const p = smooth(Math.max(0, time / 1000));
-          return { x: centerX + (width * .88 - centerX) * p, y: centerY - 30 * Math.sin(p * Math.PI), reveal: false };
+      const rowHeight = height / rows;
+      const path = (time: number) => {
+        if (time < 950) {
+          const p = smooth(Math.max(0, time / 950));
+          return { x: width/2 + width*.38*p, y: height/2, alpha: 1 };
         }
-        if (time < 2100) {
-          const p = (time - 1000) / 1100;
-          return { x: bezier(p, width*.88, width*1.02, width*.3, 40), y: bezier(p, centerY, height*.13, 24, 48), reveal: false };
+        if (time < 2050) {
+          const p = (time-950)/1100;
+          return { x: bezier(p,width*.88,width*1.02,width*.3,0),
+            y: bezier(p,height/2,height*.1,0,rowHeight/2), alpha: 1 };
         }
-        const progress = Math.min(1, (time - 2100) / 3200);
-        const sweep = progress * rows;
-        const row = Math.min(rows - 1, Math.floor(sweep));
-        const p = smooth(Math.min(1, sweep - row));
-        return { x: row % 2 === 0 ? 40 + (width-80)*p : width-40-(width-80)*p,
-          y: 48 + (height-48) * (row + p) / rows, reveal: true };
+        const sweep = Math.min(rows, (time-2050)/3500*rows);
+        const row = Math.min(rows-1, Math.floor(sweep));
+        const p = Math.min(1,sweep-row);
+        // Hide the return between rows: every visible pass is perfectly horizontal.
+        return { x: width*smooth(p), y: (row+.5)*rowHeight,
+          alpha: Math.min(1,p*18,(1-p)*18) };
       };
-      const particles = Array.from(line.querySelectorAll<HTMLElement>('[data-welcome-letter]')).map((element, index) => {
+      const letters = Array.from(line.querySelectorAll<HTMLElement>('[data-welcome-letter]')).map(element => {
         const rect = element.getBoundingClientRect();
-        const x = rect.left + rect.width / 2, y = rect.top + rect.height / 2;
         element.style.animation = 'none';
-        return { element, x, y, lastX: x, lastY: y, index, delay: index * 16 };
+        element.style.transition = 'color 240ms ease, background-color 240ms ease, border-radius 240ms ease, filter 240ms ease';
+        element.style.color = 'transparent';
+        element.style.backgroundColor = color;
+        element.style.borderRadius = '999px';
+        element.style.filter = 'blur(5px)';
+        return { element, x: rect.left+rect.width/2, y: rect.top+rect.height/2 };
       });
-      const brush = document.createElement('canvas');
-      brush.width = brush.height = 128;
-      const brushContext = brush.getContext('2d');
-      if (brushContext) {
-        const gradient = brushContext.createRadialGradient(64, 64, 0, 64, 64, 64);
-        gradient.addColorStop(0, 'rgba(0,0,0,0.9)');
-        gradient.addColorStop(0.5, 'rgba(0,0,0,0.55)');
-        gradient.addColorStop(1, 'rgba(0,0,0,0)');
-        brushContext.fillStyle = gradient;
-        brushContext.fillRect(0, 0, 128, 128);
-      }
-      context.globalCompositeOperation = 'destination-out';
       const start = performance.now(), duration = 6100;
       const animate = (now: number) => {
         if (finished || fading) return;
-        const elapsed = now - start;
-        for (const particle of particles) {
-          const time = Math.max(0, elapsed - particle.delay);
-          const target = stream(time);
-          const gathering = smooth(Math.min(1, time / 950));
-          const ripple = Math.sin(time / 150 + particle.index * .45);
-          const x = particle.x + (target.x - particle.x) * gathering;
-          const y = particle.y + (target.y + ripple * 9 - particle.y) * gathering;
-          const end = smooth(Math.max(0, Math.min(1, (elapsed - 5350) / 700)));
-          particle.element.style.transform = `translate3d(${x - particle.x}px,${y - particle.y}px,0) rotate(${ripple * gathering * 8}deg) scale(${1 - gathering * .64})`;
-          particle.element.style.opacity = String(1 - end);
-          particle.element.style.filter = `blur(${gathering * .25}px)`;
-          if (target.reveal) {
-            const size = Math.max(100, height / rows * 1.1);
-            const distance = Math.hypot(x - particle.lastX, y - particle.lastY);
-            const steps = Math.min(24, Math.max(1, Math.ceil(distance / (size * .25))));
-            context.globalAlpha = .28;
-            for (let step = 1; step <= steps; step++) {
-              const bx = particle.lastX + (x - particle.lastX) * step / steps;
-              const by = particle.lastY + (y - particle.lastY) * step / steps;
-              context.drawImage(brush, bx - size, by - size, size * 2, size * 2);
-            }
-          }
-          particle.lastX = x; particle.lastY = y;
+        const elapsed = now-start;
+        const gathering = smooth(Math.min(1,elapsed/650));
+        const head = path(elapsed);
+        for (const letter of letters) {
+          letter.element.style.transform = `translate3d(${(head.x-letter.x)*gathering}px,${(head.y-letter.y)*gathering}px,0) scale(1,${1-gathering*.92})`;
+          letter.element.style.opacity = String(1-smooth(Math.min(1,elapsed/700)));
         }
-        const fadeProgress = Math.max(0, Math.min(1, (elapsed - duration + 650) / 650));
-        surface.style.opacity = String(1 - fadeProgress * fadeProgress * (3 - 2 * fadeProgress));
-        if (elapsed >= duration) complete();
-        else frame = requestAnimationFrame(animate);
+        inkContext.clearRect(0,0,width,height);
+        inkContext.strokeStyle = color;
+        inkContext.lineCap = 'round';
+        const revealStarted = elapsed >= 2050;
+        const currentRow = Math.min(rows-1,Math.floor(Math.max(0,elapsed-2050)/3500*rows));
+        // A single connected ribbon with a soft, tapered tail; no glyphs or particles.
+        const tail = path(Math.max(revealStarted ? 2050 : 0, elapsed-196));
+        const ribbonGradient = inkContext.createLinearGradient(tail.x,tail.y,head.x+.01,head.y);
+        ribbonGradient.addColorStop(0,'transparent');
+        ribbonGradient.addColorStop(1,color);
+        inkContext.strokeStyle=ribbonGradient;
+        inkContext.globalAlpha=head.alpha*Math.min(1,elapsed/500);
+        inkContext.lineWidth=5;
+        inkContext.beginPath();
+        let connected=false;
+        for (let segment=28;segment>=0;segment--) {
+          const t=elapsed-segment*7;
+          if (t<0 || (revealStarted && (t<2050 || Math.floor((t-2050)/3500*rows)!==currentRow))) continue;
+          const point=path(t);
+          if (!connected) { inkContext.moveTo(point.x,point.y); connected=true; }
+          else inkContext.lineTo(point.x,point.y);
+        }
+        inkContext.stroke();
+        if (revealStarted) {
+          const sweep = Math.min(rows,(elapsed-2050)/3500*rows);
+          const row = Math.min(rows-1,Math.floor(sweep));
+          const progress = smooth(Math.min(1,sweep-row));
+          context.globalCompositeOperation = 'destination-out';
+          context.globalAlpha = 1;
+          context.fillStyle = '#000';
+          context.fillRect(0,0,width,row*rowHeight);
+          // Soft vertical leading edge, constant height: no diagonal reveal.
+          const edge = width*progress;
+          context.fillRect(0,row*rowHeight,Math.max(0,edge-32),rowHeight);
+          const gradient=context.createLinearGradient(edge-32,0,edge+24,0);
+          gradient.addColorStop(0,'rgba(0,0,0,1)'); gradient.addColorStop(1,'rgba(0,0,0,0)');
+          context.fillStyle=gradient;
+          context.fillRect(Math.max(0,edge-32),row*rowHeight,56,rowHeight);
+        }
+        const ending=smooth(Math.max(0,Math.min(1,(elapsed-5550)/550)));
+        surface.style.opacity=String(1-ending);
+        ink.style.opacity=String(1-ending);
+        if (elapsed>=duration) complete();
+        else frame=requestAnimationFrame(animate);
       };
       frame = requestAnimationFrame(animate);
     };
@@ -154,6 +177,7 @@ export function WelcomeSplash({ name, onDone }: WelcomeSplashProps) {
   return <div className="welcome-flow" role="status" aria-label={text}>
     <div ref={underlay} className="welcome-flow-underlay" aria-hidden="true"/>
     <canvas ref={canvas} className="welcome-flow-canvas" aria-hidden="true"/>
+    <canvas ref={ribbon} className="welcome-flow-canvas" aria-hidden="true"/>
     <div ref={word} className="welcome-flow-text" aria-hidden="true">{Array.from(text).map((letter,index) => <span key={index} data-welcome-letter className="welcome-flow-letter animate-letter-in" style={{animationDelay:`${Math.min(index * 20, 500)}ms`}}>{letter === ' ' ? '\u00A0' : letter}</span>)}</div>
     <button type="button" className="welcome-flow-skip" onClick={() => skip.current()}>Passer l’animation</button>
   </div>;
