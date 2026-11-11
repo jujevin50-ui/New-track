@@ -1257,3 +1257,12 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 @media (max-width: 639px) { .finance-invest-metrics { grid-template-columns: 1fr; gap: 16px; } .finance-editor { padding: 24px 20px; } .finance-stat .dashboard-metric-body { height: 82px; } .finance-stat .dashboard-metric-gauge { height: 82px; width: 145px; } }
 .finance-asset-evolution { width: calc(100% + 32px); height: clamp(440px, 54vh, 600px); margin-inline: -16px; }
 @media (max-width: 639px) { .finance-asset-evolution { width: 100%; height: 360px; margin-inline: 0; } }
+/* Liquid selection is shared by the Trading and Finance sidebars. */
+.rail-gooey-defs { position: absolute; width: 0; height: 0; pointer-events: none; }
+.rail-gooey-layer { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.rail-gooey-pill { position: absolute; inset: 0 0 auto; border-radius: 12px; background: hsl(var(--secondary)); transform-origin: center; }
+.rail-gooey-drop { position: absolute; border-radius: 50%; background: hsl(var(--secondary)); pointer-events: none; }
+.rail-links-gooey .rail-selection-slider { background: transparent; transition-duration: 650ms; }
+.rail-links-gooey .rail-link:hover { background: hsl(var(--secondary) / .35); }
+.rail-links-gooey .rail-link.is-current { color: hsl(var(--foreground)); }
+@media (prefers-reduced-motion: reduce) { .rail-links-gooey .rail-selection-slider { transition: none; } .rail-gooey-layer { filter: none !important; } }
