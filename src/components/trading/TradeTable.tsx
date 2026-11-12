@@ -89,6 +89,15 @@ const TradeTable = ({
     return unified;
   }, [trades, sortField, sortDir]);
 
+  const totals = useMemo(() => {
+    const byCurrency = new Map<string, number>();
+    trades.filter(trade => trade.endDate).forEach(trade => {
+      const currency = accounts.find(account => account.id === trade.accountId)?.currency || '';
+      byCurrency.set(currency, (byCurrency.get(currency) || 0) + getNetResult(trade));
+    });
+    return [...byCurrency.entries()];
+  }, [trades, accounts]);
+
   const allImages = useMemo(
     () =>
       rows
@@ -345,6 +354,21 @@ const TradeTable = ({
                 );
               })}
             </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-border bg-secondary/35 font-semibold">
+                <th scope="row" colSpan={4} className="px-4 py-4 text-left">
+                  Total net <span className="text-xs font-normal text-muted-foreground">(trades clôturés de la sélection)</span>
+                </th>
+                <td className="px-4 py-4 text-right font-mono tabular-nums">
+                  {totals.length ? totals.map(([currency, total]) => (
+                    <div key={currency} className={total > 0 ? 'text-profit' : total < 0 ? 'text-loss' : 'text-foreground'}>
+                      {money(total, currency)}
+                    </div>
+                  )) : '—'}
+                </td>
+                <td colSpan={8} />
+              </tr>
+            </tfoot>
 
 
           </table>

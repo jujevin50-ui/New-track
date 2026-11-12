@@ -13,12 +13,13 @@ export default function TradeFilters({ trades, filters, onChange, children, acti
   const pairs = [...new Set([...trades.map(trade => trade.pair), ...(filters.pair !== 'all' ? [filters.pair] : [])])].sort();
   const set = (key: keyof TradeFilterState, value: string) => onChange({...filters,[key]:value});
   const active = Object.keys(filters).some(key => filters[key as keyof TradeFilterState] !== initialTradeFilters[key as keyof TradeFilterState]);
-  const field = (key: keyof TradeFilterState, label: string, options: {value:string;label:string}[]) => <DashboardFilter label={label} ariaLabel={`Filtre ${label.toLowerCase()}`} value={filters[key]} onChange={value => set(key,value)} options={options}/>;
+  const field = (key: keyof TradeFilterState, label: string, options: {value:string;label:string}[]) => <DashboardFilter label={label} ariaLabel={`Filtre ${label.toLowerCase()}`} value={filters[key] ?? initialTradeFilters[key] ?? 'all'} onChange={value => set(key,value)} options={options}/>;
   return <div className="space-y-5">
     <div className="trades-toolbar"><div className="dashboard-filter-controls trades-filter-controls">
       {children}
       {field('pair','Paire',[{value:'all',label:'Toutes'},...pairs.map(pair => ({value:pair,label:pair}))])}
       {field('position','Position',[{value:'all',label:'Toutes'},{value:'open',label:'Ouvertes'},{value:'closed',label:'Clôturées'}])}
+      {field('quality','Étoiles',[{value:'all',label:'Toutes'},{value:'1',label:'★ · 1 étoile'},{value:'2',label:'★★ · 2 étoiles'},{value:'3',label:'★★★ · 3 étoiles'}])}
       {field('result','Résultat',[{value:'all',label:'Tous'},{value:'win',label:'Gagnants'},{value:'loss',label:'Perdants'},{value:'neutral',label:'Neutres'}])}
     </div>{actions}</div>
     <details className="trades-advanced" open={advancedOpen} onToggle={event=>{if(event.currentTarget.open!==advancedOpen)setAdvancedOpen(event.currentTarget.open);}}><summary className="cursor-pointer text-xs text-muted-foreground">Plus de filtres</summary><div className="dashboard-filter-controls mt-4">
