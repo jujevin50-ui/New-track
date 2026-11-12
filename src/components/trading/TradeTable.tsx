@@ -90,10 +90,18 @@ const TradeTable = ({
   }, [trades, sortField, sortDir]);
 
   const totals = useMemo(() => {
-    const byCurrency = new Map<string, number>();
+    const byCurrency = new Map<string, { net: number; percent: number | null; r: number | null }>();
     trades.filter(trade => trade.endDate).forEach(trade => {
-      const currency = accounts.find(account => account.id === trade.accountId)?.currency || '';
-      byCurrency.set(currency, (byCurrency.get(currency) || 0) + getNetResult(trade));
+      const account = accounts.find(account => account.id === trade.accountId);
+      const currency = account?.currency || '';
+      const balance = account?.initialBalance || 0;
+      const net = getNetResult(trade);
+      const total = byCurrency.get(currency) || { net: 0, percent: null, r: null };
+      total.net += net;
+      if (balance > 0) total.percent = (total.percent ?? 0) + net / balance * 100;
+      const r = getTradeR(trade, balance);
+      if (r !== null) total.r = (total.r ?? 0) + r;
+      byCurrency.set(currency, total);
     });
     return [...byCurrency.entries()];
   }, [trades, accounts]);
@@ -361,12 +369,22 @@ const TradeTable = ({
                 </th>
                 <td className="px-4 py-4 text-right font-mono tabular-nums">
                   {totals.length ? totals.map(([currency, total]) => (
-                    <div key={currency} className={total > 0 ? 'text-profit' : total < 0 ? 'text-loss' : 'text-foreground'}>
-                      {money(total, currency)}
+                    <div key={currency} className={total.net > 0 ? 'text-profit' : total.net < 0 ? 'text-loss' : 'text-foreground'}>
+                      {money(total.net, currency)}
                     </div>
                   )) : '—'}
                 </td>
-                <td colSpan={8} />
+                {(['percent', 'r'] as const).map(metric => (
+                  <td key={metric} className="px-4 py-4 text-right font-mono tabular-nums" aria-label={metric === 'percent' ? 'Total %' : 'Total RR'}>
+                    {totals.length ? totals.map(([currency, total]) => {
+                      const value = total[metric];
+                      return <div key={currency} className={value !== null && value > 0 ? 'text-profit' : value !== null && value < 0 ? 'text-loss' : 'text-muted-foreground'}>
+                        {value === null ? '—' : `${value > 0 ? '+' : ''}${value.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${metric === 'percent' ? ' %' : 'R'}`}
+                      </div>;
+                    }) : '—'}
+                  </td>
+                ))}
+                <td colSpan={6} />
               </tr>
             </tfoot>
 
