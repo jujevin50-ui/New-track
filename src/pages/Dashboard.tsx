@@ -1,7 +1,7 @@
 import { usePagePreference, oneOf } from '@/hooks/usePagePreference';
 import { periodPerformance } from '@/lib/periodPerformance';
 import PeriodPerformanceList from '@/components/trading/PeriodPerformanceList';
-import MonthlyPerformanceChart from '@/components/trading/MonthlyPerformanceChart';
+import TradePerformanceChart from '@/components/trading/TradePerformanceChart';
 import DashboardFilter from '@/components/trading/DashboardFilter';
 import { ResponsiveContainer, BarChart, Bar, Cell, ReferenceLine, XAxis, YAxis, Tooltip } from 'recharts';
 import DisciplineYearChart from '@/components/trading/DisciplineYearChart';
@@ -12,6 +12,7 @@ import { useTrades } from '@/hooks/useTrades';
 import { useDailyJournal } from '@/hooks/useDailyJournal';
 import { localDay, shiftDay } from '@/lib/discipline';
 import { buildDashboardCurrencyGroups, dashboardAnalytics } from '@/lib/dashboardAnalytics';
+import { tradePerformance } from '@/lib/tradePerformance';
 import { getNetResult } from '@/types/trade';
 import type { Account } from '@/types/account';
 import { Input } from '@/components/ui/input';
@@ -75,7 +76,7 @@ export default function Dashboard({ activeAccount, accounts, onSelectAccount }: 
   const monthlyPeriods=periodPerformance(stats.closedTrades,capital,'month',scopeAccounts);
   const rrKnown=weeklyPeriods.reduce((sum,row)=>sum+row.rrTrades,0);
   const totalRR=stats.totalTrades&&rrKnown===stats.totalTrades?weeklyPeriods.reduce((sum,row)=>sum+(row.rr??0),0):null;
-  const monthly = [...monthlyPeriods].reverse().map(month => ({ date: month.start.slice(0, 7), performance: month.performance, rr: month.rr, trades: month.trades }));
+  const tradePoints = tradePerformance(stats.closedTrades, scopeAccounts);
 
   return <div className="dashboard-redesign mx-auto w-full space-y-8 pb-10">
     <h1 className="sr-only page-title-hidden">{view==='global'?'Vue globale':selectedAccount?.name??'Dashboard'}</h1>
@@ -113,8 +114,8 @@ export default function Dashboard({ activeAccount, accounts, onSelectAccount }: 
     <div className="space-y-8">
       <Section title="Progression du résultat" action={view === 'account' && <div className="dashboard-switch dashboard-switch-small" role="group" aria-label="Unité de la courbe"><button type="button" aria-pressed={chartUnit === 'amount'} onClick={() => setUnit('amount')}>{currency === 'UNKNOWN' ? 'Montant' : currency}</button><button type="button" aria-pressed={chartUnit === 'percent'} disabled={!percentageAvailable} title="Résultat rapporté au capital initial" onClick={() => setUnit('percent')}>% du capital</button></div>}><div className="h-[300px] w-full min-w-0 sm:h-[340px]"><DashboardPerformanceChart data={stats.curve} currency={currency} startingCapital={capital} unit={chartUnit} /></div></Section>
       <div className="grid min-w-0 items-start gap-8 md:grid-cols-2">
-        <Section title="Rendement réalisé du compte (%)" action={<span className="text-xs text-muted-foreground">Par mois · résultat net / capital initial</span>}><MonthlyPerformanceChart data={monthly} validCapital={percentageAvailable} /></Section>
-        <Section title="RR réalisé" action={<span className="text-xs text-muted-foreground">Par mois · somme des R nets</span>}><MonthlyPerformanceChart data={monthly} validCapital={percentageAvailable} metric="rr" /></Section>
+        <Section title="Rendement réalisé du compte (%)" action={<span className="text-xs text-muted-foreground">Par trade · résultat net / capital initial</span>}><TradePerformanceChart data={tradePoints} /></Section>
+        <Section title="RR réalisé" action={<span className="text-xs text-muted-foreground">Par trade · résultat net / risque initial</span>}><TradePerformanceChart data={tradePoints} metric="rr" /></Section>
       </div>
       {view==='global'&&<div className="grid min-w-0 items-start gap-8 xl:grid-cols-2"><PeriodPerformanceList rows={weeklyPeriods} kind="week"/><PeriodPerformanceList rows={monthlyPeriods} kind="month"/></div>}
       <DisciplineYearChart hideSummary key={view} preferenceKey={`dashboard.${view}.discipline-chart`} journals={journals} selectedDate={disciplineDate} today={today} period={view === 'global' ? 'year' : 'month'} onSelectDate={setDisciplineDate} />
