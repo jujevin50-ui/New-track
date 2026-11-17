@@ -84,3 +84,34 @@ it('writes notes and embedded screenshots through the existing JSON file workflo
   await openNotes();
   expect(await screen.findByRole('heading', { name: 'Note fichier' })).toBeVisible();
 });
+
+it('pastes and drops images, reads a note and navigates its enlarged screenshots', async () => {
+  await openNotes();
+  fireEvent.click(screen.getByText('Nouvelle note'));
+  fireEvent.change(screen.getByLabelText('Titre'), { target: { value: 'Analyse visuelle' } });
+  fireEvent.paste(screen.getByLabelText('Explications'), { clipboardData: { items: [{ type: 'image/png', getAsFile: () => new File(['paste'], 'collee.png', { type: 'image/png' }) }] } });
+  await screen.findByText('Retirer collee.png');
+  fireEvent.drop(screen.getByRole('group'), { dataTransfer: { files: [new File(['drop'], 'deposee.png', { type: 'image/png' })] } });
+  await screen.findByText('Retirer deposee.png');
+  fireEvent.click(screen.getByText('Enregistrer'));
+  await screen.findByRole('heading', { name: 'Analyse visuelle' });
+  expect(readLocalData()?.notes[0].screenshots).toHaveLength(2);
+  fireEvent.click(screen.getByText('Lire'));
+  fireEvent.click(screen.getAllByLabelText('Agrandir collee.png').at(-1)!);
+  expect(screen.getByText(/Capture 1 sur 2/)).toBeVisible();
+  fireEvent.click(screen.getByLabelText('Image suivante'));
+  expect(screen.getByText(/Capture 2 sur 2/)).toBeVisible();
+  fireEvent.keyDown(screen.getAllByRole('dialog').at(-1)!, { key: 'ArrowLeft' });
+  expect(screen.getByText(/Capture 1 sur 2/)).toBeVisible();
+  fireEvent.click(screen.getByText('Taille réelle'));
+  expect(screen.getByText('Ajuster')).toBeVisible();
+});
+
+it('reports unsupported pasted images without discarding the draft', async () => {
+  await openNotes();
+  fireEvent.click(screen.getByText('Nouvelle note'));
+  fireEvent.change(screen.getByLabelText('Titre'), { target: { value: 'Brouillon' } });
+  fireEvent.paste(screen.getByLabelText('Explications'), { clipboardData: { items: [{ type: 'image/svg+xml', getAsFile: () => new File(['svg'], 'image.svg', { type: 'image/svg+xml' }) }] } });
+  expect(await screen.findByRole('alert')).toHaveTextContent('Choisissez des images PNG');
+  expect(screen.getByLabelText('Titre')).toHaveValue('Brouillon');
+});
