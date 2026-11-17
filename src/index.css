@@ -1275,3 +1275,17 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 .rail-workspaces-animated button:hover > span { transform: translateY(-1px); }
 .rail-workspaces-animated button:active > span { transform: scale(.94); }
 @media (prefers-reduced-motion: reduce) { .rail-workspaces-animated button > span { transition: none; transform: none !important; } }
+
+/* Opening counter: tabular reels roll vertically, then the surface slides away. */
+.welcome-counter { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; overflow: hidden; background: hsl(var(--background)); color: hsl(var(--foreground)); transition: transform 500ms cubic-bezier(.76,0,.24,1); }
+.welcome-counter-content { width: min(440px, calc(100vw - 64px)); text-align: center; }
+.welcome-counter-eyebrow { font-size: 11px; letter-spacing: .3em; color: hsl(var(--muted-foreground)); }
+.welcome-counter-number { display: flex; justify-content: center; margin: 28px 0; font-size: clamp(88px, 20vw, 160px); font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: -.06em; line-height: 1; }
+.welcome-counter-window { display: block; height: 1em; width: .68em; overflow: hidden; }
+.welcome-counter-reel { display: flex; flex-direction: column; will-change: transform; }
+.welcome-counter-reel > span { display: block; flex: 0 0 1em; height: 1em; }
+.welcome-counter-track { height: 2px; overflow: hidden; background: hsl(var(--border)); }
+.welcome-counter-progress { height: 100%; background: hsl(var(--primary)); transform: scaleX(0); transform-origin: left; }
+.welcome-counter-greeting { margin-top: 24px; padding: 0 8px; overflow-wrap: anywhere; font-size: 14px; color: hsl(var(--muted-foreground)); }
+.welcome-counter-exit { transform: translateY(-100%); }
+@media (prefers-reduced-motion: reduce) { .welcome-counter { transition: none; } .welcome-counter-reel { will-change: auto; } }
