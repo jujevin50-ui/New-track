@@ -1,3 +1,4 @@
+import { format } from 'date-fns';
 import { useRef, useState, type FormEvent } from 'react';
 import { BookOpen, Plus, Pencil, Trash2, ChevronLeft, ChevronRight, Download, ZoomIn, ZoomOut, ImagePlus } from 'lucide-react';
 import { useData } from '@/contexts/DataContext';
@@ -58,14 +59,14 @@ export default function Notes() {
   return <div className="mx-auto w-full space-y-6 pb-10">
     <header className="flex flex-wrap items-center justify-between gap-4">
       <div><h1 className="text-xl font-semibold">Notes</h1><p className="mt-1 text-sm text-muted-foreground">Vos idées, analyses et captures de trading.</p></div>
-      <Button className="gap-2 rounded-xl" onClick={() => { setError(''); const now = new Date().toISOString(); setDraft({ id: crypto.randomUUID(), title: '', explanations: '', screenshots: [], createdAt: now, updatedAt: now }); }}><Plus className="h-4 w-4" />Nouvelle note</Button>
+      <Button className="gap-2 rounded-xl" onClick={() => { setError(''); const now = new Date().toISOString(); setDraft({ id: crypto.randomUUID(), title: '', date: format(new Date(), 'yyyy-MM-dd'), explanations: '', screenshots: [], createdAt: now, updatedAt: now }); }}><Plus className="h-4 w-4" />Nouvelle note</Button>
     </header>
     <div><label htmlFor="notes-search" className="sr-only">Rechercher des notes</label><Input id="notes-search" placeholder="Rechercher dans les titres et les explications…" value={query} onChange={event => setQuery(event.target.value)} className="rounded-xl" /></div>
     {error && !draft && !removing && <p role="alert" className="text-sm text-destructive">{error}</p>}
     {!notes.length ? <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 text-center"><BookOpen className="h-10 w-10 text-muted-foreground" /><p className="text-muted-foreground">{query ? 'Aucune note ne correspond à cette recherche.' : 'Créez votre première note.'}</p></div> : <div className="grid min-w-0 gap-5 md:grid-cols-2 xl:grid-cols-3">
       {notes.map(note => <article key={note.id} className="min-w-0 rounded-2xl border border-border bg-card/60 p-5">
         <h2 className="break-words text-lg font-semibold"><button type="button" className="text-left hover:text-primary focus-visible:outline focus-visible:outline-2 rounded" onClick={() => setReading(note.id)}>{note.title}</button></h2>
-        <p className="mt-1 text-xs text-muted-foreground">Modifiée le {new Date(note.updatedAt).toLocaleDateString('fr-FR')}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{note.date && <><time dateTime={note.date}>{format(new Date(`${note.date}T12:00:00`), 'dd/MM/yyyy')}</time> · </>}Modifiée le {new Date(note.updatedAt).toLocaleDateString('fr-FR')}</p>
         <p className="mt-4 line-clamp-4 whitespace-pre-wrap break-words text-sm">{note.explanations}</p>
         <div className="mt-4 grid grid-cols-2 gap-2">{note.screenshots.map(image => <button type="button" key={image.id} onClick={() => preview(note.screenshots, note.screenshots.indexOf(image))} aria-label={`Agrandir ${image.name}`} className="rounded-lg focus-visible:ring-2 ring-primary hover:opacity-80"><img src={image.content} alt={image.name} className="aspect-video w-full rounded-lg border border-border object-contain" /></button>)}</div>
         <div className="mt-4 flex flex-wrap gap-2"><Button variant="ghost" size="sm" onClick={() => setReading(note.id)}>Lire</Button><Button variant="outline" size="sm" className="gap-2" onClick={() => edit(note)}><Pencil className="h-4 w-4" />Modifier</Button><Button variant="ghost" size="sm" className="gap-2 text-destructive" onClick={() => { setError(''); setRemoving(note); }}><Trash2 className="h-4 w-4" />Supprimer</Button></div>
@@ -79,6 +80,7 @@ export default function Notes() {
             if (images.length) { event.preventDefault(); void addImages(images); }
           }}>
           <div><label htmlFor="note-title" className="text-sm">Titre</label><Input id="note-title" autoFocus required value={draft.title} disabled={busy} onChange={event => setDraft({ ...draft, title: event.target.value })} /></div>
+          <div className="sm:max-w-xs"><label htmlFor="note-date" className="text-sm">Date de la note</label><Input id="note-date" type="date" value={draft.date ?? ''} disabled={busy} onChange={event => setDraft({ ...draft, date: event.target.value })} /></div>
           <div><label htmlFor="note-explanations" className="text-sm">Explications</label><Textarea id="note-explanations" rows={7} value={draft.explanations} disabled={busy} onChange={event => setDraft({ ...draft, explanations: event.target.value })} /></div>
           <div tabIndex={0} role="group" aria-label="Zone de captures : coller ou déposer des images" className="rounded-xl border-2 border-dashed border-border bg-muted/20 p-5 text-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary" onDragOver={event => { event.preventDefault(); }} onDrop={event => { event.preventDefault(); void addImages(Array.from(event.dataTransfer.files)); }}>
             <ImagePlus className="mx-auto mb-2 h-6 w-6 text-muted-foreground" />
@@ -98,7 +100,7 @@ export default function Notes() {
     <Dialog open={!!selected} onOpenChange={open => { if (!open) setReading(null); }}>
       <DialogContent className="max-h-[94dvh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader><DialogTitle className="break-words pr-6">{selected?.title}</DialogTitle><DialogDescription>Votre note et toutes ses captures.</DialogDescription></DialogHeader>
-        {selected && <><p className="whitespace-pre-wrap break-words leading-relaxed">{selected.explanations || 'Aucune explication.'}</p><div className="grid gap-4 sm:grid-cols-2">{selected.screenshots.map((image, index) => <button key={image.id} type="button" className="min-w-0 rounded-xl border border-border bg-muted/20 p-2 focus-visible:ring-2 ring-primary" aria-label={`Agrandir ${image.name}`} onClick={() => preview(selected.screenshots, index)}><img src={image.content} alt={image.name} className="max-h-64 w-full rounded-lg object-contain" /><span className="mt-2 block truncate text-xs text-muted-foreground">{image.name} · Agrandir</span></button>)}</div><div className="sticky -bottom-6 border-t border-border bg-background py-4"><Button className="gap-2" onClick={() => edit(selected)}><Pencil className="h-4 w-4" />Modifier la note</Button></div></>}
+        {selected && <>{selected.date && <p className="text-sm text-muted-foreground">Date de la note : <time dateTime={selected.date}>{format(new Date(`${selected.date}T12:00:00`), 'dd/MM/yyyy')}</time></p>}<p className="whitespace-pre-wrap break-words leading-relaxed">{selected.explanations || 'Aucune explication.'}</p><div className="grid gap-4 sm:grid-cols-2">{selected.screenshots.map((image, index) => <button key={image.id} type="button" className="min-w-0 rounded-xl border border-border bg-muted/20 p-2 focus-visible:ring-2 ring-primary" aria-label={`Agrandir ${image.name}`} onClick={() => preview(selected.screenshots, index)}><img src={image.content} alt={image.name} className="max-h-64 w-full rounded-lg object-contain" /><span className="mt-2 block truncate text-xs text-muted-foreground">{image.name} · Agrandir</span></button>)}</div><div className="sticky -bottom-6 border-t border-border bg-background py-4"><Button className="gap-2" onClick={() => edit(selected)}><Pencil className="h-4 w-4" />Modifier la note</Button></div></>}
       </DialogContent>
     </Dialog>
     <Dialog open={!!viewer} onOpenChange={open => { if (!open) setViewer(null); }}>

@@ -24,6 +24,7 @@ it('creates, edits, searches, reloads and deletes notes with multiple screenshot
   await openNotes();
   fireEvent.click(screen.getByText('Nouvelle note'));
   fireEvent.change(screen.getByLabelText('Titre'), { target: { value: 'Plan EURUSD' } });
+  fireEvent.change(screen.getByLabelText('Date de la note'), { target: { value: '2026-11-05' } });
   fireEvent.change(screen.getByLabelText('Explications'), { target: { value: 'Attendre le retour au support' } });
   fireEvent.change(screen.getByLabelText(/Ajouter des captures/), { target: { files: [new File(['one'], 'avant.png', { type: 'image/png' }), new File(['two'], 'apres.png', { type: 'image/png' })] } });
   await screen.findByText('Retirer apres.png');
@@ -33,6 +34,8 @@ it('creates, edits, searches, reloads and deletes notes with multiple screenshot
   cleanup();
   await openNotes();
   expect(await screen.findByRole('heading', { name: 'Plan EURUSD' })).toBeVisible();
+  expect(readLocalData()?.notes[0].date).toBe('2026-11-05');
+  expect(screen.getByText('05/11/2026')).toBeVisible();
   fireEvent.change(screen.getByLabelText('Rechercher des notes'), { target: { value: 'support' } });
   expect(screen.getByText('Plan EURUSD')).toBeVisible();
   fireEvent.change(screen.getByLabelText('Rechercher des notes'), { target: { value: 'absent' } });
@@ -40,9 +43,13 @@ it('creates, edits, searches, reloads and deletes notes with multiple screenshot
   fireEvent.change(screen.getByLabelText('Rechercher des notes'), { target: { value: '' } });
   fireEvent.click(screen.getByText('Modifier'));
   fireEvent.change(screen.getByLabelText('Titre'), { target: { value: 'Plan corrigé' } });
+  expect(screen.getByLabelText('Date de la note')).toHaveValue('2026-11-05');
+  fireEvent.change(screen.getByLabelText('Date de la note'), { target: { value: '2026-10-31' } });
   fireEvent.click(screen.getByText('Retirer avant.png'));
   fireEvent.click(screen.getByText('Enregistrer'));
   await screen.findByRole('heading', { name: 'Plan corrigé' });
+  expect(readLocalData()?.notes[0].date).toBe('2026-10-31');
+  expect(screen.getByText('31/10/2026')).toBeVisible();
   expect(readLocalData()?.notes[0].screenshots).toHaveLength(1);
   fireEvent.click(screen.getByText('Supprimer'));
   fireEvent.click(screen.getByText('Annuler'));
