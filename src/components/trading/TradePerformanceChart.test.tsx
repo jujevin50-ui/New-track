@@ -38,3 +38,16 @@ describe('per-trade realized performance charts', () => {
     expect(screen.getByText(/premiers trades clôturés/)).toBeInTheDocument();
   });
 });
+
+it('fits every available trade across the full width, including zero, without empty slots', () => {
+  const many = Array.from({ length: 80 }, (_, index) => ({ ...data[index % data.length], id: `trade-${index}`, tradeNumber: index + 1 }));
+  const { container } = render(<TradePerformanceChart data={many} metric="rr" fullWidth />);
+  expect(screen.getByText(/60 trade\(s\) affiché/)).toBeInTheDocument();
+  expect(container.querySelectorAll('.recharts-bar-rectangle path')).toHaveLength(60);
+  expect(screen.queryByText('Indisponible')).not.toBeInTheDocument();
+  expect(screen.getByRole('img').style.minWidth).toBe('0');
+});
+it('explains when none of the selected trades has the requested metric', () => {
+  render(<TradePerformanceChart data={[data[3]]} metric="rr" fullWidth />);
+  expect(screen.getByText(/Aucun trade avec un RR calculable/)).toBeInTheDocument();
+});

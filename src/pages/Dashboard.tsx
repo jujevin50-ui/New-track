@@ -12,7 +12,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTrades } from '@/hooks/useTrades';
 import { useDailyJournal } from '@/hooks/useDailyJournal';
 import { localDay, shiftDay } from '@/lib/discipline';
-import { buildDashboardCurrencyGroups, dashboardAnalytics } from '@/lib/dashboardAnalytics';
+import { buildDashboardCurrencyGroups, dashboardAnalytics, selectClosedDashboardTrades } from '@/lib/dashboardAnalytics';
 import { tradePerformance } from '@/lib/tradePerformance';
 import { getNetResult } from '@/types/trade';
 import type { Account } from '@/types/account';
@@ -77,7 +77,14 @@ export default function Dashboard({ activeAccount, accounts, onSelectAccount }: 
   const monthlyPeriods=periodPerformance(stats.closedTrades,capital,'month',scopeAccounts);
   const rrKnown=weeklyPeriods.reduce((sum,row)=>sum+row.rrTrades,0);
   const totalRR=stats.totalTrades&&rrKnown===stats.totalTrades?weeklyPeriods.reduce((sum,row)=>sum+(row.rr??0),0):null;
-  const tradePoints = tradePerformance(stats.closedTrades, scopeAccounts);
+  const chartAccounts = view === 'global' ? eligibleAccounts : scopeAccounts;
+  const chartTrades = view === 'global' ? selectClosedDashboardTrades(allTrades, { accountIds: chartAccounts.map(account => account.id), from: range.from, to: range.to }) : stats.closedTrades;
+  const tradePoints = tradePerformance(chartTrades, chartAccounts);
+
+  const performanceCharts = (<div className={`grid min-w-0 items-start gap-8 ${view === 'global' ? 'grid-cols-1' : 'md:grid-cols-2'}`}>
+        <Section title={view === 'global' ? 'Rendement réalisé par trade (%)' : 'Rendement réalisé du compte (%)'} action={<span className="text-xs text-muted-foreground">Par trade · résultat net / capital initial</span>}><TradePerformanceChart data={tradePoints} fullWidth={view === 'global'} /></Section>
+        <Section title="RR réalisé" action={<span className="text-xs text-muted-foreground">Par trade · résultat net / risque initial</span>}><TradePerformanceChart data={tradePoints} metric="rr" fullWidth={view === 'global'} /></Section>
+      </div>);
 
   return <div className="dashboard-redesign mx-auto w-full space-y-8 pb-10">
     <h1 className="sr-only page-title-hidden">{view==='global'?'Vue globale':selectedAccount?.name??'Dashboard'}</h1>
@@ -92,7 +99,7 @@ export default function Dashboard({ activeAccount, accounts, onSelectAccount }: 
       <p className="text-[10px] text-muted-foreground">Résultats clôturés · {currency === 'UNKNOWN' ? 'Devise non renseignée' : currency}</p>
       {period === 'custom' && <div className="flex w-full flex-wrap items-center gap-3"><label className="flex items-center gap-2 text-xs text-muted-foreground">Du<Input aria-label="Début de la période" type="date" value={custom.from} onChange={event => setCustom(previous => ({ ...previous, from: event.target.value }))} className="h-8 w-auto" /></label><label className="flex items-center gap-2 text-xs text-muted-foreground">Au<Input aria-label="Fin de la période" type="date" value={custom.to} max={today} onChange={event => setCustom(previous => ({ ...previous, to: event.target.value }))} className="h-8 w-auto" /></label>{invalidRange && <p role="alert" className="text-xs text-loss">La fin doit être postérieure au début.</p>}</div>}
     </div>
-    {!scopeAccounts.length ? <div className="py-16 text-center"><p className="mb-4 text-sm text-muted-foreground">{ambiguousCurrency ? 'Renseigne la devise de ces comptes pour comparer leurs résultats.' : accounts.length ? 'Aucun compte dans cette sélection.' : 'Ajoute un compte pour commencer à suivre ta progression.'}</p><Link to="/accounts" className="dashboard-text-link">{accounts.length ? 'Gérer mes comptes' : 'Ajouter mon premier compte'} →</Link></div> : <>
+    {!scopeAccounts.length ? <div className="py-16 text-center"><p className="mb-4 text-sm text-muted-foreground">{ambiguousCurrency ? 'Renseigne la devise de ces comptes pour comparer leurs résultats.' : accounts.length ? 'Aucun compte dans cette sélection.' : 'Ajoute un compte pour commencer à suivre ta progression.'}</p><Link to="/accounts" className="dashboard-text-link">{accounts.length ? 'Gérer mes comptes' : 'Ajouter mon premier compte'} →</Link>{view === 'global' && chartAccounts.length > 0 && performanceCharts}</div> : <>
     <div className={`dashboard-metrics ui-rule-after grid grid-cols-2 gap-x-5 gap-y-6 md:grid-cols-3 ${view==='global'?'xl:grid-cols-6':'xl:grid-cols-5'}`}>
       {[
         {label: 'Résultat net réalisé', value: money(stats.netProfit, currency, true), color: tone(stats.netProfit)},
@@ -114,10 +121,7 @@ export default function Dashboard({ activeAccount, accounts, onSelectAccount }: 
     </div>
     <div className="space-y-8">
       <Section title="Progression du résultat" action={view === 'account' && <div className="dashboard-switch dashboard-switch-small" role="group" aria-label="Unité de la courbe"><button type="button" aria-pressed={chartUnit === 'amount'} onClick={() => setUnit('amount')}>{currency === 'UNKNOWN' ? 'Montant' : currency}</button><button type="button" aria-pressed={chartUnit === 'percent'} disabled={!percentageAvailable} title="Résultat rapporté au capital initial" onClick={() => setUnit('percent')}>% du capital</button></div>}><div className="h-[300px] w-full min-w-0 sm:h-[340px]"><DashboardPerformanceChart data={stats.curve} currency={currency} startingCapital={capital} unit={chartUnit} /></div></Section>
-      <div className="grid min-w-0 items-start gap-8 md:grid-cols-2">
-        <Section title="Rendement réalisé du compte (%)" action={<span className="text-xs text-muted-foreground">Par trade · résultat net / capital initial</span>}><TradePerformanceChart data={tradePoints} /></Section>
-        <Section title="RR réalisé" action={<span className="text-xs text-muted-foreground">Par trade · résultat net / risque initial</span>}><TradePerformanceChart data={tradePoints} metric="rr" /></Section>
-      </div>
+      {performanceCharts}
       {view==='global'&&<div className="grid min-w-0 items-start gap-8 xl:grid-cols-2"><PeriodPerformanceList rows={weeklyPeriods} kind="week"/><PeriodPerformanceList rows={monthlyPeriods} kind="month"/></div>}
       <DisciplineYearChart hideSummary key={view} preferenceKey={`dashboard.${view}.discipline-chart`} journals={journals} selectedDate={disciplineDate} today={today} period={view === 'global' ? 'year' : 'month'} onSelectDate={setDisciplineDate} />
     </div>
