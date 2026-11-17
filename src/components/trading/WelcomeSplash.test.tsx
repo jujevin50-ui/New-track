@@ -3,16 +3,16 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { WelcomeSplash } from './WelcomeSplash';
 
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); document.body.style.overflow = ''; });
-it('rolls to 100 and releases the page exactly once', () => {
+it('scrolls motivational phrases and releases the page exactly once', () => {
   vi.useFakeTimers();
   const done = vi.fn();
   const { container } = render(<WelcomeSplash name="Alex" onDone={done} />);
   expect(document.body.style.overflow).toBe('hidden');
   act(() => { vi.advanceTimersByTime(2250); });
-  const reels = container.querySelectorAll<HTMLElement>('.welcome-counter-reel');
-  expect(reels[0].style.transform).toBe('translate3d(0, -1em, 0)');
-  expect(reels[1].style.transform).toBe('translate3d(0, -10em, 0)');
-  expect(reels[2].style.transform).toBe('translate3d(0, -100em, 0)');
+  expect(container.querySelector('.welcome-words-reel')).toHaveStyle({ transform: 'translateY(-75%)' });
+  expect(screen.getByText('Stay disciplined.')).toBeInTheDocument();
+  expect(screen.getByText('Hard work.')).toBeInTheDocument();
+  expect(container.querySelector('.welcome-counter-number')).toBeNull();
   expect(done).not.toHaveBeenCalled();
   act(() => { vi.advanceTimersByTime(1000); });
   expect(done).toHaveBeenCalledTimes(1);

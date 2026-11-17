@@ -2,10 +2,10 @@ import { useLayoutEffect, useRef } from 'react';
 
 interface WelcomeSplashProps { name: string; showGreeting?: boolean; onDone: () => void; }
 
-/** An odometer rolls upward from 000 to 100 before revealing the workspace. */
+/** Motivational phrases scroll upward before the workspace is revealed. */
 export function WelcomeSplash({ name, showGreeting = true, onDone }: WelcomeSplashProps) {
   const surface = useRef<HTMLDivElement>(null);
-  const digits = useRef<(HTMLSpanElement | null)[]>([]);
+  const words = useRef<HTMLDivElement>(null);
   const progress = useRef<HTMLDivElement>(null);
   const onDoneRef = useRef(onDone);
   const skip = useRef(() => {});
@@ -27,9 +27,8 @@ export function WelcomeSplash({ name, showGreeting = true, onDone }: WelcomeSpla
     };
     skip.current = complete;
     const render = (value: number) => {
-      // Repeated digits keep every reel moving upward, including the 9 → 0 carry.
-      const positions = [Math.max(0, value - 99), Math.floor(value / 10) + Math.max(0, value % 10 - 9), value];
-      digits.current.forEach((digit, index) => { if (digit) digit.style.transform = `translate3d(0, -${positions[index]}em, 0)`; });
+      const position = Math.min(3, Math.floor(value / 25));
+      if (words.current) words.current.style.transform = `translateY(-${position * 25}%)`;
       if (progress.current) progress.current.style.transform = `scaleX(${value / 100})`;
     };
     const onPreference = () => { if (reduced.matches) complete(); };
@@ -43,8 +42,8 @@ export function WelcomeSplash({ name, showGreeting = true, onDone }: WelcomeSpla
       const animate = (now: number) => {
         if (finished) return;
         const elapsed = now - start;
-        const fraction = Math.min(1, elapsed / 2200);
-        render(100 * (1 - Math.pow(1 - fraction, 2)));
+        const fraction = Math.min(1, elapsed / 2400);
+        render(100 * fraction);
         if (fraction < 1) frame = requestAnimationFrame(animate);
         else timers.push(window.setTimeout(() => {
           surface.current?.classList.add('welcome-counter-exit');
@@ -66,9 +65,7 @@ export function WelcomeSplash({ name, showGreeting = true, onDone }: WelcomeSpla
   return <div ref={surface} className="welcome-counter" role="status" aria-label={showGreeting ? 'Ouverture de votre espace de trading' : 'Ouverture de Finance'}>
     <div className="welcome-counter-content" aria-hidden="true">
       <p className="welcome-counter-eyebrow">{showGreeting ? 'TRADING JOURNAL' : 'FINANCE'}</p>
-      <div className="welcome-counter-number">
-        {[2, 11, 101].map((length, index) => <span key={index} className="welcome-counter-window"><span ref={element => { digits.current[index] = element; }} className="welcome-counter-reel">{Array.from({ length }, (_, value) => <span key={value}>{value % 10}</span>)}</span></span>)}
-      </div>
+      <div className="welcome-words-window"><div ref={words} className="welcome-words-reel">{['Stay disciplined.', 'Hard work.', 'Trust the process.', 'Stay consistent.'].map(phrase => <div key={phrase} className="welcome-words-phrase">{phrase}</div>)}</div></div>
       <div className="welcome-counter-track"><div ref={progress} className="welcome-counter-progress" /></div>
       <p className="welcome-counter-greeting">{showGreeting ? `Bienvenue, ${name || 'Trader'}` : 'Votre espace Finance'}</p>
     </div>

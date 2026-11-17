@@ -1,3 +1,4 @@
+import { AnimatedValue } from '@/components/AnimatedValue';
 import { TrendingUp, TrendingDown, Activity, Target, BarChart3, Percent, Hash, CheckCircle, XCircle, Zap, ArrowUp, ArrowDown, Repeat, Trophy, Skull, DollarSign } from 'lucide-react';
 import { WidgetConfig, STAT_DEFS } from '@/hooks/useDashboardConfig';
 import { WidgetColorPicker } from '@/components/trading/WidgetColorPicker';
@@ -166,7 +167,7 @@ const DashboardStats = ({ stats, editMode, statConfigs, onStatColorChange, onTog
 
               {/* Main value */}
               <p className={`text-xl font-bold font-mono leading-none ${!hasCustomColor ? styles.value : 'text-foreground'}`}>
-                {getStatValue(stat.key)}
+                <AnimatedValue value={getStatValue(stat.key)} locale="en-US" />
               </p>
 
               {/* Badge or win-loss bar */}

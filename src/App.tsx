@@ -1,3 +1,4 @@
+import { NumberAnimationContext } from '@/contexts/NumberAnimationContext';
 import AppUpdatePrompt from '@/components/AppUpdatePrompt';
 import { PageSkeleton } from '@/components/ui/page-skeleton';
 import { Toaster } from "@/components/ui/toaster";
@@ -115,18 +116,19 @@ const AppContent = () => {
 
   if (location.pathname === "/finance") {
     return (
-      <>{splash}<div className="relative z-10 min-h-screen text-foreground" aria-hidden={showSplash || undefined} {...(showSplash ? {inert: ''} : {})}>
+      <NumberAnimationContext.Provider value={!showSplash}>{splash}<div className="relative z-10 min-h-screen text-foreground" aria-hidden={showSplash || undefined} {...(showSplash ? {inert: ''} : {})}>
         <ErrorBoundary resetKey="finance">
           <Suspense fallback={<PageLoader />}>
             <Finance />
           </Suspense>
         </ErrorBoundary>
-      </div></>
+      </div></NumberAnimationContext.Provider>
     );
   }
 
   return (
     <>
+      <NumberAnimationContext.Provider value={!showSplash}>
       {splash}
       <div className="relative z-10" aria-hidden={showSplash || undefined} {...(showSplash ? {inert: ''} : {})}>
         <AppLayout accounts={accounts} activeAccountId={activeAccountId} onSelectAccount={setActiveAccountId}>
@@ -152,6 +154,7 @@ const AppContent = () => {
           </ErrorBoundary>
         </AppLayout>
       </div>
+      </NumberAnimationContext.Provider>
     </>
   );
 };

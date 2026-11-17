@@ -1,3 +1,4 @@
+import { AnimatedValue } from '@/components/AnimatedValue';
 import { usePagePreference, oneOf } from '@/hooks/usePagePreference';
 import { accountScope } from '@/lib/accountScope';
 import DashboardFilter from '@/components/trading/DashboardFilter';
@@ -46,7 +47,7 @@ export default function Discipline({ activeAccount, accounts, onSelectAccount }:
       </div>
 </div></div></div>
     <div className="grid grid-cols-3 gap-4 py-4">
-      {[{label: 'Série en cours', value: stats.streak, unit: stats.streak === 1 ? 'jour' : 'jours'}, {label: 'Séances suivies', value: stats.days, unit: stats.days === 1 ? 'séance' : 'séances'}, {label: 'Expérience', value: stats.xp, unit: 'XP'}].map(metric => <div key={metric.label} className="min-w-0 text-center"><p className="text-xs text-muted-foreground">{metric.label}</p><p className="mt-5 text-2xl font-semibold tracking-tight tabular-nums sm:text-[27px]">{metric.value}<span className="ml-2 text-[11px] font-normal text-muted-foreground">{metric.unit}</span></p></div>)}
+      {[{label: 'Série en cours', value: stats.streak, unit: stats.streak === 1 ? 'jour' : 'jours'}, {label: 'Séances suivies', value: stats.days, unit: stats.days === 1 ? 'séance' : 'séances'}, {label: 'Expérience', value: stats.xp, unit: 'XP'}].map(metric => <div key={metric.label} className="min-w-0 text-center"><p className="text-xs text-muted-foreground">{metric.label}</p><p className="mt-5 text-2xl font-semibold tracking-tight tabular-nums sm:text-[27px]"><AnimatedValue value={String(metric.value)} /><span className="ml-2 text-[11px] font-normal text-muted-foreground">{metric.unit}</span></p></div>)}
     </div>
     <DisciplineSession key={date} date={date} existing={getJournal(date)} trades={trades.filter(trade => trade.endDate?.slice(0, 10) === date)} currency={scope.currency} onDirty={value => { dirty.current = value; }} onSaving={value => { saving.current = value; }} onSave={saveJournal} />
     <DisciplineYearChart hideSummary period={chartPeriod} onPeriodChange={setChartPeriod} journals={journals} selectedDate={date} today={today} onSelectDate={chooseDate} />

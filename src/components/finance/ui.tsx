@@ -1,3 +1,4 @@
+import { AnimatedValue } from '@/components/AnimatedValue';
 import { useId, type ReactNode } from 'react';
 import {
   ArrowDownRight, ArrowUpRight, Banknote, Briefcase, Car, CandlestickChart, GraduationCap, Gamepad2, HeartPulse,
@@ -74,7 +75,7 @@ export function Stat({ label, value, color, percent }: { label: string; value: s
         <path d="M 10 60 A 50 50 0 0 1 110 60" fill="none" stroke="hsl(var(--secondary))" strokeWidth="9" strokeLinecap="round" />
         <path d="M 10 60 A 50 50 0 0 1 110 60" fill="none" stroke="hsl(var(--primary))" strokeWidth="9" strokeLinecap="round" pathLength="100" strokeDasharray={`${Math.max(0,Math.min(100,percent))} 100`} visibility={percent > 0 ? 'visible' : 'hidden'} />
       </svg>}
-      <p className="dashboard-metric-value" style={percent === undefined ? { color } : undefined}>{value}</p>
+      <p className="dashboard-metric-value" style={percent === undefined ? { color } : undefined}><AnimatedValue value={value} /></p>
     </div>
   </div>;
 }

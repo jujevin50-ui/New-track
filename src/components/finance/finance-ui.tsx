@@ -1,3 +1,4 @@
+import { AnimatedValue } from '@/components/AnimatedValue';
 import type { ReactNode } from 'react';
 import {
   ArrowDownRight, ArrowUpRight, Banknote, Briefcase, Car, CandlestickChart, GraduationCap, Gamepad2, HeartPulse,
@@ -74,7 +75,7 @@ export function Stat({ label, value, icon, color, hint, children }: { label: str
         <Tile color={color} size="sm">{icon}</Tile>
         <span className="text-[13px] text-muted-foreground">{label}</span>
       </div>
-      <p className="font-mono text-[26px] leading-none font-semibold tracking-tight mt-4">{value}</p>
+      <p className="font-mono text-[26px] leading-none font-semibold tracking-tight mt-4"><AnimatedValue value={value} /></p>
       {hint && <p className="text-xs text-muted-foreground mt-2">{hint}</p>}
       {children}
     </div>

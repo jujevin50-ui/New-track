@@ -1,3 +1,4 @@
+import { AnimatedValue } from '@/components/AnimatedValue';
 import { usePagePreference, oneOf } from '@/hooks/usePagePreference';
 import { periodPerformance } from '@/lib/periodPerformance';
 import PeriodPerformanceList from '@/components/trading/PeriodPerformanceList';
@@ -107,7 +108,7 @@ export default function Dashboard({ activeAccount, accounts, onSelectAccount }: 
             <path d="M 10 60 A 50 50 0 0 1 110 60" fill="none" stroke="hsl(var(--secondary))" strokeWidth="9" strokeLinecap="round" />
             <path d="M 10 60 A 50 50 0 0 1 110 60" fill="none" stroke="hsl(var(--primary))" strokeWidth="9" strokeLinecap="round" pathLength="100" strokeDasharray={`${metric.percent ?? 0} 100`} visibility={metric.percent && metric.percent > 0 ? 'visible' : 'hidden'} />
           </svg>}
-          <p className={`dashboard-metric-value ${metric.color ?? ''}`}>{metric.value}</p>
+          <p className={`dashboard-metric-value ${metric.color ?? ''}`}><AnimatedValue value={metric.value} /></p>
         </div>
       </div>)}
     </div>
