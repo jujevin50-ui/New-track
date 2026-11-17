@@ -22,6 +22,7 @@ const NAV_ITEMS = [
   { id: 'trades',         title: 'Trades',           url: '/trades',         icon: List },
   { id: 'weekly-report',  title: 'Weekly Report',    url: '/weekly-report',  icon: ClipboardList },
   { id: 'ai-assistant',   title: 'AI Assistant',     url: '/ai-assistant',   icon: Sparkles },
+  { id: 'notes', title: 'Notes', url: '/notes', icon: ClipboardList },
   { id: 'accounts',       title: 'Accounts',         url: '/accounts',       icon: Wallet },
 ];
 

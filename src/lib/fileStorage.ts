@@ -63,6 +63,7 @@ export async function requestPermission(handle: FileSystemFileHandle): Promise<b
 
 export interface AppData {
   version: number;
+  notes: import('@/types/note').Note[];
   strategyDocuments: StrategyDocument[];
   accounts: any[];
   trades: any[];
@@ -93,6 +94,7 @@ export interface AppData {
 
 export const DEFAULT_DATA: AppData = {
   version: 1,
+  notes: [],
   strategyDocuments: [],
   accounts: [],
   trades: [],

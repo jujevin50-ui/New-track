@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { id: 'discipline', title: 'Discipline', url: '/discipline', Icon: Target },
   { id: 'reports', title: 'Reports', url: '/reports', Icon: BarChart3 },
   { id: 'ai-assistant', title: 'AI Assistant', url: '/ai-assistant', Icon: Sparkles },
+  { id: 'notes', title: 'Notes', url: '/notes', Icon: BookOpen },
   { id: 'strategy', title: 'Stratégie', url: '/strategy', Icon: BookOpen },
   { id: 'payout', title: 'Payout', url: '/payout', Icon: Banknote },
   { id: 'accounts', title: 'Accounts', url: '/accounts', Icon: Wallet },
