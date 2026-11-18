@@ -15,14 +15,14 @@
   --ui-ease-enter: cubic-bezier(.22,1,.36,1);
   --ui-ease-exit: cubic-bezier(.4,0,1,1);
 }
-.ui-button, .objective-template {
+.ui-button {
   min-height: var(--ui-control);
   touch-action: manipulation;
   transition: transform var(--ui-duration-fast) var(--ui-ease-enter),
     background-color var(--ui-duration-fast) ease, color var(--ui-duration-fast) ease, border-color var(--ui-duration-fast) ease;
 }
 .ui-button:active:not(:disabled):not([aria-disabled=true]),
-.objective-template:active, .dashboard-switch button:active:not(:disabled),
+.dashboard-switch button:active:not(:disabled),
 .ui-tab-trigger:active:not(:disabled), .page-segments > button:active:not(:disabled) { transform: scale(.97); }
 .ui-button[aria-busy=true] { cursor: progress; }
 .ui-button[data-feedback=success] {
@@ -30,9 +30,9 @@
   border-color: transparent;
   color: hsl(var(--background));
   opacity: 1;
-  animation: ui-save-pulse 520ms var(--ui-ease-enter);
+  animation: ui-save-pulse var(--ui-duration-normal) var(--ui-ease-enter);
 }
-.ui-save-check { animation: ui-confirm-check 320ms var(--ui-ease-enter); }
+.ui-save-check { animation: ui-confirm-check var(--ui-duration-fast) var(--ui-ease-enter); }
 .ui-checkbox[data-state=checked] svg { animation: ui-confirm-check 220ms var(--ui-ease-enter); }
 @keyframes ui-save-pulse {
   from { box-shadow: 0 0 0 0 hsl(var(--profit) / .48); }
@@ -110,7 +110,7 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
   .ui-button:active:not(:disabled):not([aria-disabled=true]),
-  .objective-template:active, .dashboard-switch button:active:not(:disabled),
+  .dashboard-switch button:active:not(:disabled),
   .ui-tab-trigger:active:not(:disabled), .page-segments > button:active:not(:disabled) { transform: none; }
   .ui-button[data-feedback=success], .ui-save-check, .ui-checkbox[data-state=checked] svg,
   .objective-card, .objective-card .ui-progress-indicator, .toaster [data-type=success] [data-icon], .ui-tab-panel[data-state=active] { animation: none; }

@@ -25,7 +25,7 @@ export function useSaveConfirmation() {
     timer.current = window.setTimeout(() => {
       setSaved(false);
       after?.();
-    }, 650);
+    }, 220);
   };
 
   return { saved, confirm, reset };

@@ -16,12 +16,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const metricIcons = { reviews: ClipboardCheck, missions: ListChecks, plan: Crosshair, manual: Target };
-const templates = [
-  { metric: 'reviews', title: 'Tenir mon journal', target: 5, days: 7 },
-  { metric: 'missions', title: 'Renforcer ma discipline', target: 20, days: 7 },
-  { metric: 'plan', title: 'Respecter mon plan', target: 5, days: 30 },
-] as const;
-
 const statuses = { active: 'En cours', upcoming: 'À venir', achieved: 'Atteints', expired: 'Échus' };
 const statusOrder = { active: 0, upcoming: 1, achieved: 2, expired: 3 };
 const statusLabel = { ...statuses, achieved: 'Atteint', expired: 'Échu' };
@@ -49,11 +43,11 @@ export default function Objectives() {
   entries.forEach(({ status }) => { counts[status]++; });
   const visible = entries.filter(entry => filter === 'all' || entry.status === filter);
 
-  const openEditor = (objective?: Objective, template?: (typeof templates)[number]) => {
+  const openEditor = (objective?: Objective) => {
     setError('');
     setDraft(objective ? { ...objective, target: String(objective.target), manualProgress: String(objective.manualProgress) } : {
-      id: '', title: template?.title ?? '', note: '', metric: template?.metric ?? 'manual',
-      start: today, end: shiftDay(today, (template?.days ?? 7) - 1), target: String(template?.target ?? 1), manualProgress: '0',
+      id: '', title: '', note: '', metric: 'manual',
+      start: today, end: shiftDay(today, 6), target: '1', manualProgress: '0',
     });
   };
 
@@ -119,25 +113,6 @@ export default function Objectives() {
         </div>
       )}
 
-      <section aria-labelledby="objective-models">
-        <h2 id="objective-models" className="mb-3 text-sm font-semibold">Partir d’un modèle</h2>
-        <div className="grid gap-2 sm:grid-cols-3">
-          {templates.map(template => {
-            const Icon = metricIcons[template.metric];
-            return (
-              <button key={template.metric} type="button" className="objective-template flex items-center gap-3 rounded-xl bg-secondary/35 p-4 text-left hover:bg-secondary/70" onClick={() => openEditor(undefined, template)}>
-                <Icon className="size-5 shrink-0 text-primary" aria-hidden="true" />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold">{template.title}</span>
-                  <span className="mt-1 block text-xs text-muted-foreground">{template.target} {OBJECTIVE_METRICS[template.metric].unit} en {template.days} jours</span>
-                </span>
-                <Plus className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
       <section aria-labelledby="my-objectives" className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 id="my-objectives" className="text-lg font-semibold tracking-tight">Mes objectifs</h2>
@@ -155,7 +130,7 @@ export default function Objectives() {
         {visible.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border px-5 py-12 text-center">
             <Target aria-hidden="true" className="mx-auto mb-3 size-7 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">{entries.length ? 'Aucun objectif dans cette vue.' : 'Choisis un modèle ou crée ton premier objectif.'}</p>
+            <p className="text-sm text-muted-foreground">{entries.length ? 'Aucun objectif dans cette vue.' : 'Aucun objectif pour le moment.'}</p>
           </div>
         ) : (
           <div className="grid gap-3 min-[1250px]:grid-cols-2">
