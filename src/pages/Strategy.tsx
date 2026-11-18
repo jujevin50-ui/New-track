@@ -5,6 +5,7 @@ import type { Account } from '@/types/account';
 import { useEffect, useRef, useState, lazy, Suspense } from 'react';
 import { BookOpen, Download, FileText, Loader2, Plus, Trash2 } from 'lucide-react';
 import { useData } from '@/contexts/DataContext';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { htmlFrame } from '@/lib/htmlDocument';
 import { importStrategyDocument, documentBuffer, wordPreview, wordFrame, PDF_MIN_ZOOM, PDF_MAX_ZOOM, type StrategyDocument } from '@/lib/strategyDocuments';
@@ -55,6 +56,7 @@ export default function Strategy({ accounts, activeAccountId, onSelectAccount }:
       const document = await importStrategyDocument(file);
       await addRow('strategyDocuments', {...document, ...(activeAccountId && activeAccountId !== 'all' ? {accountId:activeAccountId} : {})});
       setKind('all'); setQuery(''); setSelectedId(document.id);
+      toast.success('Document importé');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Impossible d’enregistrer le document.');
     } finally { setBusy(false); }

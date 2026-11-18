@@ -1,4 +1,5 @@
 import { readFormDraft, saveFormDraft, removeFormDraft } from '@/lib/formDrafts';
+import { useSaveConfirmation } from '@/hooks/useSaveConfirmation';
 import { useState, useEffect, useCallback, useId, useRef } from 'react';
 import { Trade, TradeFormData, PAIRS, EXIT_TYPES, ExitType, SetupQuality } from '@/types/trade';
 import { Account } from '@/types/account';
@@ -145,7 +146,7 @@ const AddTradeDialog = ({ open, onOpenChange, onSubmit, editTrade, accounts, act
   const draftReady = useRef(false);
   const draftCompleted = useRef(false);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const { saved, confirm, reset: resetConfirmation } = useSaveConfirmation();
   const [formError, setFormError] = useState('');
   const [imageError, setImageError] = useState('');
   const [pastingImage, setPastingImage] = useState(false);
@@ -174,9 +175,9 @@ const AddTradeDialog = ({ open, onOpenChange, onSubmit, editTrade, accounts, act
     setPastingImage(false);
     setPreviewIndex(null);
     draftReady.current = false;
+    resetConfirmation();
     if (!open) return;
     draftCompleted.current = false;
-    setSaved(false);
     setFormError('');
     setImageError('');
     const recovered = readFormDraft(draftKey,isTradeDraft);
@@ -200,18 +201,12 @@ const AddTradeDialog = ({ open, onOpenChange, onSubmit, editTrade, accounts, act
     }
     // Restoration must commit before the draft can be saved again.
     queueMicrotask(()=>{ draftReady.current = true; });
-  }, [editTrade, open, defaultAccountId, draftKey]);
+  }, [editTrade, open, defaultAccountId, draftKey, resetConfirmation]);
 
   useEffect(() => {
     if (!open || !draftReady.current || draftCompleted.current) return;
     saveFormDraft(draftKey,{form,resultText,commissionText,swapText,riskText,feesOpen} satisfies TradeDraft);
   }, [open,editTrade,draftKey,form,resultText,commissionText,swapText,riskText,feesOpen]);
-
-  useEffect(() => {
-    if (!open || !saved) return;
-    const timer = window.setTimeout(() => onOpenChange(false), 650);
-    return () => window.clearTimeout(timer);
-  }, [open, saved, onOpenChange]);
 
   const set = <K extends keyof TradeFormData>(field: K, value: TradeFormData[K]) => {
     setFormError('');
@@ -491,7 +486,7 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
       await onSubmit(form);
       draftCompleted.current = true;
       removeFormDraft(draftKey);
-      setSaved(true);
+      confirm(() => onOpenChange(false));
     } catch (error) {
       setFormError(error instanceof Error ? error.message : 'Impossible d’enregistrer le trade.');
     } finally {
@@ -512,7 +507,7 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
 
   return (
     <>
-      <Dialog open={open} onOpenChange={value => { if (!saving) onOpenChange(value); }}>
+      <Dialog open={open} onOpenChange={value => { if (!saving && !saved) onOpenChange(value); }}>
         <DialogContent aria-describedby={undefined} className="trade-editor flex h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] max-w-[1760px] sm:h-[94dvh] sm:w-[96vw] flex-col gap-0 overflow-hidden rounded-3xl border-border/60 bg-card p-0 sm:rounded-3xl">
           <DialogHeader className="flex-row items-center justify-between gap-2 space-y-0 border-b border-border/60 px-5 py-5 !pr-14 text-left sm:px-7">
             <DialogTitle className="text-xl tracking-tight">{editTrade ? 'Modifier le trade' : 'Nouveau trade'}</DialogTitle>
@@ -640,8 +635,7 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
             </div>
             <footer className="ui-form-footer flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-border/60 bg-background/80 px-5 py-4 sm:px-7">
               {formError && <p role="alert" className="w-full text-sm text-loss">{formError}</p>}
-              <Button type="submit" disabled={saving || saved || pastingImage || !accounts.length} className={`gap-2 rounded-xl px-5 ${saved ? 'trade-save-success' : ''}`}>
-                {saving ? <Loader2 aria-hidden="true" className="size-4 animate-spin" /> : saved ? <Check aria-hidden="true" className="size-4" /> : null}
+              <Button type="submit" loading={saving} saved={saved} disabled={saved || pastingImage || !accounts.length} className="gap-2 rounded-xl px-5">
                 {saved ? 'Enregistré' : 'Enregistrer'}
               </Button>
               <span aria-live="polite" className="sr-only">{saved ? 'Trade enregistré.' : ''}</span>

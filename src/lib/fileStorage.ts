@@ -1,5 +1,6 @@
 import type { FinanceAssetProfile } from './financeAssets';
 import type { StrategyDocument } from './strategyDocuments';
+import type { Objective } from './objectives';
 
 const DB_NAME = 'tr7upfx-fs';
 const STORE = 'handles';
@@ -65,6 +66,7 @@ export interface AppData {
   version: number;
   notes: import('@/types/note').Note[];
   strategyDocuments: StrategyDocument[];
+  objectives: Objective[];
   accounts: any[];
   trades: any[];
   pendingOrders: any[];
@@ -96,6 +98,7 @@ export const DEFAULT_DATA: AppData = {
   version: 1,
   notes: [],
   strategyDocuments: [],
+  objectives: [],
   accounts: [],
   trades: [],
   pendingOrders: [],

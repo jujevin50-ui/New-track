@@ -839,20 +839,8 @@ html [role="dialog"].trade-editor {
   }
 }
 
-.trade-editor button.trade-save-success:disabled {
-  background: hsl(var(--profit));
-  color: hsl(var(--background));
-  opacity: 1;
-}
-
 @media (prefers-reduced-motion: no-preference) {
   .trade-editor .trade-image-tools { transition: opacity 140ms ease; }
-  .trade-editor .trade-save-success { animation: trade-saved 480ms ease-out; }
-}
-
-@keyframes trade-saved {
-  0% { box-shadow: 0 0 0 0 hsl(var(--profit) / .48); }
-  100% { box-shadow: 0 0 0 10px hsl(var(--profit) / 0); }
 }
 
 @media (prefers-reduced-transparency: reduce) {
@@ -1308,7 +1296,7 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 .reports-period-item[aria-pressed=true] { background: hsl(var(--primary) / 0.09); box-shadow: inset 3px 0 hsl(var(--primary)); }
 .reports-period-item:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: -2px; }
 .reports-page .report-paper { padding-top: 0 !important; border: 0; box-shadow: none; }
-.reports-page .report-paper > div { padding: 0 0 28px; }
+.reports-page .report-paper > :is(div, fieldset) { padding: 0 0 28px; }
 .reports-page .report-paper :is(.rounded-xl,.rounded-2xl) { background: transparent; border-color: transparent; box-shadow: none; }
 .reports-page .report-paper :is(input,textarea) { background: transparent; border-color: hsl(var(--border)); border-radius: 10px; }
 .reports-page .report-paper .font-mono { font-family: inherit; font-variant-numeric: tabular-nums; }

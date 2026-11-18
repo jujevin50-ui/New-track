@@ -7,9 +7,9 @@ export const useAiSettings = () => {
 
   const setApiKey = useCallback((key: string) => {
     const trimmed = key.trim();
-    setApiKeyState(trimmed);
     if (trimmed) localStorage.setItem(GEMINI_KEY_STORAGE, trimmed);
     else localStorage.removeItem(GEMINI_KEY_STORAGE);
+    setApiKeyState(trimmed);
   }, []);
 
   return { apiKey, setApiKey };

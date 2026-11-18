@@ -6,6 +6,7 @@ import { accountScope } from '@/lib/accountScope';
 import { useState, useRef, useEffect, useMemo, KeyboardEvent, MouseEvent } from 'react';
 import { useTrades } from '@/hooks/useTrades';
 import { useAiSettings } from '@/hooks/useAiSettings';
+import { useSaveConfirmation } from '@/hooks/useSaveConfirmation';
 import { useAiConversations, ChatMessage, AiConversation } from '@/hooks/useAiConversations';
 import { Account } from '@/types/account';
 import { generateAssistantResponse, buildDataContext } from '@/lib/localAssistant';
@@ -67,6 +68,8 @@ export default function AiAssistant({ activeAccount, accounts, onSelectAccount }
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const { saved: keySaved, confirm: confirmKey } = useSaveConfirmation();
+  const [keyError, setKeyError] = useState('');
   const [keyInput, setKeyInput] = useState(apiKey);
   const bottomRef = useRef<HTMLDivElement>(null);
   const prevScope = useRef(scopeKey);
@@ -149,12 +152,19 @@ export default function AiAssistant({ activeAccount, accounts, onSelectAccount }
 
   const openSettings = () => {
     setKeyInput(apiKey);
+    setKeyError('');
     setSettingsOpen(true);
   };
 
   const saveKey = () => {
-    setApiKey(keyInput);
-    setSettingsOpen(false);
+    if (keySaved || !keyInput.trim()) return;
+    setKeyError('');
+    try {
+      setApiKey(keyInput);
+      confirmKey(() => setSettingsOpen(false));
+    } catch {
+      setKeyError('Impossible d’enregistrer la clé dans ce navigateur.');
+    }
   };
 
   const newConversation = () => {
@@ -198,7 +208,7 @@ export default function AiAssistant({ activeAccount, accounts, onSelectAccount }
         </section>
       </div>
 
-      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+      <Dialog open={settingsOpen} onOpenChange={open => { if (!keySaved) setSettingsOpen(open); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Configurer l'IA (Google Gemini)</DialogTitle>
@@ -214,18 +224,23 @@ export default function AiAssistant({ activeAccount, accounts, onSelectAccount }
             <Input
               type="password"
               value={keyInput}
+              disabled={keySaved}
               onChange={e => setKeyInput(e.target.value)}
               placeholder="AIza..."
               autoComplete="off"
             />
+            {keyError && <p role="alert" className="text-sm text-loss">{keyError}</p>}
             <div className="flex justify-end gap-2">
               {apiKey && (
-                <Button variant="outline" onClick={() => { setApiKey(''); setKeyInput(''); setSettingsOpen(false); }}>
+                <Button variant="outline" disabled={keySaved} onClick={() => {
+                  try { setApiKey(''); setKeyInput(''); setSettingsOpen(false); }
+                  catch { setKeyError('Impossible de supprimer la clé dans ce navigateur.'); }
+                }}>
                   Supprimer la clé
                 </Button>
               )}
-              <Button onClick={saveKey} disabled={!keyInput.trim()}>
-                Enregistrer
+              <Button onClick={saveKey} saved={keySaved} disabled={keySaved || !keyInput.trim()}>
+                {keySaved ? 'Enregistré' : 'Enregistrer'}
               </Button>
             </div>
           </div>

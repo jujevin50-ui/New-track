@@ -1,3 +1,4 @@
+import { useSaveConfirmation } from '@/hooks/useSaveConfirmation';
 import { usePagePreference } from '@/hooks/usePagePreference';
 import DashboardFilter from '@/components/trading/DashboardFilter';
 import { Fragment, useEffect, useMemo, useState } from 'react';
@@ -139,6 +140,9 @@ export function StatementsView({ accounts, statements, initialAccountId, selecte
   const [draft, setDraft] = useState<Draft | null>(null);
   const [expanded, setExpanded] = usePagePreference<string|null>('finance.statements.expanded',null,value=>value===null||typeof value==='string');
   const [saving, setSaving] = useState(false);
+  const [savingInitial, setSavingInitial] = useState(false);
+  const statementConfirmation = useSaveConfirmation();
+  const initialConfirmation = useSaveConfirmation();
 
   const orderedAccounts = useMemo(() => {
     const rank = (a: AccountLite) => (byAccount[a.id]?.length ? 0 : INVEST_TYPES.includes(a.type) ? 1 : 2);
@@ -333,17 +337,32 @@ export function StatementsView({ accounts, statements, initialAccountId, selecte
     setInitialOpen(true);
   };
   const saveInitial = async () => {
+    if (savingInitial || initialConfirmation.saved) return;
     const capital = num(initialForm.capital);
     if (!(capital > 0)) return toast.error('Indique un capital initial supérieur à 0.');
     if (!initialForm.date) return toast.error('Indique la date du dépôt.');
-    await onSetInitial(selected, round2(capital), initialForm.date);
-    setInitialOpen(false);
-    toast.success('Capital initial enregistré');
+    setSavingInitial(true);
+    try {
+      await onSetInitial(selected, round2(capital), initialForm.date);
+      initialConfirmation.confirm(() => setInitialOpen(false));
+    } catch {
+      toast.error('Impossible d’enregistrer le capital initial.');
+    } finally {
+      setSavingInitial(false);
+    }
   };
   const clearInitial = async () => {
-    await onSetInitial(selected, null, null);
-    setInitialOpen(false);
-    toast.success('Capital initial supprimé');
+    if (savingInitial || initialConfirmation.saved) return;
+    setSavingInitial(true);
+    try {
+      await onSetInitial(selected, null, null);
+      setInitialOpen(false);
+      toast.success('Capital initial supprimé');
+    } catch {
+      toast.error('Impossible de supprimer le capital initial.');
+    } finally {
+      setSavingInitial(false);
+    }
   };
 
   /* ── Édition ── */
@@ -408,7 +427,7 @@ export function StatementsView({ accounts, statements, initialAccountId, selecte
   }, [draft]);
 
   const submit = async () => {
-    if (!draft) return;
+    if (!draft || saving || statementConfirmation.saved) return;
     if (!draft.accountId) return toast.error('Choisis un compte.');
     if (!draft.date) return toast.error('Indique la date du relevé.');
     const rows = draft.holdings.filter(h => h.name.trim() || hasNum(h.value));
@@ -435,9 +454,10 @@ export function StatementsView({ accounts, statements, initialAccountId, selecte
     setSaving(true);
     try {
       await onSave(statement, editing, draft.applyBalance);
-      setSelectedRaw(draft.accountId);
-      setOpen(false);
-      toast.success(editing ? 'Relevé modifié' : 'Relevé enregistré');
+      statementConfirmation.confirm(() => {
+        setSelectedRaw(draft.accountId);
+        setOpen(false);
+      });
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Impossible d’enregistrer le relevé.'); } finally { setSaving(false); }
   };
 
@@ -676,10 +696,10 @@ export function StatementsView({ accounts, statements, initialAccountId, selecte
       )}
 
       {/* ───── Dialog capital initial ───── */}
-      <Dialog open={initialOpen} onOpenChange={setInitialOpen}>
+      <Dialog open={initialOpen} onOpenChange={value => { if (!savingInitial && !initialConfirmation.saved) setInitialOpen(value); }}>
         <DialogContent className="bg-card border-border sm:max-w-md">
           <DialogHeader><DialogTitle>Capital initial — {selected !== 'all' ? accountName(selected) : ''}</DialogTitle></DialogHeader>
-          <div className="space-y-4">
+          <fieldset disabled={savingInitial || initialConfirmation.saved} className="min-w-0 space-y-4">
             <p className="text-xs text-muted-foreground">Indique la somme déposée au départ et la date du dépôt. L’évolution du compte sera calculée à partir de ce point.</p>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Capital initial (€)</Label><Input inputMode="decimal" placeholder="Ex : 10 000" value={initialForm.capital} onChange={e => setInitialForm(f => ({ ...f, capital: e.target.value }))} /></div>
@@ -687,18 +707,18 @@ export function StatementsView({ accounts, statements, initialAccountId, selecte
             </div>
             <div className="flex items-center justify-between gap-2">
               {initial ? <Button variant="outline" className="text-loss" onClick={clearInitial}>Supprimer</Button> : <span />}
-              <div className="flex gap-2"><Button variant="outline" onClick={() => setInitialOpen(false)}>Annuler</Button><Button onClick={saveInitial}>Enregistrer</Button></div>
+              <div className="flex gap-2"><Button variant="outline" onClick={() => setInitialOpen(false)}>Annuler</Button><Button onClick={saveInitial} loading={savingInitial} saved={initialConfirmation.saved}>{initialConfirmation.saved ? 'Enregistré' : 'Enregistrer'}</Button></div>
             </div>
-          </div>
+          </fieldset>
         </DialogContent>
       </Dialog>
 
       {/* ───── Dialog relevé ───── */}
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={value => { if (!saving && !statementConfirmation.saved) setOpen(value); }}>
         <DialogContent className="bg-card border-border sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editing ? 'Modifier le relevé' : 'Nouveau relevé'}</DialogTitle></DialogHeader>
           {draft && (
-            <div className="space-y-4">
+            <fieldset disabled={saving || statementConfirmation.saved} className="min-w-0 space-y-4">
               <div className="grid sm:grid-cols-3 gap-3">
                 <div>
                   <Label>Compte</Label>
@@ -762,9 +782,9 @@ export function StatementsView({ accounts, statements, initialAccountId, selecte
 
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
-                <Button onClick={submit} disabled={saving}>{editing ? 'Enregistrer' : 'Ajouter le relevé'}</Button>
+                <Button onClick={submit} loading={saving} saved={statementConfirmation.saved}>{statementConfirmation.saved ? 'Enregistré' : editing ? 'Enregistrer' : 'Ajouter le relevé'}</Button>
               </div>
-            </div>
+            </fieldset>
           )}
         </DialogContent>
       </Dialog>

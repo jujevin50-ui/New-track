@@ -1,3 +1,4 @@
+import { useSaveConfirmation } from '@/hooks/useSaveConfirmation';
 import { usePagePreference, oneOf } from '@/hooks/usePagePreference';
 import { useDialogDraft } from '@/hooks/useDialogDraft';
 import { FormField } from '@/components/ui/form-field';
@@ -69,6 +70,7 @@ export default function Finance() {
   const [financeBusy,setFinanceBusy] = useState(false);
   const [financeError,setFinanceError] = useState('');
   const financeLock = useRef(false);
+  const { saved: financeSaved, confirm: confirmFinance } = useSaveConfirmation();
   const [transferOpen, setTransferOpen] = useState(false);
   const [tx, setTx] = useState<FinanceTransaction>({ ...emptyTx });
   const [editingAccount, setEditingAccount] = useState<FinanceAccount | null>(null);
@@ -153,33 +155,29 @@ export default function Finance() {
   const accountName = (accountId: string) => accounts.find(a => a.id === accountId)?.name || 'Compte supprimé';
 
   const saveTx = async () => {
-    if (!tx.description || !tx.accountId || tx.amount <= 0) return toast.error('Complète la description, le compte et le montant.');
     const row = { ...tx, id: tx.id || id('tx'), amount: Math.abs(Number(tx.amount)) };
     if (tx.id) await updateRow('financeTransactions', tx.id, row); else await addRow('financeTransactions', row);
-    setTxOpen(false); setTx({ ...emptyTx, accountId: selectedAccount !== 'all' ? selectedAccount : accounts[0]?.id || '' }); toast.success('Transaction enregistrée');
+    return () => { setTxOpen(false); setTx({ ...emptyTx, accountId: selectedAccount !== 'all' ? selectedAccount : accounts[0]?.id || '' }); toast.success('Transaction enregistrée'); };
   };
 
   const saveAccount = async () => {
-    if (!accountForm.name) return toast.error('Donne un nom au compte.');
     const txNet = editingAccount ? transactions.filter(t => t.accountId === editingAccount.id).reduce((sum, t) => sum + (t.type === 'income' ? Number(t.amount) : -Number(t.amount)), 0) : 0;
     const transferNet = editingAccount ? transfers.reduce((sum, t) => sum + (t.toAccountId === editingAccount.id ? Number(t.amount) : t.fromAccountId === editingAccount.id ? -Number(t.amount) : 0), 0) : 0;
     const openingBalance = editingAccount ? Number(accountForm.balance) - txNet - transferNet : Number(accountForm.balance);
     const row = { ...accountForm, id: accountForm.id || id('acc'), balance: Number(accountForm.balance), openingBalance };
     if (editingAccount) await updateRow('financeAccounts', editingAccount.id, row); else await addRow('financeAccounts', row);
-    setAccountOpen(false); setEditingAccount(null); toast.success('Compte enregistré');
+    return () => { setAccountOpen(false); setEditingAccount(null); toast.success('Compte enregistré'); };
   };
 
   const saveSub = async () => {
-    if (!subForm.name || !subForm.accountId || subForm.amount <= 0) return toast.error('Complète les informations de l’abonnement.');
     const row = { ...subForm, id: subForm.id || id('sub'), amount: Math.abs(Number(subForm.amount)) };
     if (subForm.id) await updateRow('financeSubscriptions', subForm.id, row); else await addRow('financeSubscriptions', row);
-    setSubOpen(false); setSubForm({ ...subForm, id: '', name: '', amount: 0 }); toast.success('Abonnement enregistré');
+    return () => { setSubOpen(false); setSubForm({ ...subForm, id: '', name: '', amount: 0 }); toast.success('Abonnement enregistré'); };
   };
 
   const saveTransfer = async () => {
-    if (!transferForm.fromAccountId || !transferForm.toAccountId || transferForm.fromAccountId === transferForm.toAccountId || transferForm.amount <= 0) return toast.error('Choisis deux comptes différents et un montant valide.');
     await addRow('financeTransfers', { ...transferForm, id: id('trf'), amount: Math.abs(Number(transferForm.amount)) });
-    setTransferOpen(false); toast.success('Virement enregistré');
+    return () => { setTransferOpen(false); toast.success('Virement enregistré'); };
   };
 
   const saveStatement = async (statement: FinanceStatement, isEdit: boolean, applyBalance: boolean) => {
@@ -208,8 +206,8 @@ export default function Finance() {
     transfer: { from: !transferForm.fromAccountId ? 'Choisis le compte source.' : '', to: !transferForm.toAccountId ? 'Choisis le compte destination.' : transferForm.toAccountId === transferForm.fromAccountId ? 'Choisis un compte différent de la source.' : '', amount: !(transferForm.amount > 0) ? 'Indique un montant supérieur à zéro.' : '' },
   };
   const fieldError = (kind: keyof typeof financeErrors, key: string) => financeAttempt === kind ? (financeErrors[kind] as Record<string,string>)[key] : undefined;
-  const submitFinance = async (event: FormEvent<HTMLFormElement>, kind: keyof typeof financeErrors, action: () => Promise<unknown>) => {
-    event.preventDefault(); if (financeLock.current) return;
+  const submitFinance = async (event: FormEvent<HTMLFormElement>, kind: keyof typeof financeErrors, action: () => Promise<() => void>) => {
+    event.preventDefault(); if (financeLock.current || financeSaved) return;
     setFinanceAttempt(kind); setFinanceError('');
     if (Object.values(financeErrors[kind]).some(Boolean)) {
       const form = event.currentTarget;
@@ -217,12 +215,17 @@ export default function Finance() {
       return;
     }
     financeLock.current=true; setFinanceBusy(true);
-    try { await action(); ({tx:txDraft,account:accountDraft,sub:subDraft,transfer:transferDraft}[kind]).clear(); setFinanceAttempt(''); }
+    try {
+      const closeSavedForm = await action();
+      ({ tx: txDraft, account: accountDraft, sub: subDraft, transfer: transferDraft }[kind]).clear();
+      setFinanceAttempt('');
+      confirmFinance(closeSavedForm);
+    }
     catch (error) { setFinanceError(error instanceof Error ? error.message : 'L’enregistrement a échoué. La saisie est conservée ; réessaie.'); }
     finally { financeLock.current=false; setFinanceBusy(false); }
   };
   const closeFinance = (setter: (open:boolean)=>void, value:boolean) => {
-    if (financeLock.current) return;
+    if (financeLock.current || financeSaved) return;
     setter(value); setFinanceError(''); setFinanceAttempt('');
   };
 
@@ -354,7 +357,7 @@ export default function Finance() {
       <Dialog open={txOpen} onOpenChange={value=>closeFinance(setTxOpen,value)}>
         <DialogContent className="finance-editor bg-background sm:max-w-xl" aria-describedby={undefined}>
           <DialogHeader><DialogTitle>{tx.id ? 'Modifier la transaction' : 'Nouvelle transaction'}</DialogTitle></DialogHeader>
-          <FinanceForm draftStatus={txDraft.status} busy={financeBusy} error={financeError} onSubmit={event=>submitFinance(event,'tx',saveTx)}>
+          <FinanceForm draftStatus={txDraft.status} busy={financeBusy} saved={financeSaved} error={financeError} onSubmit={event=>submitFinance(event,'tx',saveTx)}>
             <div className="dashboard-switch w-full" role="group" aria-label="Nature de l’opération">
               <button type="button" aria-pressed={tx.type==='expense'} onClick={()=>setTx(x=>({...x,type:'expense',category:'Autre'}))}>Dépense</button>
               <button type="button" aria-pressed={tx.type==='income'} onClick={()=>setTx(x=>({...x,type:'income',category:'Autre'}))}>Revenu</button>
@@ -376,7 +379,7 @@ export default function Finance() {
       <Dialog open={accountOpen} onOpenChange={value=>closeFinance(setAccountOpen,value)}>
         <DialogContent className="finance-editor bg-background sm:max-w-xl" aria-describedby={undefined}>
           <DialogHeader><DialogTitle>{editingAccount?'Modifier le compte':'Nouveau compte'}</DialogTitle></DialogHeader>
-          <FinanceForm draftStatus={accountDraft.status} busy={financeBusy} error={financeError} onSubmit={event=>submitFinance(event,'account',saveAccount)}>
+          <FinanceForm draftStatus={accountDraft.status} busy={financeBusy} saved={financeSaved} error={financeError} onSubmit={event=>submitFinance(event,'account',saveAccount)}>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField label="Nom" required error={fieldError('account','name')}>{field=><Input {...field} value={accountForm.name} onChange={event=>setAccountForm(x=>({...x,name:event.target.value}))} placeholder="Compte courant" />}</FormField>
               <FormField label="Banque / établissement">{field=><Input {...field} value={accountForm.institution} onChange={event=>setAccountForm(x=>({...x,institution:event.target.value}))} placeholder="Boursobank, Fortuneo…" />}</FormField>
@@ -391,7 +394,7 @@ export default function Finance() {
       <Dialog open={subOpen} onOpenChange={value=>closeFinance(setSubOpen,value)}>
         <DialogContent className="finance-editor bg-background sm:max-w-xl" aria-describedby={undefined}>
           <DialogHeader><DialogTitle>{subForm.id?'Modifier l’abonnement':'Nouvel abonnement'}</DialogTitle></DialogHeader>
-          <FinanceForm draftStatus={subDraft.status} busy={financeBusy} error={financeError} onSubmit={event=>submitFinance(event,'sub',saveSub)}>
+          <FinanceForm draftStatus={subDraft.status} busy={financeBusy} saved={financeSaved} error={financeError} onSubmit={event=>submitFinance(event,'sub',saveSub)}>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField label="Nom" required error={fieldError('sub','name')}>{field=><Input {...field} value={subForm.name} onChange={event=>setSubForm(x=>({...x,name:event.target.value}))} placeholder="Netflix, salle, téléphone…" />}</FormField>
               <FormField label="Montant" required error={fieldError('sub','amount')}>{field=><Input {...field} type="number" inputMode="decimal" step="0.01" min="0.01" value={subForm.amount||''} onChange={event=>setSubForm(x=>({...x,amount:Number(event.target.value)}))} />}</FormField>
@@ -406,7 +409,7 @@ export default function Finance() {
       <Dialog open={transferOpen} onOpenChange={value=>closeFinance(setTransferOpen,value)}>
         <DialogContent className="finance-editor bg-background sm:max-w-xl" aria-describedby={undefined}>
           <DialogHeader><DialogTitle>Nouveau virement</DialogTitle></DialogHeader>
-          <FinanceForm draftStatus={transferDraft.status} busy={financeBusy} error={financeError} onSubmit={event=>submitFinance(event,'transfer',saveTransfer)}>
+          <FinanceForm draftStatus={transferDraft.status} busy={financeBusy} saved={financeSaved} error={financeError} onSubmit={event=>submitFinance(event,'transfer',saveTransfer)}>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField label="Compte source" required error={fieldError('transfer','from')}>{field=><Select value={transferForm.fromAccountId} onValueChange={value=>setTransferForm(x=>({...x,fromAccountId:value}))}><SelectTrigger {...field}><SelectValue placeholder="Choisir un compte" /></SelectTrigger><SelectContent className="dashboard-filter-menu-account">{accounts.map(account=><SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>)}</SelectContent></Select>}</FormField>
               <FormField label="Compte destination" required error={fieldError('transfer','to')}>{field=><Select value={transferForm.toAccountId} onValueChange={value=>setTransferForm(x=>({...x,toAccountId:value}))}><SelectTrigger {...field}><SelectValue placeholder="Choisir un compte" /></SelectTrigger><SelectContent className="dashboard-filter-menu-account">{accounts.map(account=><SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>)}</SelectContent></Select>}</FormField>
@@ -426,11 +429,11 @@ export default function Finance() {
   );
 }
 
-function FinanceForm({ children, busy, error, draftStatus, onSubmit }: {children:ReactNode;busy:boolean;error:string;draftStatus:'saved'|'memory'|null;onSubmit:(event:FormEvent<HTMLFormElement>)=>void}) {
+function FinanceForm({ children, busy, saved, error, draftStatus, onSubmit }: {children:ReactNode;busy:boolean;saved:boolean;error:string;draftStatus:'saved'|'memory'|null;onSubmit:(event:FormEvent<HTMLFormElement>)=>void}) {
   return <form noValidate onSubmit={onSubmit} className="space-y-6">
-    <fieldset disabled={busy} className="space-y-5">{children}</fieldset>
+    <fieldset disabled={busy || saved} className="space-y-5">{children}</fieldset>
     {error && <p role="alert" className="ui-field-error">{error}</p>}
-    <div className="ui-form-footer"><p className="ui-draft-status" role="status">{draftStatus==='memory'?'Brouillon en mémoire · gardez cet onglet ouvert.':'Brouillon conservé dans cet onglet.'}</p><Button type="submit" loading={busy} className="w-full sm:w-auto">{busy?'Enregistrement…':'Enregistrer'}</Button></div>
+    <div className="ui-form-footer"><p className="ui-draft-status" role="status">{draftStatus==='memory'?'Brouillon en mémoire · gardez cet onglet ouvert.':'Brouillon conservé dans cet onglet.'}</p><Button type="submit" loading={busy} saved={saved} disabled={saved} className="w-full sm:w-auto">{saved ? 'Enregistré' : 'Enregistrer'}</Button></div>
   </form>;
 }
 

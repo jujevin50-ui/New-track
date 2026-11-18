@@ -1,3 +1,4 @@
+import { useSaveConfirmation } from '@/hooks/useSaveConfirmation';
 import { format } from 'date-fns';
 import { useRef, useState, type FormEvent } from 'react';
 import { BookOpen, Plus, Pencil, Trash2, ChevronLeft, ChevronRight, Download, ZoomIn, ZoomOut, ImagePlus } from 'lucide-react';
@@ -31,13 +32,14 @@ export default function Notes() {
   const [draft, setDraft] = useState<Note | null>(null);
   const [removing, setRemoving] = useState<Note | null>(null);
   const [busy, setBusy] = useState(false);
+  const { saved, confirm } = useSaveConfirmation();
   const [error, setError] = useState('');
   const notes = data.notes.filter(note => `${note.title} ${note.explanations}`.toLocaleLowerCase('fr').includes(query.trim().toLocaleLowerCase('fr'))).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   const report = (cause: unknown) => setError(cause instanceof Error ? cause.message : 'Impossible de sauvegarder la note.');
   const selected = data.notes.find(note => note.id === reading);
   const preview = (images: Note['screenshots'], index: number) => { setZoomed(false); setViewer({ images, index }); };
   const addImages = async (files: File[]) => {
-    if (!files.length || importing.current || busy) return;
+    if (!files.length || importing.current || busy || saved) return;
     importing.current = true; setBusy(true); setError('');
     try {
       const images = await Promise.all(files.map(readScreenshot));
@@ -48,11 +50,11 @@ export default function Notes() {
   const edit = (note: Note) => { setReading(null); setError(''); setDraft({ ...note, screenshots: [...note.screenshots] }); };
   const save = async (event: FormEvent) => {
     event.preventDefault();
-    if (!draft || !draft.title.trim() || busy) return;
+    if (!draft || !draft.title.trim() || busy || saved) return;
     setBusy(true); setError('');
     try {
       await upsertRow('notes', { ...draft, title: draft.title.trim(), updatedAt: new Date().toISOString() }, 'id');
-      setDraft(null);
+      confirm(() => setDraft(null));
     } catch (cause) { report(cause); }
     finally { setBusy(false); }
   };
@@ -72,28 +74,28 @@ export default function Notes() {
         <div className="mt-4 flex flex-wrap gap-2"><Button variant="ghost" size="sm" onClick={() => setReading(note.id)}>Lire</Button><Button variant="outline" size="sm" className="gap-2" onClick={() => edit(note)}><Pencil className="h-4 w-4" />Modifier</Button><Button variant="ghost" size="sm" className="gap-2 text-destructive" onClick={() => { setError(''); setRemoving(note); }}><Trash2 className="h-4 w-4" />Supprimer</Button></div>
       </article>)}
     </div>}
-    <Dialog open={!!draft} onOpenChange={open => { if (!open && !busy) setDraft(null); }}>
+    <Dialog open={!!draft} onOpenChange={open => { if (!open && !busy && !saved) setDraft(null); }}>
       <DialogContent className="max-h-[94dvh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader><DialogTitle>{data.notes.some(note => note.id === draft?.id) ? 'Modifier la note' : 'Nouvelle note'}</DialogTitle><DialogDescription>Écrivez votre note et collez vos captures avec Ctrl+V ou ⌘V. Cliquez sur une image pour l’agrandir.</DialogDescription></DialogHeader>
         {draft && <form onSubmit={save} className="min-w-0 space-y-4" onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); event.currentTarget.requestSubmit(); } }} onPaste={event => {
             const images = Array.from(event.clipboardData.items).filter(item => item.type.startsWith('image/')).map(item => item.getAsFile()).filter((file): file is File => file !== null);
             if (images.length) { event.preventDefault(); void addImages(images); }
           }}>
-          <div><label htmlFor="note-title" className="text-sm">Titre</label><Input id="note-title" autoFocus required value={draft.title} disabled={busy} onChange={event => setDraft({ ...draft, title: event.target.value })} /></div>
-          <div className="sm:max-w-xs"><label htmlFor="note-date" className="text-sm">Date de la note</label><Input id="note-date" type="date" value={draft.date ?? ''} disabled={busy} onChange={event => setDraft({ ...draft, date: event.target.value })} /></div>
-          <div><label htmlFor="note-explanations" className="text-sm">Explications</label><Textarea id="note-explanations" rows={7} value={draft.explanations} disabled={busy} onChange={event => setDraft({ ...draft, explanations: event.target.value })} /></div>
+          <div><label htmlFor="note-title" className="text-sm">Titre</label><Input id="note-title" autoFocus required value={draft.title} disabled={busy || saved} onChange={event => setDraft({ ...draft, title: event.target.value })} /></div>
+          <div className="sm:max-w-xs"><label htmlFor="note-date" className="text-sm">Date de la note</label><Input id="note-date" type="date" value={draft.date ?? ''} disabled={busy || saved} onChange={event => setDraft({ ...draft, date: event.target.value })} /></div>
+          <div><label htmlFor="note-explanations" className="text-sm">Explications</label><Textarea id="note-explanations" rows={7} value={draft.explanations} disabled={busy || saved} onChange={event => setDraft({ ...draft, explanations: event.target.value })} /></div>
           <div tabIndex={0} role="group" aria-label="Zone de captures : coller ou déposer des images" className="rounded-xl border-2 border-dashed border-border bg-muted/20 p-5 text-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary" onDragOver={event => { event.preventDefault(); }} onDrop={event => { event.preventDefault(); void addImages(Array.from(event.dataTransfer.files)); }}>
             <ImagePlus className="mx-auto mb-2 h-6 w-6 text-muted-foreground" />
             <p className="text-sm font-medium">Collez ou glissez vos captures ici</p>
             <p className="mt-1 text-xs text-muted-foreground">Ctrl+V / ⌘V dans la note · PNG, JPEG, WebP, GIF · 5 Mo par image</p>
-            <Button type="button" variant="outline" className="mt-3" disabled={busy} onClick={() => fileInput.current?.click()}>Choisir des images</Button>
+            <Button type="button" variant="outline" className="mt-3" disabled={busy || saved} onClick={() => fileInput.current?.click()}>Choisir des images</Button>
             <label htmlFor="note-images" className="sr-only">Ajouter des captures (5 Mo maximum par image)</label>
-            <input ref={fileInput} id="note-images" className="sr-only" type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif" disabled={busy} onChange={event => { const files = Array.from(event.target.files ?? []); event.target.value = ''; void addImages(files); }} />
+            <input ref={fileInput} id="note-images" className="sr-only" type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif" disabled={busy || saved} onChange={event => { const files = Array.from(event.target.files ?? []); event.target.value = ''; void addImages(files); }} />
           </div>
           {draft.screenshots.length > 0 && <p className="text-sm text-muted-foreground">{draft.screenshots.length} capture{draft.screenshots.length > 1 ? 's' : ''} · Cliquez pour agrandir</p>}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{draft.screenshots.map((image, index) => <div key={image.id} className="min-w-0 rounded-xl border border-border p-2"><button type="button" className="block w-full rounded-lg focus-visible:ring-2 ring-primary" aria-label={`Agrandir ${image.name}`} onClick={() => preview(draft.screenshots, index)}><img src={image.content} alt={image.name} className="aspect-video w-full rounded-lg bg-muted/30 object-contain" /></button><Button type="button" variant="ghost" size="sm" disabled={busy} className="mt-1 h-auto w-full whitespace-normal break-all text-destructive" onClick={() => setDraft({ ...draft, screenshots: draft.screenshots.filter(item => item.id !== image.id) })}>Retirer {image.name}</Button></div>)}</div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{draft.screenshots.map((image, index) => <div key={image.id} className="min-w-0 rounded-xl border border-border p-2"><button type="button" className="block w-full rounded-lg focus-visible:ring-2 ring-primary" aria-label={`Agrandir ${image.name}`} onClick={() => preview(draft.screenshots, index)}><img src={image.content} alt={image.name} className="aspect-video w-full rounded-lg bg-muted/30 object-contain" /></button><Button type="button" variant="ghost" size="sm" disabled={busy || saved} className="mt-1 h-auto w-full whitespace-normal break-all text-destructive" onClick={() => setDraft({ ...draft, screenshots: draft.screenshots.filter(item => item.id !== image.id) })}>Retirer {image.name}</Button></div>)}</div>
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-          <div className="sticky -bottom-6 z-10 flex justify-end gap-2 border-t border-border bg-background py-4"><Button type="button" variant="outline" disabled={busy} onClick={() => setDraft(null)}>Annuler</Button><Button type="submit" disabled={busy || !draft.title.trim()}>{busy ? 'Enregistrement…' : 'Enregistrer'}</Button></div>
+          <div className="sticky -bottom-6 z-10 flex justify-end gap-2 border-t border-border bg-background py-4"><Button type="button" variant="outline" disabled={busy || saved} onClick={() => setDraft(null)}>Annuler</Button><Button type="submit" loading={busy} saved={saved} disabled={saved || !draft.title.trim()}>{saved ? 'Enregistré' : 'Enregistrer'}</Button></div>
         </form>}
       </DialogContent>
     </Dialog>
@@ -112,6 +114,6 @@ export default function Notes() {
         {viewer && <><div className="flex min-h-0 flex-1 items-start justify-center overflow-auto rounded-xl bg-muted/30"><img src={viewer.images[viewer.index].content} alt={viewer.images[viewer.index].name} className={zoomed ? 'm-auto max-w-none shrink-0' : 'h-full w-full object-contain'} /></div><div className="flex flex-wrap items-center justify-center gap-2"><Button type="button" variant="outline" size="icon" aria-label="Image précédente" disabled={viewer.images.length < 2} onClick={() => { setZoomed(false); setViewer({ ...viewer, index: (viewer.index - 1 + viewer.images.length) % viewer.images.length }); }}><ChevronLeft className="h-4 w-4" /></Button><Button type="button" variant="outline" className="gap-2" onClick={() => setZoomed(!zoomed)}>{zoomed ? <ZoomOut className="h-4 w-4" /> : <ZoomIn className="h-4 w-4" />}{zoomed ? 'Ajuster' : 'Taille réelle'}</Button><Button asChild variant="outline" size="icon"><a href={viewer.images[viewer.index].content} download={viewer.images[viewer.index].name} aria-label="Télécharger l’image"><Download className="h-4 w-4" /></a></Button><Button type="button" variant="outline" size="icon" aria-label="Image suivante" disabled={viewer.images.length < 2} onClick={() => { setZoomed(false); setViewer({ ...viewer, index: (viewer.index + 1) % viewer.images.length }); }}><ChevronRight className="h-4 w-4" /></Button></div></>}
       </DialogContent>
     </Dialog>
-    <AlertDialog open={!!removing} onOpenChange={open => { if (!open && !busy) setRemoving(null); }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Supprimer cette note ?</AlertDialogTitle><AlertDialogDescription>La note « {removing?.title} » et ses captures seront supprimées définitivement.</AlertDialogDescription></AlertDialogHeader>{error && <p role="alert" className="text-sm text-destructive">{error}</p>}<AlertDialogFooter><AlertDialogCancel disabled={busy}>Annuler</AlertDialogCancel><Button variant="destructive" disabled={busy} onClick={async () => { if (!removing) return; setBusy(true); setError(''); try { await deleteRow('notes', removing.id); setRemoving(null); } catch (cause) { report(cause); } finally { setBusy(false); } }}>Confirmer la suppression</Button></AlertDialogFooter></AlertDialogContent></AlertDialog>
+    <AlertDialog open={!!removing} onOpenChange={open => { if (!open && !busy) setRemoving(null); }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Supprimer cette note ?</AlertDialogTitle><AlertDialogDescription>La note « {removing?.title} » et ses captures seront supprimées définitivement.</AlertDialogDescription></AlertDialogHeader>{error && <p role="alert" className="text-sm text-destructive">{error}</p>}<AlertDialogFooter><AlertDialogCancel disabled={busy || saved}>Annuler</AlertDialogCancel><Button variant="destructive" disabled={busy || saved} onClick={async () => { if (!removing) return; setBusy(true); setError(''); try { await deleteRow('notes', removing.id); setRemoving(null); } catch (cause) { report(cause); } finally { setBusy(false); } }}>Confirmer la suppression</Button></AlertDialogFooter></AlertDialogContent></AlertDialog>
   </div>;
 }

@@ -1,3 +1,4 @@
+import { useSaveConfirmation } from '@/hooks/useSaveConfirmation';
 import { usePagePreference, oneOf } from '@/hooks/usePagePreference';
 import DashboardFilter from '@/components/trading/DashboardFilter';
 import { accountScope } from '@/lib/accountScope';
@@ -210,6 +211,7 @@ const Reports = ({ accounts }: ReportsProps) => {
   const [visibility, setVisibility] = usePagePreference('reports.visibility','all',oneOf('all','saved','draft'));
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const { saved, confirm } = useSaveConfirmation();
   const loadedForm = useRef<PeriodReportData | null>(null);
   const formatMoney = (value: number, currency = scope.currency) => { try { return new Intl.NumberFormat('fr-FR', {style:'currency',currency,signDisplay:'exceptZero',maximumFractionDigits:2}).format(value); } catch {return value.toLocaleString('fr-FR',{signDisplay:'exceptZero',maximumFractionDigits:2});} };
   const pdfMoney = useCallback((value: number, currency = scope.currency) => `${value >= 0 ? '+' : ''}${value.toFixed(2)} ${currency}`, [scope.currency]);
@@ -343,7 +345,7 @@ const Reports = ({ accounts }: ReportsProps) => {
   const updateTradeNote = (tradeId: string, note: string) => { setDirty(true); setFormData(prev => ({ ...prev, tradeNotes: { ...prev.tradeNotes, [tradeId]: note } })); };
 
   const selectPeriod = (type: PeriodType, key: string) => {
-    if (saving || dirty && !window.confirm('Changer de rapport sans enregistrer les modifications ?')) return false;
+    if (saving || saved || dirty && !window.confirm('Changer de rapport sans enregistrer les modifications ?')) return false;
     setDirty(false);
     setSelected({ type, key });
     setIsEditing(false);
@@ -358,9 +360,9 @@ const Reports = ({ accounts }: ReportsProps) => {
 
   const handleSave = async () => {
     if (!selected) return;
-    if (saving) return;
+    if (saving || saved) return;
     setSaving(true);
-    try { await saveReport(selected.type, selected.key, formData); loadedForm.current = formData; setDirty(false); toast.success('Rapport enregistré'); setIsEditing(false); } catch { toast.error('Impossible d’enregistrer le rapport.'); } finally { setSaving(false); }
+    try { await saveReport(selected.type, selected.key, formData); loadedForm.current = formData; setDirty(false); confirm(() => { toast.success('Rapport enregistré'); setIsEditing(false); }); } catch { toast.error('Impossible d’enregistrer le rapport.'); } finally { setSaving(false); }
   };
 
   const handleDownloadPDF = useCallback(async (mode: 'download' | 'preview' = 'download'): Promise<string | undefined> => {
@@ -551,7 +553,7 @@ const Reports = ({ accounts }: ReportsProps) => {
       <h1 className="sr-only page-title-hidden">Rapports</h1>
       <div className="flex flex-wrap items-end gap-4">
         {scope.groups.length > 1 && <DashboardFilter label="Devise" ariaLabel="Devise des rapports" value={scope.currency || 'UNKNOWN'} onChange={value => {
-          if (!dirty || window.confirm('Changer de devise sans enregistrer les modifications ?')) {
+          if (!saving && !saved && (!dirty || window.confirm('Changer de devise sans enregistrer les modifications ?'))) {
             setDirty(false);
             setIsEditing(false);
             setPreferredCurrency(value);
@@ -571,7 +573,7 @@ const Reports = ({ accounts }: ReportsProps) => {
           <Input id="report-search" type="search" placeholder="Semaine, mois ou année…" value={query} onChange={event => setQuery(event.target.value)} className="h-11 rounded-[10px] bg-transparent text-xs" />
         </div>
         <DashboardFilter label="Afficher" ariaLabel="État des rapports" value={visibility} onChange={setVisibility} options={[{value:'all',label:'Toutes les périodes'},{value:'saved',label:'Enregistrés'},{value:'draft',label:'À rédiger'}]}/>
-        <Button variant="outline" className="h-11 rounded-[10px] text-xs" disabled={saving} onClick={() => createCurrent(browseType)}>Nouveau rapport</Button>
+        <Button variant="outline" className="h-11 rounded-[10px] text-xs" disabled={saving || saved} onClick={() => createCurrent(browseType)}>Nouveau rapport</Button>
       </div>
       <ReportTimeline entries={visibleEntries} type={browseType} selectedKey={selected?.type === browseType ? selected.key : undefined} onSelect={key => {
         if (selected?.type !== browseType || selected.key !== key) selectPeriod(browseType, key);
@@ -608,11 +610,11 @@ const Reports = ({ accounts }: ReportsProps) => {
                     </>
                   ) : (
                     <>
-                      <Button variant="outline" size="sm" disabled={saving} onClick={() => { if(loadedForm.current) setFormData(loadedForm.current); setDirty(false); setIsEditing(false); }} className="gap-1.5 text-xs">
+                      <Button variant="outline" size="sm" disabled={saving || saved} onClick={() => { if(loadedForm.current) setFormData(loadedForm.current); setDirty(false); setIsEditing(false); }} className="gap-1.5 text-xs">
                         Annuler
                       </Button>
-                      <Button size="sm" disabled={saving} onClick={handleSave} className="gap-1.5 text-xs">
-                        <Save className="h-3.5 w-3.5" />Enregistrer
+                      <Button size="sm" loading={saving} saved={saved} disabled={saved} onClick={handleSave} className="gap-1.5 text-xs">
+                        {!saving && !saved && <Save aria-hidden="true" />}{saved ? 'Enregistré' : 'Enregistrer' }
                       </Button>
                     </>
                   )}
@@ -620,7 +622,7 @@ const Reports = ({ accounts }: ReportsProps) => {
               </div>
 
               {isEditing ? (
-              <div className="p-6 sm:p-12 space-y-10">
+              <fieldset disabled={saving || saved} className="min-w-0 space-y-10 p-6 sm:p-12">
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                   {[
                     { label: 'P&L', value: formatMoney(stats.pnl), color: stats.pnl >= 0 ? 'text-profit' : 'text-loss' },
@@ -737,14 +739,14 @@ const Reports = ({ accounts }: ReportsProps) => {
                 </div>
 
                 <div className="flex items-center gap-2 pt-1">
-                  <Button disabled={saving} onClick={handleSave} className="gap-1.5 text-xs">
-                    <Save className="h-3.5 w-3.5" />Enregistrer le rapport
+                  <Button loading={saving} saved={saved} disabled={saved} onClick={handleSave} className="gap-1.5 text-xs">
+                    {!saving && !saved && <Save aria-hidden="true" />}{saved ? 'Enregistré' : 'Enregistrer le rapport'}
                   </Button>
-                  <Button variant="outline" onClick={() => setIsEditing(false)} className="gap-1.5 text-xs">
+                  <Button variant="outline" disabled={saving || saved} onClick={() => setIsEditing(false)} className="gap-1.5 text-xs">
                     <Eye className="h-3.5 w-3.5" />Voir PDF
                   </Button>
                 </div>
-              </div>
+              </fieldset>
               ) : (
                 <div className="report-pdf-preview">
                   {loadedContext.current !== reportContext ? <p role="status" className="py-12 text-center text-sm text-muted-foreground">Préparation du rapport…</p> : <Suspense fallback={<p role="status" className="py-12 text-center text-sm text-muted-foreground">Ouverture du PDF…</p>}><ReportPdfPreview generate={generatePreview} label={`Rapport PDF · ${reportLabel(selected.type, selected.key)}`}/></Suspense>}

@@ -15,9 +15,43 @@
   --ui-ease-enter: cubic-bezier(.22,1,.36,1);
   --ui-ease-exit: cubic-bezier(.4,0,1,1);
 }
-.ui-button { min-height: var(--ui-control); touch-action: manipulation; transition: transform var(--ui-duration-fast) var(--ui-ease-enter); }
-.ui-button:active:not(:disabled):not([aria-disabled=true]) { transform: scale(.98); }
+.ui-button, .objective-template {
+  min-height: var(--ui-control);
+  touch-action: manipulation;
+  transition: transform var(--ui-duration-fast) var(--ui-ease-enter),
+    background-color var(--ui-duration-fast) ease, color var(--ui-duration-fast) ease, border-color var(--ui-duration-fast) ease;
+}
+.ui-button:active:not(:disabled):not([aria-disabled=true]),
+.objective-template:active, .dashboard-switch button:active:not(:disabled),
+.ui-tab-trigger:active:not(:disabled), .page-segments > button:active:not(:disabled) { transform: scale(.97); }
 .ui-button[aria-busy=true] { cursor: progress; }
+.ui-button[data-feedback=success] {
+  background: hsl(var(--profit));
+  border-color: transparent;
+  color: hsl(var(--background));
+  opacity: 1;
+  animation: ui-save-pulse 520ms var(--ui-ease-enter);
+}
+.ui-save-check { animation: ui-confirm-check 320ms var(--ui-ease-enter); }
+.ui-checkbox[data-state=checked] svg { animation: ui-confirm-check 220ms var(--ui-ease-enter); }
+@keyframes ui-save-pulse {
+  from { box-shadow: 0 0 0 0 hsl(var(--profit) / .48); }
+  to { box-shadow: 0 0 0 10px hsl(var(--profit) / 0); }
+}
+@keyframes ui-confirm-check {
+  from { opacity: 0; transform: scale(.55); }
+  to { opacity: 1; transform: scale(1); }
+}
+.objective-card, .ui-tab-panel[data-state=active] { animation: ui-page-in var(--ui-duration-normal) var(--ui-ease-enter); }
+.objective-card .ui-progress-indicator { animation: ui-progress-enter 500ms var(--ui-ease-enter); }
+.objective-card[data-status=achieved] .ui-progress-indicator { background: hsl(var(--profit)); }
+.objective-card[data-status=achieved] h3 { animation: ui-fade-in 220ms ease-out; }
+.calendar-day[aria-pressed=true] .calendar-day-number,
+.reports-timeline-entry[aria-pressed=true] .reports-timeline-marker {
+  animation: ui-confirm-check 280ms var(--ui-ease-enter);
+}
+.toaster [data-type=success] [data-icon] { color: hsl(var(--profit)); animation: ui-confirm-check 320ms var(--ui-ease-enter); }
+@keyframes ui-progress-enter { from { transform: translateX(-100%); } }
 .ui-input, .ui-select-trigger { min-height: var(--ui-control); }
 .ui-input, .ui-textarea, .ui-select-trigger { border-radius: var(--ui-radius-control); }
 .ui-input[aria-invalid=true], .ui-textarea[aria-invalid=true], .ui-select-trigger[aria-invalid=true] { border-color: hsl(var(--loss)); }
@@ -75,7 +109,11 @@
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
-  .ui-button:active { transform: none; }
+  .ui-button:active:not(:disabled):not([aria-disabled=true]),
+  .objective-template:active, .dashboard-switch button:active:not(:disabled),
+  .ui-tab-trigger:active:not(:disabled), .page-segments > button:active:not(:disabled) { transform: none; }
+  .ui-button[data-feedback=success], .ui-save-check, .ui-checkbox[data-state=checked] svg,
+  .objective-card, .objective-card .ui-progress-indicator, .toaster [data-type=success] [data-icon], .ui-tab-panel[data-state=active] { animation: none; }
   .ui-page-enter, .finance-content, .ui-skeleton, .ui-loading-icon { animation: none !important; }
 }
 /* Keep user-selected accents on graphics, but provide a readable ink for small text. */
@@ -90,6 +128,13 @@
 }
 /* Color states change immediately; movement stays on compositor-friendly properties. */
 .ui-sheet, .rail-link, .rail-workspaces button, .settings-menu button, .dashboard-switch button, .dashboard-filter-trigger, .dashboard-filter-option, .finance-period button, .finance-account-row, .finance-subscription-row, .finance-transfer-row { transition-property: transform, opacity; }
+.dashboard-switch button, .page-segments > button, .rail-link, .settings-menu button, .ui-tab-trigger {
+  transition: transform var(--ui-duration-fast) var(--ui-ease-enter),
+    background-color var(--ui-duration-fast) ease, color var(--ui-duration-fast) ease;
+}
+.ui-input, .ui-textarea, .ui-select-trigger {
+  transition: border-color var(--ui-duration-fast) ease, box-shadow var(--ui-duration-fast) ease;
+}
 .rail-links-gooey .rail-selection-slider { transition-property: transform; }
 .rail-link:focus-visible, .rail-workspaces button:focus-visible, .rail-settings-pill:focus-visible { outline: 2px solid hsl(var(--foreground)); outline-offset: -3px; }
 .app-update-prompt { position: fixed; right: 24px; bottom: max(24px,env(safe-area-inset-bottom)); z-index: 80; width: min(390px,calc(100vw - 32px)); padding: 20px; border: 1px solid hsl(var(--border)); border-radius: 16px; background: hsl(var(--popover)); color: hsl(var(--popover-foreground)); box-shadow: var(--shadow-pop); animation: ui-page-in var(--ui-duration-normal) var(--ui-ease-enter); }

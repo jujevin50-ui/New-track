@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Loader2 } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 
@@ -37,13 +37,14 @@ export interface ButtonProps
   asChild?: boolean;
   /** Keeps the label visible and prevents duplicate submissions. */
   loading?: boolean;
+  saved?: boolean;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, loading = false, disabled, children, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, loading = false, saved = false, disabled, children, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
-    return <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} disabled={disabled || loading} aria-busy={loading || undefined} {...props}>
-      {asChild ? children : <>{loading && <Loader2 className="ui-loading-icon h-4 w-4" aria-hidden="true" />}{children}</>}
+    return <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} disabled={disabled || loading} aria-busy={loading || undefined} data-feedback={saved && !loading ? 'success' : undefined} {...props}>
+      {asChild ? children : <>{loading ? <Loader2 className="ui-loading-icon" aria-hidden="true" /> : saved && <Check className="ui-save-check" aria-hidden="true" />}{children}</>}
     </Comp>;
   },
 );
