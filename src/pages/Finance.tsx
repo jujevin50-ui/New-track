@@ -262,7 +262,7 @@ export default function Finance() {
             <Stat label="Cash-flow annuel" value={eur(yearTotals.cashflow)} icon={<TrendingUp className="h-4 w-4" />} color={yearTotals.cashflow >= 0 ? 'hsl(var(--profit))' : 'hsl(var(--loss))'} />
             <Stat label="Taux d’épargne annuel" value={yearTotals.income > 0 ? `${yearSavingsRate.toLocaleString('fr-FR',{maximumFractionDigits:1})} %` : '—'} percent={yearSavingsRate} icon={<PiggyBank className="h-4 w-4" />} color={PALETTE[0]} />
           </div>
-          <div className="grid lg:grid-cols-[1.6fr_1fr] gap-8">
+          <div className="grid gap-8 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
             <Card title={`Flux de ${cursor.getFullYear()}`} subtitle="Revenus et dépenses par mois"><div className="h-[320px]"><YearFlowBars data={yearData} /></div></Card>
             <Card title="Cash-flow mensuel" subtitle="Évolution sur l’année"><div className="h-[320px]"><CashflowChart data={yearData} /></div></Card>
           </div>
@@ -292,7 +292,7 @@ export default function Finance() {
             <Stat label="Cash-flow net" value={eur(income-expenses)} color={income-expenses >= 0 ? 'hsl(var(--profit))' : 'hsl(var(--loss))'} />
             <Stat label="Taux d’épargne" value={income > 0 ? `${savingsRate.toLocaleString('fr-FR',{maximumFractionDigits:1})} %` : '—'} percent={savingsRate} />
           </div>
-          <div className="grid lg:grid-cols-[1.65fr_1fr] gap-8">
+          <div className="grid gap-8 xl:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
             <Card title="Progression du cash-flow" action={<span className="text-xs capitalize text-muted-foreground">{monthLabel}</span>}>
               <div className="h-[300px] sm:h-[340px]"><FlowAreaChart data={trendData} lastIndex={trendData.length-1} /></div>
               <div className="mt-5"><SplitBar parts={[
@@ -326,7 +326,7 @@ export default function Finance() {
             </Card>
           </div>
 
-          <div className="grid lg:grid-cols-[1.2fr_1fr] gap-8">
+          <div className="grid gap-8 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
             <Card title="Dernières opérations" subtitle={`${monthTx.length} ce mois-ci`} action={<button onClick={() => setTab('transactions')} className="text-[13px] font-medium text-primary hover:underline">Tout voir</button>}>
               {recentTx.length ? <div className="-mx-2">{recentTx.map(t => <TxRow key={t.id} t={t} accountName={accountName(t.accountId)} />)}</div> : <Empty text="Aucune opération ce mois-ci" />}
             </Card>

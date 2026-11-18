@@ -894,7 +894,7 @@ html .app-panel { background-color: var(--glass-bg-strong); background-image: no
 @media (prefers-reduced-motion: reduce) { .header-nav-icon { transition: none; } }
 
 /* Workspace navigation: persistent on desktop, a focused drawer on mobile. */
-.workspace-shell { min-width: 0; }
+.workspace-shell { --workspace-rail-width: 248px; box-sizing: border-box; min-width: 0; }
 .workspace-rail { position: fixed; z-index: 50; top: 12px; bottom: 12px; left: 12px; width: 244px; overflow: hidden; border: 1px solid hsl(var(--border) / 0.75); border-radius: 22px; background: hsl(var(--card) / 0.88); backdrop-filter: blur(24px); box-shadow: 0 10px 35px -22px hsl(0 0% 0% / 0.28); }
 .rail-inner { display: flex; flex-direction: column; height: 100%; min-height: 0; padding: 22px 14px 14px; background-image: radial-gradient(ellipse at top left, hsl(var(--primary) / 0.08), transparent 40%); }
 .rail-brand { display: flex; align-items: center; gap: 10px; padding: 0 6px 24px; }
@@ -1006,7 +1006,7 @@ html .app-panel { background-color: var(--glass-bg-strong); background-image: no
 /* A single continuous workspace replaces floating cards and decorative glass. */
 :root { --background: 0 0% 100%; }
 .dark { --background: 0 0% 7%; }
-.workspace-rail { top: 0; bottom: 0; left: 0; width: 248px; border-radius: 0; border: 0; border-right: 1px solid hsl(var(--border)); box-shadow: none; backdrop-filter: none; }
+.workspace-rail { top: 0; bottom: 0; left: 0; width: var(--workspace-rail-width); border-radius: 0; border: 0; border-right: 1px solid hsl(var(--border)); box-shadow: none; backdrop-filter: none; }
 .workspace-rail .rail-inner { background-image: none; }
 html .workspace-shell main :is(.surface, .app-panel, .metric-card, .report-paper, .bg-background\/40, .bg-background\/30, .bg-background\/20, .bg-card, .bg-card\/95, .bg-card\/90, .bg-card\/80, .bg-card\/40) {
   background: transparent;
@@ -1025,7 +1025,12 @@ html .workspace-shell main .metric-card:hover { transform: none; box-shadow: non
 html .workspace-shell main .rb-lift:hover { transform: none; box-shadow: none; }
 html .workspace-shell main .report-paper { padding-top: 1rem; }
 html .workspace-shell main :is(input, textarea, select, button).bg-card { border-radius: 10px; background: hsl(var(--background)); }
-@media (min-width: 1024px) { .workspace-shell { padding-top: 16px; } }
+@media (min-width: 1024px) {
+  .workspace-shell {
+    padding-top: 16px;
+    padding-left: var(--workspace-rail-width);
+  }
+}
 .settings-card { background: transparent; border: 0; border-top: 1px solid hsl(var(--border) / 0.7); border-radius: 0; padding-inline: 0; }
 html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px solid hsl(var(--primary)); }
 
