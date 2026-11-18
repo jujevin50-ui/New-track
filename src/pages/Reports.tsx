@@ -2,7 +2,7 @@ import { usePagePreference, oneOf } from '@/hooks/usePagePreference';
 import DashboardFilter from '@/components/trading/DashboardFilter';
 import { accountScope } from '@/lib/accountScope';
 import { localDay } from '@/lib/discipline';
-import { useEffect, useMemo, useState, useCallback, useRef, lazy, Suspense, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState, useCallback, useRef, lazy, Suspense, type ReactNode } from 'react';
 import { Account } from '@/types/account';
 import { Trade, getNetResult, getTradeScreenshots } from '@/types/trade';
 import { useTrades } from '@/hooks/useTrades';
@@ -22,6 +22,8 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import {
   CalendarDays,
   CalendarRange,
+  ChevronLeft,
+  ChevronRight,
   Download,
   Edit3,
   Eye,
@@ -44,10 +46,96 @@ interface ReportsProps {
 interface PeriodEntry {
   key: string;
   label: string;
+  dateRange: string;
   tradeCount: number;
   hasReport: boolean;
-  pnl: number;
-  wins: number;
+}
+
+const timelineDates = new Intl.DateTimeFormat('fr-FR', {
+  day: 'numeric', month: 'short', timeZone: 'UTC',
+});
+
+const timelineTitle = (type: PeriodType, entry: PeriodEntry) =>
+  type === 'weekly' ? `Semaine ${Number(entry.key.split('-W')[1])}` : entry.label;
+
+function ReportTimeline({ entries, type, selectedKey, onSelect }: {
+  entries: PeriodEntry[];
+  type: PeriodType;
+  selectedKey?: string;
+  onSelect: (key: string) => void;
+}) {
+  const track = useRef<HTMLOListElement>(null);
+  const [edges, setEdges] = useState({ start: true, end: true });
+
+  useLayoutEffect(() => {
+    const list = track.current;
+    if (!list) return;
+    const updateEdges = () => {
+      const start = list.scrollLeft <= 1;
+      const end = list.scrollLeft + list.clientWidth >= list.scrollWidth - 1;
+      setEdges(previous => previous.start === start && previous.end === end ? previous : { start, end });
+    };
+    const selected = list.querySelector<HTMLElement>('[aria-pressed="true"]')?.closest('li');
+    if (selected) {
+      const left = selected.offsetLeft;
+      const right = left + selected.offsetWidth;
+      if (left < list.scrollLeft || right > list.scrollLeft + list.clientWidth) {
+        list.scrollLeft = Math.max(0, left - (list.clientWidth - selected.offsetWidth) / 2);
+      }
+    }
+    updateEdges();
+    list.addEventListener('scroll', updateEdges, { passive: true });
+    const observer = new ResizeObserver(updateEdges);
+    observer.observe(list);
+    return () => {
+      list.removeEventListener('scroll', updateEdges);
+      observer.disconnect();
+    };
+  }, [type, entries, selectedKey]);
+
+  const move = (direction: number) => {
+    const list = track.current;
+    if (!list) return;
+    const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+    list.scrollBy({ left: direction * list.clientWidth * 0.85, behavior });
+  };
+
+  return (
+    <nav aria-label="Frise chronologique des rapports" className="min-w-0">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold">Frise chronologique <span className="ml-2 text-xs font-normal text-muted-foreground">Du plus récent au plus ancien</span></h2>
+        {entries.length > 0 && <div className="flex gap-1">
+          <Button type="button" variant="ghost" size="icon" aria-label="Vers les périodes récentes" disabled={edges.start} onClick={() => move(-1)}><ChevronLeft aria-hidden="true" /></Button>
+          <Button type="button" variant="ghost" size="icon" aria-label="Vers les périodes anciennes" disabled={edges.end} onClick={() => move(1)}><ChevronRight aria-hidden="true" /></Button>
+        </div>}
+      </div>
+      {entries.length ? (
+        <ol ref={track} className="reports-timeline">
+          {entries.map(entry => (
+            <li key={entry.key}>
+              <button
+                type="button"
+                className="reports-timeline-entry"
+                aria-pressed={selectedKey === entry.key}
+                onClick={() => onSelect(entry.key)}
+              >
+                <span className="reports-timeline-marker" aria-hidden="true" />
+                <span className="reports-timeline-label">
+                  <span className="block text-sm font-semibold capitalize">{timelineTitle(type, entry)}</span>
+                  <span className="mt-1 block text-xs font-medium text-muted-foreground">{entry.dateRange}</span>
+                  <span className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+                    <span className={entry.hasReport ? 'font-medium text-profit' : ''}>{entry.hasReport ? 'Enregistré' : 'À rédiger'}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>{entry.tradeCount} trade{entry.tradeCount === 1 ? '' : 's'}</span>
+                  </span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ol>
+      ) : <p className="py-8 text-sm text-muted-foreground">Aucune période trouvée.</p>}
+    </nav>
+  );
 }
 
 const reportLabel = (type: PeriodType, key: string) => {
@@ -170,10 +258,9 @@ const Reports = ({ activeAccount, accounts, onSelectAccount }: ReportsProps) => 
       return {
         key,
         label: reportLabel(type, key),
+        dateRange: `${range.start.getUTCFullYear() === range.end.getUTCFullYear() ? timelineDates.format(range.start) : formatDate(range.start)} – ${formatDate(range.end)}`,
         tradeCount: tradesInPeriod.length,
         hasReport: !!reports[type][key],
-        pnl: tradesInPeriod.reduce((sum, t) => sum + getNetResult(t), 0),
-        wins: tradesInPeriod.filter(t => getNetResult(t) > 0).length,
       };
     }).sort((a, b) => b.key.localeCompare(a.key));
   }, [allTrades, reports]);
@@ -459,21 +546,32 @@ const Reports = ({ activeAccount, accounts, onSelectAccount }: ReportsProps) => 
     : undefined;
 
   const normalize = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
-  const visibleEntries = reportEntries[browseType].filter(entry => (visibility === 'all' || (visibility === 'saved' ? entry.hasReport : !entry.hasReport)) && normalize(`${entry.label} ${entry.key}`).includes(normalize(query)));
+  const visibleEntries = reportEntries[browseType].filter(entry => (visibility === 'all' || (visibility === 'saved' ? entry.hasReport : !entry.hasReport)) && normalize(`${timelineTitle(browseType, entry)} ${entry.label} ${entry.dateRange} ${entry.key}`).includes(normalize(query.trim())));
   return (
     <div className="reports-page w-full space-y-8 pb-10">
       <h1 className="sr-only page-title-hidden">Rapports</h1>
       <div className="dashboard-filter-controls"><DashboardFilter label="Compte" ariaLabel="Compte des rapports" value={activeAccount?.id ?? 'all'} onChange={id => {if (!dirty || window.confirm('Changer de compte sans enregistrer les modifications ?')) {setDirty(false); setIsEditing(false); onSelectAccount(id);}}} options={[{value:'all',label:'Tous les comptes'},...accounts.map(account => ({value:account.id,label:account.name}))]}/>{scope.groups.length>1 && <DashboardFilter label="Devise" ariaLabel="Devise des rapports" value={scope.currency || 'UNKNOWN'} onChange={value => {if (!dirty || window.confirm('Changer de devise sans enregistrer les modifications ?')) {setDirty(false); setIsEditing(false); setPreferredCurrency(value);}}} options={scope.groups.map(group=>({value:group.currency,label:group.currency}))}/>}</div>
-      <div className="reports-layout ui-reading-divider grid items-start gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="reports-browser min-w-0 space-y-4" aria-label="Liste des rapports">
-          <div role="group" aria-label="Périodicité des rapports" className="dashboard-switch reports-period-switch">{(['weekly','monthly','yearly'] as PeriodType[]).map(type => <button key={type} type="button" aria-pressed={browseType===type} onClick={()=>{const first=reportEntries[type][0]; if(first && selectPeriod(type,first.key)) setQuery('');}}>{type==='weekly' ? 'Semaines' : type==='monthly' ? 'Mois' : 'Années'}</button>)}</div>
-          <Input type="search" aria-label="Rechercher un rapport" placeholder="Rechercher une période…" value={query} onChange={event=>setQuery(event.target.value)} className="h-10 rounded-[10px] bg-transparent text-xs"/>
-          <DashboardFilter label="Afficher" ariaLabel="État des rapports" value={visibility} onChange={setVisibility} options={[{value:'all',label:'Toutes les périodes'},{value:'saved',label:'Enregistrés'},{value:'draft',label:'À rédiger'}]}/>
-          <Button variant="outline" className="h-10 w-full rounded-[10px] text-xs" disabled={saving} onClick={()=>createCurrent(browseType)}>Nouveau rapport</Button>
-          <nav className="reports-period-list" aria-label="Périodes disponibles">{visibleEntries.length ? visibleEntries.map(entry=><button key={entry.key} type="button" aria-label={`Ouvrir le rapport ${entry.label}`} aria-pressed={selected?.type===browseType && selected.key===entry.key} onClick={()=>selectPeriod(browseType,entry.key)} className="reports-period-item"><span className="block text-xs font-medium capitalize">{entry.label}</span><span className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[10px] text-muted-foreground"><span className={entry.hasReport ? 'text-primary' : ''}>{entry.hasReport ? 'Enregistré' : 'À rédiger'}</span><span>{entry.tradeCount} trade{entry.tradeCount>1 ? 's' : ''}</span></span></button>) : <p className="py-8 text-center text-xs text-muted-foreground">Aucune période trouvée.</p>}</nav>
-        </aside>
-        <div className="min-w-0">
-        {/* Right detail */}
+      <div className="flex flex-wrap items-end gap-4">
+        <div role="group" aria-label="Périodicité des rapports" className="dashboard-switch">
+          {(['weekly', 'monthly', 'yearly'] as const).map(type => (
+            <button key={type} type="button" aria-pressed={browseType === type} onClick={() => {
+              if (browseType === type) return;
+              const first = reportEntries[type][0];
+              if (first && selectPeriod(type, first.key)) setQuery('');
+            }}>{type === 'weekly' ? 'Semaines' : type === 'monthly' ? 'Mois' : 'Années'}</button>
+          ))}
+        </div>
+        <div className="min-w-0 flex-1 basis-48">
+          <label htmlFor="report-search" className="dashboard-filter-caption">Rechercher un rapport</label>
+          <Input id="report-search" type="search" placeholder="Semaine, mois ou année…" value={query} onChange={event => setQuery(event.target.value)} className="h-11 rounded-[10px] bg-transparent text-xs" />
+        </div>
+        <DashboardFilter label="Afficher" ariaLabel="État des rapports" value={visibility} onChange={setVisibility} options={[{value:'all',label:'Toutes les périodes'},{value:'saved',label:'Enregistrés'},{value:'draft',label:'À rédiger'}]}/>
+        <Button variant="outline" className="h-11 rounded-[10px] text-xs" disabled={saving} onClick={() => createCurrent(browseType)}>Nouveau rapport</Button>
+      </div>
+      <ReportTimeline entries={visibleEntries} type={browseType} selectedKey={selected?.type === browseType ? selected.key : undefined} onSelect={key => {
+        if (selected?.type !== browseType || selected.key !== key) selectPeriod(browseType, key);
+      }} />
+      <div className="min-w-0 border-t border-border/70 pt-7">
         <section className="report-paper min-w-0 rounded-xl border border-border/60 shadow-[var(--shadow-card)] overflow-hidden">
           {!selected ? (
             <div className="h-[60vh] flex flex-col items-center justify-center text-center p-8">
@@ -648,7 +746,6 @@ const Reports = ({ activeAccount, accounts, onSelectAccount }: ReportsProps) => 
             </>
           )}
         </section>
-      </div>
       </div>
 
       <Dialog open={!!previewImgs} onOpenChange={() => setPreviewImgs(null)}>
