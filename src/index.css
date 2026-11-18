@@ -1095,9 +1095,6 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 }
 
 /* Discipline follows the dashboard's continuous, quiet layout. */
-.discipline-date-control > button { height: 40px; border-radius: 10px; }
-.discipline-page .discipline-mission { min-height: 64px; }
-.discipline-page .discipline-mission > span:nth-child(2) { font-size: 12px; line-height: 1.6; }
 .discipline-page .discipline-review label { font-size: 11px; color: hsl(var(--muted-foreground)); font-weight: 400; }
 .discipline-page .discipline-review :is(textarea, select) { background: transparent; border-radius: 10px; font-size: 12px; }
 .discipline-page .discipline-review textarea:focus { border-color: hsl(var(--primary) / 0.65); }
@@ -1114,13 +1111,6 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 .discipline-review .review-writing-grid label { display: block; line-height: 16px; }
 .discipline-review .review-writing-grid textarea { height: 140px; min-height: 140px; width: 100%; }
 @media (min-width: 768px) { .discipline-review .review-writing-grid > div:not(:first-child) label { min-height: 32px; } }
-
-@media (min-width: 1280px) {
-  .discipline-session > fieldset { display: flex; flex-direction: column; }
-  .discipline-session > fieldset > section { display: flex; flex-direction: column; flex: 1; }
-  .discipline-session > fieldset > section > div:last-child { display: flex; flex-direction: column; flex: 1; justify-content: space-between; gap: 12px; }
-  .discipline-session .discipline-mission { margin-top: 0; }
-}
 
 .calendar-day { display: flex; min-width: 0; flex-direction: column; align-items: stretch; padding: 9px 7px; border-radius: 10px; background: hsl(var(--secondary) / 0.3); text-align: left; transition: background 160ms ease, box-shadow 160ms ease; }
 .calendar-day.is-profit { background: hsl(var(--profit) / 0.07); }

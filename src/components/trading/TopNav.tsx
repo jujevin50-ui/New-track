@@ -1,7 +1,7 @@
 import SlidingRailLinks from './SlidingRailLinks';
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Settings, LayoutDashboard, CalendarDays, ArrowRightLeft, Target, BarChart3, Sparkles, BookOpen, Wallet, Banknote } from 'lucide-react';
+import { Settings, LayoutDashboard, CalendarDays, ArrowRightLeft, BarChart3, Sparkles, BookOpen, Wallet, Banknote } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { useNavConfig } from '@/hooks/useNavConfig';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -16,7 +16,6 @@ const NAV_ITEMS = [
   { id: 'dashboard', title: 'Dashboard', url: '/', Icon: LayoutDashboard },
   { id: 'calendar', title: 'Calendar', url: '/calendar', Icon: CalendarDays },
   { id: 'trades', title: 'Trades', url: '/trades', Icon: ArrowRightLeft },
-  { id: 'discipline', title: 'Discipline', url: '/discipline', Icon: Target },
   { id: 'reports', title: 'Reports', url: '/reports', Icon: BarChart3 },
   { id: 'ai-assistant', title: 'AI Assistant', url: '/ai-assistant', Icon: Sparkles },
   { id: 'notes', title: 'Notes', url: '/notes', Icon: BookOpen },

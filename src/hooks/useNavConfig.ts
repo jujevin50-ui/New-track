@@ -13,7 +13,6 @@ const DEFAULT_NAV: NavItem[] = [
   { id: 'dashboard', title: 'Dashboard', visible: true },
   { id: 'calendar', title: 'Calendar', visible: true },
   { id: 'trades', title: 'Trades', visible: true },
-  { id: 'discipline', title: 'Discipline', visible: true },
   { id: 'reports', title: 'Reports', visible: true },
   { id: 'ai-assistant', title: 'AI Assistant', visible: true },
   { id: 'notes', title: 'Notes', visible: true },

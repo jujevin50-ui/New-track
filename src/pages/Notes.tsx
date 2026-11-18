@@ -67,7 +67,7 @@ export default function Notes() {
       {notes.map(note => <article key={note.id} className="min-w-0 rounded-2xl border border-border bg-card/60 p-5">
         <h2 className="break-words text-lg font-semibold"><button type="button" className="text-left hover:text-primary focus-visible:outline focus-visible:outline-2 rounded" onClick={() => setReading(note.id)}>{note.title}</button></h2>
         <p className="mt-1 text-xs text-muted-foreground">{note.date && <><time dateTime={note.date}>{format(new Date(`${note.date}T12:00:00`), 'dd/MM/yyyy')}</time> · </>}Modifiée le {new Date(note.updatedAt).toLocaleDateString('fr-FR')}</p>
-        <p className="mt-4 line-clamp-4 whitespace-pre-wrap break-words text-sm">{note.explanations}</p>
+        <p className="mt-4 whitespace-pre-wrap break-words text-sm">{note.explanations}</p>
         <div className="mt-4 grid grid-cols-2 gap-2">{note.screenshots.map(image => <button type="button" key={image.id} onClick={() => preview(note.screenshots, note.screenshots.indexOf(image))} aria-label={`Agrandir ${image.name}`} className="rounded-lg focus-visible:ring-2 ring-primary hover:opacity-80"><img src={image.content} alt={image.name} className="aspect-video w-full rounded-lg border border-border object-contain" /></button>)}</div>
         <div className="mt-4 flex flex-wrap gap-2"><Button variant="ghost" size="sm" onClick={() => setReading(note.id)}>Lire</Button><Button variant="outline" size="sm" className="gap-2" onClick={() => edit(note)}><Pencil className="h-4 w-4" />Modifier</Button><Button variant="ghost" size="sm" className="gap-2 text-destructive" onClick={() => { setError(''); setRemoving(note); }}><Trash2 className="h-4 w-4" />Supprimer</Button></div>
       </article>)}

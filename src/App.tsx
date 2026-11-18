@@ -9,7 +9,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from
 import { DataProvider, useData } from "@/contexts/DataContext";
 import { useAccounts } from "@/hooks/useAccounts";
 import { AppLayout } from "@/components/trading/AppLayout";
-import { useState, useEffect, useLayoutEffect, useRef, useMemo, lazy, Suspense, type ComponentType } from "react";
+import { useState, useEffect, useMemo, lazy, Suspense, type ComponentType } from "react";
 import { BarChart3, FolderOpen, FilePlus, HardDrive, RefreshCw } from "lucide-react";
 import { Trade } from "@/types/trade";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -32,7 +32,6 @@ const Payouts = lazyWithReload(() => import("./pages/Payouts"));
 const Trades = lazyWithReload(() => import("./pages/Trades"));
 const Accounts = lazyWithReload(() => import("./pages/Accounts"));
 const Reports = lazyWithReload(() => import("./pages/Reports"));
-const Discipline = lazyWithReload(() => import("./pages/Discipline"));
 const Notes = lazyWithReload(() => import("./pages/Notes"));
 const Strategy = lazyWithReload(() => import("./pages/Strategy"));
 const Finance = lazyWithReload(() => import("./pages/Finance"));
@@ -71,14 +70,9 @@ const AppContent = () => {
   const { status, data } = useData();
   const { accounts, activeAccount, activeAccountId, setActiveAccountId, addAccount, updateAccount, deleteAccount, categories } = useAccounts();
   const { userName } = useUserProfile();
-  const [showSplash, setShowSplash] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
-  const previousPath = useRef(location.pathname);
-  useLayoutEffect(() => {
-    if (previousPath.current !== location.pathname && location.pathname === '/finance') setShowSplash(true);
-    previousPath.current = location.pathname;
-  }, [location.pathname]);
+  const [showSplash, setShowSplash] = useState(location.pathname !== "/finance");
   const [routeRestored, setRouteRestored] = useState(false);
 
   const allTrades: Trade[] = useMemo(() => {
@@ -92,10 +86,11 @@ const AppContent = () => {
 
   useEffect(() => {
     if (!routeRestored && status === "connected") {
-      const last = localStorage.getItem("app-last-route");
+      const savedRoute = localStorage.getItem("app-last-route");
+      const last = savedRoute === "/discipline" ? "/calendar" : savedRoute;
       // Ne restaure que les routes encore disponibles.
-      const allowed = ["/", "/calendar", "/trades", "/reports", "/ai-assistant", "/accounts", "/finance", "/strategy", "/notes", "/discipline", "/payout"];
-      if (last && last !== location.pathname && allowed.includes(last)) {
+      const allowed = ["/", "/calendar", "/trades", "/reports", "/ai-assistant", "/accounts", "/finance", "/strategy", "/notes", "/payout"];
+      if (location.pathname !== "/discipline" && last && last !== location.pathname && allowed.includes(last)) {
         navigate(last, { replace: true });
       }
       setRouteRestored(true);
@@ -112,30 +107,28 @@ const AppContent = () => {
     initialBalance: accounts.reduce((s, a) => s + a.initialBalance, 0), payoutIntervalDays: 0, dailyDrawdownPct: 0, maxDrawdownPct: 0, riskPct: 1,
   } : null) : activeAccount;
 
-  const splash = showSplash && <WelcomeSplash name={userName} showGreeting={location.pathname !== "/finance"} onDone={() => setShowSplash(false)} />;
-
   if (location.pathname === "/finance") {
     return (
-      <NumberAnimationContext.Provider value={!showSplash}>{splash}<div className="relative z-10 min-h-screen text-foreground" aria-hidden={showSplash || undefined} {...(showSplash ? {inert: ''} : {})}>
+      <div className="relative z-10 min-h-screen text-foreground">
         <ErrorBoundary resetKey="finance">
           <Suspense fallback={<PageLoader />}>
             <Finance />
           </Suspense>
         </ErrorBoundary>
-      </div></NumberAnimationContext.Provider>
+      </div>
     );
   }
 
   return (
     <>
       <NumberAnimationContext.Provider value={!showSplash}>
-      {splash}
+      {showSplash && routeRestored && <WelcomeSplash name={userName} onDone={() => setShowSplash(false)} />}
       <div className="relative z-10" aria-hidden={showSplash || undefined} {...(showSplash ? {inert: ''} : {})}>
         <AppLayout accounts={accounts} activeAccountId={activeAccountId} onSelectAccount={setActiveAccountId}>
           <ErrorBoundary resetKey={location.pathname}>
             <Suspense fallback={<PageLoader />}>
               <Routes>
-                <Route path="/discipline" element={<Discipline activeAccount={displayAccount} accounts={accounts} onSelectAccount={setActiveAccountId} />} />
+                <Route path="/discipline" element={<Navigate to="/calendar" replace />} />
                 <Route path="/notes" element={<Notes />} />
                 <Route path="/strategy" element={<Strategy accounts={accounts} activeAccountId={activeAccountId} onSelectAccount={setActiveAccountId} />} />
                 <Route path="/tasks" element={<Navigate to="/" replace />} />

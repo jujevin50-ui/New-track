@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
 import { useTrades } from '@/hooks/useTrades';
 import { useDailyJournal } from '@/hooks/useDailyJournal';
 import { dashboardAnalytics } from '@/lib/dashboardAnalytics';
-import { localDay, newDailyJournal, isTradingDay, previousTradingDay } from '@/lib/discipline';
+import { completedMissions, DISCIPLINE_MISSIONS, localDay, newDailyJournal, isTradingDay, previousTradingDay } from '@/lib/discipline';
 import DashboardFilter from '@/components/trading/DashboardFilter';
 import DailyReview from '@/components/trading/DailyReview';
 import { Button } from '@/components/ui/button';
@@ -45,6 +45,28 @@ export default function CalendarView({ activeAccount, accounts, onSelectAccount 
   const [draft, setDraft] = useState(() => getJournal(date) ?? newDailyJournal(date));
   const dirty = useRef(false);
   const saving = useRef(false);
+  const missions = completedMissions(draft);
+  const updateDraft = (value: typeof draft) => {
+    setDraft(value);
+    dirty.current = true;
+  };
+  const toggleMission = (id: string) => {
+    const tracking = draft.disciplineTracking ?? { missions: [], stress: 3, triggers: [] };
+    const nextMissions = tracking.missions.includes(id)
+      ? tracking.missions.filter(mission => mission !== id)
+      : [...tracking.missions, id];
+    updateDraft({ ...draft, disciplineTracking: { ...tracking, missions: nextMissions } });
+  };
+  const saveDay = async (value: typeof draft) => {
+    if (saving.current) return;
+    saving.current = true;
+    try {
+      await saveJournal(value);
+      dirty.current = false;
+    } finally {
+      saving.current = false;
+    }
+  };
   const filteredAccounts = status === 'all' ? accounts : accounts.filter(account => account.status === status);
   const selectedAccount = filteredAccounts.find(account => account.id === activeAccount?.id) ?? filteredAccounts[0];
   const { allTrades } = useTrades(selectedAccount?.id ?? null, selectedAccount?.initialBalance ?? 0);
@@ -78,11 +100,11 @@ export default function CalendarView({ activeAccount, accounts, onSelectAccount 
       <DashboardFilter label="Compte" ariaLabel="Compte du calendrier" value={selectedId ?? ''} onChange={onSelectAccount} disabled={!filteredAccounts.length} options={[{value:'all',label:'Tous les comptes'},...filteredAccounts.map(account => ({value:account.id,label:account.name}))]} />
       {scope.groups.length > 1 && <DashboardFilter label="Devise" ariaLabel="Devise du calendrier" value={scope.currency || 'UNKNOWN'} onChange={setPreferredCurrency} options={scope.groups.map(group => ({value:group.currency,label:group.currency}))}/>}
     </div><div className="dashboard-switch" role="group" aria-label="Vue du calendrier"><button type="button" aria-pressed={view==='calendar'} onClick={()=>setView('calendar')}>Calendrier</button><button type="button" aria-pressed={view==='list'} onClick={()=>setView('list')}>Liste</button></div></div>
-    {!scope.accounts.length ? <div className="py-16 text-center text-sm text-muted-foreground"><p>{accounts.length ? 'Aucun compte dans cette sélection.' : 'Ajoute un compte pour suivre tes séances.'}</p><Link to="/accounts" className="dashboard-text-link mt-4 inline-block">Gérer mes comptes →</Link></div> : <>
-      {view==='calendar'&&<div className="grid grid-cols-3 gap-4 py-3">
+    {!scope.accounts.length && <div className="text-sm text-muted-foreground"><p>{accounts.length ? 'Aucun compte dans cette sélection.' : 'Ajoute un compte pour afficher les résultats de tes trades.'}</p><Link to="/accounts" className="dashboard-text-link mt-2 inline-block">Gérer mes comptes →</Link></div>}
+      {scope.accounts.length > 0 && view==='calendar'&&<div className="grid grid-cols-3 gap-4 py-3">
         {[{label:'Résultat net du mois',value:money(stats.netProfit,currency),color:tone(stats.netProfit)}, {label:'Trades clôturés',value:String(stats.totalTrades),color:''}, {label:'Win rate',value:percent(stats.winRate),color:''}].map(metric => <div key={metric.label} className="min-w-0 text-center"><p className="text-xs text-muted-foreground">{metric.label}</p><p className={`mt-5 break-words text-lg font-semibold tracking-tight tabular-nums sm:text-[27px] ${metric.color}`}>{metric.value}</p></div>)}
       </div>}
-      <div className="calendar-review-layout grid items-stretch gap-8 xl:grid-cols-2">
+      <div className="calendar-review-layout grid items-start gap-8 xl:grid-cols-2">
         <section className="calendar-month flex min-w-0 flex-col" aria-label={view==='calendar'?'Calendrier mensuel':'Liste des bilans'}>
           <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-sm font-semibold capitalize" aria-live="polite">{view==='calendar'?new Date(`${month}-01T12:00:00`).toLocaleDateString('fr-FR',{month:'long',year:'numeric'}):'Bilans journaliers'}</h2>
@@ -110,9 +132,25 @@ export default function CalendarView({ activeAccount, accounts, onSelectAccount 
         </section>
         <section className="discipline-review ui-review-divider min-w-0" aria-labelledby="calendar-review-title">
           <header className="mb-6 flex flex-wrap items-center justify-between gap-3"><h2 id="calendar-review-title" className="text-sm font-semibold">Bilan journalier</h2><Input aria-label="Date du bilan" type="date" max={today} value={date} onChange={event => chooseDate(event.target.value)} className="h-10 w-auto max-w-full rounded-[10px] bg-transparent text-xs"/></header>
-          <DailyReview key={date} currency={currency} date={date} existing={getJournal(date)} value={draft} onChange={value => {setDraft(value); dirty.current = true;}} psychologyElsewhere trades={dayTrades} saveLabel="Enregistrer la journée" onSave={async value => {saving.current = true; try {await saveJournal(value); dirty.current = false;} finally {saving.current = false;}}}/>
+          <DailyReview key={date} currency={currency} date={date} existing={getJournal(date)} value={draft} onChange={updateDraft} psychologyElsewhere trades={dayTrades} saveLabel="Enregistrer la journée" onSave={saveDay}>
+            <section aria-labelledby="calendar-missions-title" className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <h3 id="calendar-missions-title" className="text-sm font-semibold">Mes missions du jour</h3>
+                <span className="text-xs tabular-nums text-muted-foreground">{missions.length * 20} / 100 XP</span>
+              </div>
+              <progress className="block h-1.5 w-full accent-primary" aria-label="Missions accomplies" value={missions.length} max={DISCIPLINE_MISSIONS.length} />
+              <div className="space-y-2">
+                {DISCIPLINE_MISSIONS.map(mission => {
+                  const checked = missions.includes(mission.id);
+                  return <button key={mission.id} type="button" aria-pressed={checked} onClick={() => toggleMission(mission.id)} className={`discipline-mission flex w-full items-center gap-3 rounded-[10px] border p-3 text-left text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${checked ? 'border-primary/20 bg-primary/10' : 'border-border/60 hover:bg-secondary/40'}`}>
+                    <span aria-hidden="true" className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${checked ? 'border-primary bg-primary text-primary-foreground' : 'border-border'}`}>{checked && <Check className="h-3.5 w-3.5" />}</span>
+                    {mission.title}
+                  </button>;
+                })}
+              </div>
+            </section>
+          </DailyReview>
         </section>
       </div>
-    </>}
   </div>;
 }
