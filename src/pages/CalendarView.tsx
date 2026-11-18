@@ -105,9 +105,9 @@ export default function CalendarView({ activeAccount, accounts, onSelectAccount 
         {[{label:'Résultat net du mois',value:money(stats.netProfit,currency),color:tone(stats.netProfit)}, {label:'Trades clôturés',value:String(stats.totalTrades),color:''}, {label:'Win rate',value:percent(stats.winRate),color:''}].map(metric => <div key={metric.label} className="min-w-0 text-center"><p className="text-xs text-muted-foreground">{metric.label}</p><p className={`mt-5 break-words text-lg font-semibold tracking-tight tabular-nums sm:text-[27px] ${metric.color}`}>{metric.value}</p></div>)}
       </div>}
       <div className="calendar-review-layout grid items-start gap-8 xl:grid-cols-2">
-        <section className="calendar-month flex min-w-0 flex-col" aria-label={view==='calendar'?'Calendrier mensuel':'Liste des bilans'}>
+        <section className="calendar-month flex min-w-0 flex-col rounded-2xl border border-border/70 bg-card/50 p-3 sm:p-5" aria-label={view==='calendar'?'Calendrier mensuel':'Liste des bilans'}>
           <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold capitalize" aria-live="polite">{view==='calendar'?new Date(`${month}-01T12:00:00`).toLocaleDateString('fr-FR',{month:'long',year:'numeric'}):'Bilans journaliers'}</h2>
+            <h2 className="text-base font-semibold capitalize tracking-tight" aria-live="polite">{view==='calendar'?new Date(`${month}-01T12:00:00`).toLocaleDateString('fr-FR',{month:'long',year:'numeric'}):'Bilans journaliers'}</h2>
             {view==='calendar'&&<div className="flex items-center gap-2"><Button variant="outline" size="icon" aria-label="Mois précédent" onClick={() => moveMonth(-1)}><ChevronLeft className="h-4 w-4"/></Button><Button variant="ghost" className="h-10 text-xs" onClick={() => chooseDate(previousTradingDay(today))}>Aujourd’hui</Button><Button variant="outline" size="icon" aria-label="Mois suivant" onClick={() => moveMonth(1)}><ChevronRight className="h-4 w-4"/></Button></div>}
           </header>
           {view==='list'?<CalendarJournalList journals={journals} daily={history.daily} month={month} today={today} selectedDate={date} currency={currency} onSelectDate={day=>{
@@ -130,24 +130,41 @@ export default function CalendarView({ activeAccount, accounts, onSelectAccount 
             })}
           </div></>}
         </section>
-        <section className="discipline-review ui-review-divider min-w-0" aria-labelledby="calendar-review-title">
-          <header className="mb-6 flex flex-wrap items-center justify-between gap-3"><h2 id="calendar-review-title" className="text-sm font-semibold">Bilan journalier</h2><Input aria-label="Date du bilan" type="date" max={today} value={date} onChange={event => chooseDate(event.target.value)} className="h-10 w-auto max-w-full rounded-[10px] bg-transparent text-xs"/></header>
+        <section className="discipline-review min-w-0 rounded-2xl border border-border/70 bg-card/50 p-4 sm:p-6" aria-labelledby="calendar-review-title">
+          <header className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h2 id="calendar-review-title" className="scroll-mt-20 text-lg font-semibold tracking-tight">Bilan journalier</h2>
+              <time dateTime={date} className="mt-1 block text-xs capitalize text-muted-foreground">{fullDate(date)}</time>
+            </div>
+            <Input aria-label="Date du bilan" type="date" max={today} value={date} onChange={event => chooseDate(event.target.value)} className="h-10 w-auto max-w-full rounded-[10px] bg-background/60 text-xs"/>
+          </header>
           <DailyReview key={date} currency={currency} date={date} existing={getJournal(date)} value={draft} onChange={updateDraft} psychologyElsewhere trades={dayTrades} saveLabel="Enregistrer la journée" onSave={saveDay}>
-            <section aria-labelledby="calendar-missions-title" className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <h3 id="calendar-missions-title" className="text-sm font-semibold">Mes missions du jour</h3>
-                <span className="text-xs tabular-nums text-muted-foreground">{missions.length * 20} / 100 XP</span>
+            <section aria-labelledby="calendar-missions-title" className="overflow-hidden rounded-xl border border-border/70 bg-background/50">
+              <div className="bg-primary/[.04] px-3.5 py-3 sm:px-4">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                  <h3 id="calendar-missions-title" className="text-sm font-semibold">Mes missions du jour</h3>
+                  <span className="text-xs tabular-nums text-muted-foreground"><strong className="font-semibold text-foreground">{missions.length}/{DISCIPLINE_MISSIONS.length}</strong> missions · {missions.length * 20} XP</span>
+                </div>
+                <progress className="sr-only" aria-label="Missions accomplies" value={missions.length} max={DISCIPLINE_MISSIONS.length} />
+                <div aria-hidden="true" className="mt-3 flex gap-1">
+                  {DISCIPLINE_MISSIONS.map(({ id }, index) => <span key={id} className={`h-1 flex-1 rounded-full motion-safe:transition-colors ${index < missions.length ? 'bg-primary' : 'bg-border'}`} />)}
+                </div>
               </div>
-              <progress className="block h-1.5 w-full accent-primary" aria-label="Missions accomplies" value={missions.length} max={DISCIPLINE_MISSIONS.length} />
-              <div className="space-y-2">
+              <ul className="divide-y divide-border/60 border-t border-border/60">
                 {DISCIPLINE_MISSIONS.map(mission => {
                   const checked = missions.includes(mission.id);
-                  return <button key={mission.id} type="button" aria-pressed={checked} onClick={() => toggleMission(mission.id)} className={`discipline-mission flex w-full items-center gap-3 rounded-[10px] border p-3 text-left text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${checked ? 'border-primary/20 bg-primary/10' : 'border-border/60 hover:bg-secondary/40'}`}>
-                    <span aria-hidden="true" className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${checked ? 'border-primary bg-primary text-primary-foreground' : 'border-border'}`}>{checked && <Check className="h-3.5 w-3.5" />}</span>
-                    {mission.title}
-                  </button>;
+                  return (
+                    <li key={mission.id}>
+                      <button type="button" aria-pressed={checked} onClick={() => toggleMission(mission.id)} className="flex min-h-11 w-full items-center gap-3 px-3.5 py-2.5 text-left text-sm leading-snug enabled:hover:bg-secondary/50 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary disabled:opacity-70 aria-pressed:bg-primary/[.06] motion-safe:transition-colors sm:px-4">
+                        <span aria-hidden="true" className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border motion-safe:transition-colors ${checked ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground/40 bg-background'}`}>
+                          {checked && <Check className="h-3.5 w-3.5" />}
+                        </span>
+                        {mission.title}
+                      </button>
+                    </li>
+                  );
                 })}
-              </div>
+              </ul>
             </section>
           </DailyReview>
         </section>

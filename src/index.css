@@ -899,9 +899,53 @@ html .app-panel { background-color: var(--glass-bg-strong); background-image: no
 .rail-inner { display: flex; flex-direction: column; height: 100%; min-height: 0; padding: 22px 14px 14px; background-image: radial-gradient(ellipse at top left, hsl(var(--primary) / 0.08), transparent 40%); }
 .rail-brand { display: flex; align-items: center; gap: 10px; padding: 0 6px 24px; }
 .rail-brand-icon { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 40px; flex-shrink: 0; border: 1px solid hsl(var(--primary) / 0.2); border-radius: 12px; background: hsl(var(--primary) / 0.1); color: hsl(var(--primary)); }
-.rail-workspaces { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border: 1px solid hsl(var(--border) / 0.6); border-radius: 13px; background: hsl(var(--secondary) / 0.5); }
-.rail-workspaces button { display: flex; align-items: center; justify-content: center; gap: 7px; height: 35px; font-size: 11px; font-weight: 500; border-radius: 9px; color: hsl(var(--muted-foreground)); transition: background 180ms ease, color 180ms ease; }
-.rail-workspaces button.is-active { background: hsl(var(--card)); color: hsl(var(--foreground)); box-shadow: 0 1px 5px hsl(0 0% 0% / 0.06); }
+.rail-workspaces {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 4px;
+  border: 1px solid hsl(var(--border) / .75);
+  border-radius: 15px;
+  background: hsl(var(--secondary) / .55);
+}
+
+.rail-workspace-pill {
+  position: absolute;
+  inset: 4px auto 4px 4px;
+  width: calc((100% - 8px) / 2);
+  border: 1px solid hsl(var(--primary) / .23);
+  border-radius: 11px;
+  background: linear-gradient(145deg, hsl(var(--primary) / .13), transparent), hsl(var(--card));
+  box-shadow: 0 2px 5px hsl(var(--foreground) / .08);
+  pointer-events: none;
+}
+
+.rail-workspaces button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  border-radius: 11px;
+  color: hsl(var(--muted-foreground));
+  font-size: 12px;
+  font-weight: 600;
+  transition: color 180ms ease, background-color 180ms ease, box-shadow 120ms ease;
+}
+
+.rail-workspaces button[aria-current=page] { color: hsl(var(--foreground)); }
+.rail-workspaces button[aria-current=page] svg { color: hsl(var(--primary)); }
+.rail-workspaces button:active { box-shadow: inset 0 0 0 1px hsl(var(--primary) / .25); }
+
+@media (hover: hover) {
+  .rail-workspaces button:not([aria-current]):hover {
+    color: hsl(var(--foreground));
+    background: hsl(var(--foreground) / .05);
+  }
+}
+
 .rail-section-title { display: flex; align-items: center; justify-content: space-between; padding: 28px 12px 12px; font-size: 9px; font-weight: 600; letter-spacing: 0.13em; text-transform: uppercase; color: hsl(var(--muted-foreground)); }
 .rail-navigation { display: flex; flex: 1; flex-direction: column; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 .rail-nav { display: flex; flex: 1; flex-direction: column; gap: 24px; min-height: min-content; }
@@ -922,34 +966,13 @@ html .app-panel { background-color: var(--glass-bg-strong); background-image: no
 .workspace-rail-mobile { width: min(300px, 90vw); height: 100dvh; }
 .rail-link:focus-visible, .rail-utility:focus-visible, .rail-workspaces button:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: -2px; }
 
-@media (prefers-reduced-motion: no-preference) {
-  .rail-workspace-button > span {
-    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  .rail-workspace-button:focus-visible > span {
-    transform: translateY(-2px) scale(1.08);
-  }
-
-  @media (hover: hover) {
-    .rail-workspace-button:hover > span {
-      transform: translateY(-2px) scale(1.08);
-    }
-  }
-
-  .rail-workspace-button:active > span {
-    transform: translateY(1px) scale(0.94);
-    transition-duration: 90ms;
-  }
-}
-@media (min-width: 1024px) { .workspace-shell { padding-left: 272px; padding-top: 12px; } }
 @media (prefers-reduced-motion: reduce) { .rail-link, .rail-utility, .rail-workspaces button { transition: none; } .workspace-rail-mobile { animation: none !important; transition: none !important; } }
 @media (prefers-reduced-transparency: reduce) { .workspace-rail, .rail-mobile-header { background: hsl(var(--background)); backdrop-filter: none; } }
 
-.workspace-rail { animation: rail-arrive 320ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.workspace-rail:not([data-workspace-switch]) { animation: rail-arrive 320ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 .workspace-rail::before { content: ''; position: absolute; top: 0; left: 24px; right: 24px; height: 1px; background: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.4), transparent); }
 @keyframes rail-arrive { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
-@media (prefers-reduced-motion: reduce) { .workspace-rail { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .workspace-rail:not([data-workspace-switch]) { animation: none; } }
 
 .settings-window { display: flex; flex-direction: column; height: min(760px, 90dvh); background: hsl(var(--background)); }
 .settings-heading { display: flex; flex-direction: row; align-items: center; gap: 12px; padding: 24px 28px; border-bottom: 1px solid hsl(var(--border) / 0.6); }
@@ -1099,7 +1122,6 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 .discipline-page .discipline-review :is(textarea, select) { background: transparent; border-radius: 10px; font-size: 12px; }
 .discipline-page .discipline-review textarea:focus { border-color: hsl(var(--primary) / 0.65); }
 .discipline-page .discipline-review button[type=submit] { min-height: 40px; border-radius: 10px; font-size: 12px; }
-@media (prefers-reduced-motion: no-preference) { .discipline-page .discipline-mission { transition: background 180ms ease, border-color 180ms ease; } }
 .discipline-page .discipline-review .dashboard-filter-field { width: 100%; }
 
 .discipline-review .review-options label,
@@ -1278,14 +1300,6 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 .rail-links-gooey .rail-link.is-current { color: hsl(var(--foreground)); }
 @media (prefers-reduced-motion: reduce) { .rail-links-gooey .rail-selection-slider { transition: none; } .rail-gooey-layer { filter: none !important; } }
 /* An elastic shared pill accompanies changes between the two workspaces. */
-.rail-workspaces-animated { position: relative; isolation: isolate; gap: 0; }
-.rail-workspace-pill { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / 2); border-radius: 9px; background: hsl(var(--card)); box-shadow: 0 1px 5px hsl(0 0% 0% / .06); pointer-events: none; }
-.rail-workspaces-animated button { position: relative; z-index: 1; background: transparent; }
-.rail-workspaces-animated button.is-active { background: transparent; box-shadow: none; }
-.rail-workspaces-animated button > span { display: inline-block; transition: transform 200ms cubic-bezier(.22,1,.36,1), opacity 180ms ease; }
-.rail-workspaces-animated button:hover > span { transform: translateY(-1px); }
-.rail-workspaces-animated button:active > span { transform: scale(.94); }
-@media (prefers-reduced-motion: reduce) { .rail-workspaces-animated button > span { transition: none; transform: none !important; } }
 
 /* Opening counter: tabular reels roll vertically, then the surface slides away. */
 .welcome-counter { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; overflow: hidden; background: hsl(var(--background)); color: hsl(var(--foreground)); transition: transform 500ms cubic-bezier(.76,0,.24,1); }

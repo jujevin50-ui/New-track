@@ -1,11 +1,15 @@
 import { APP_LOGO } from '@/lib/branding';
 import { useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Menu } from 'lucide-react';
+import { ChartNoAxesCombined, Landmark, Menu } from 'lucide-react';
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 
 let pendingWorkspace: { from: boolean; to: boolean } | null = null;
+const workspaces = [
+  { finance: false, label: 'Trading', Icon: ChartNoAxesCombined },
+  { finance: true, label: 'Finance', Icon: Landmark },
+];
 
 const query = '(min-width: 1024px)';
 const subscribe = (listener: () => void) => { const media = window.matchMedia(query); media.addEventListener('change', listener); return () => media.removeEventListener('change', listener); };
@@ -22,29 +26,34 @@ export default function WorkspaceRail({ children }: { children: ReactNode }) {
   useLayoutEffect(() => {
     const pill = workspacePill.current;
     const pending = pendingWorkspace;
-    if (!pill || !pending || pending.to !== finance) return;
+    if (!pill || !pending) return;
     pendingWorkspace = null;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (pending.to !== finance || media.matches) return;
+    pill.closest('.workspace-rail')?.setAttribute('data-workspace-switch', '');
     const from = pending.from ? 100 : 0, to = finance ? 100 : 0;
     const animation = pill.animate([
-      { transform: `translateX(${from}%) scale(1,1)` },
-      { transform: `translateX(${(from+to)/2}%) scale(1.22,.88)`, offset: .42 },
-      { transform: `translateX(${to}%) scale(.96,1.04)`, offset: .78 },
-      { transform: `translateX(${to}%) scale(1,1)` },
-    ], { duration: 280, easing: 'cubic-bezier(.22,1,.36,1)' });
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+      { transform: `translateX(${from}%)` },
+      { transform: `translateX(${to}%)` },
+    ], { duration: 340, easing: 'cubic-bezier(.2,.8,.2,1)' });
     const stop = () => { if (media.matches) animation.cancel(); };
     media.addEventListener('change', stop);
     return () => { animation.cancel(); media.removeEventListener('change', stop); };
   }, [finance, desktop, open]);
   const content = <div className="rail-inner">
     <div className="rail-brand rail-brand-logo"><img src={APP_LOGO} alt="Track Record" className="h-16 w-16 object-contain" /></div>
-    <div className="rail-workspaces rail-workspaces-animated" role="navigation" aria-label="Modules de l’application">
+    <div className="rail-workspaces" role="navigation" aria-label="Modules de l’application">
       <span ref={workspacePill} className="rail-workspace-pill" aria-hidden="true" style={{transform:`translateX(${finance ? 100 : 0}%)`}} />
-      {[{ value: false, label: 'Trading' }, { value: true, label: 'Finance' }].map(({ value, label }) => <button type="button" key={label} aria-current={finance === value ? 'page' : undefined} onClick={() => {
-        if (value !== finance) pendingWorkspace = { from: finance, to: value };
-        navigate(value ? '/finance' : '/'); setOpen(false);
-      }} className={`rail-workspace-button${finance === value ? ' is-active' : ''}`}><span>{label}</span></button>)}
+      {workspaces.map(({ finance: destination, label, Icon }) => (
+        <button type="button" key={label} aria-current={finance === destination ? 'page' : undefined} onClick={() => {
+          if (desktop && destination !== finance) pendingWorkspace = { from: finance, to: destination };
+          navigate(destination ? '/finance' : '/');
+          setOpen(false);
+        }}>
+          <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+          {label}
+        </button>
+      ))}
     </div>
     <div className="rail-navigation" onClick={event => { if (!desktop && event.target instanceof Element && event.target.closest('a, [data-rail-link]')) setOpen(false); }}>{children}</div>
   </div>;
