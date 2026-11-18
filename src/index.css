@@ -826,6 +826,9 @@ html [role="alertdialog"].bg-card {
 /* Le formulaire conserve un fond lisible au-dessus des graphiques et des vagues. */
 html [role="dialog"].trade-editor {
   background-color: hsl(var(--card) / 0.96);
+  max-height: calc(100dvh - 1rem);
+  overflow: hidden;
+  scrollbar-gutter: auto;
 }
 
 @media (prefers-reduced-transparency: reduce) {
