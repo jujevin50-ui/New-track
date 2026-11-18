@@ -44,7 +44,7 @@ export default function WorkspaceRail({ children }: { children: ReactNode }) {
       {[{ value: false, label: 'Trading' }, { value: true, label: 'Finance' }].map(({ value, label }) => <button type="button" key={label} aria-current={finance === value ? 'page' : undefined} onClick={() => {
         if (value !== finance) pendingWorkspace = { from: finance, to: value };
         navigate(value ? '/finance' : '/'); setOpen(false);
-      }} className={[!value && 'rail-link-motion', finance === value && 'is-active'].filter(Boolean).join(' ')}><span>{label}</span></button>)}
+      }} className={`rail-workspace-button${finance === value ? ' is-active' : ''}`}><span>{label}</span></button>)}
     </div>
     <div className="rail-navigation" onClick={event => { if (!desktop && event.target instanceof Element && event.target.closest('a, [data-rail-link]')) setOpen(false); }}>{children}</div>
   </div>;
