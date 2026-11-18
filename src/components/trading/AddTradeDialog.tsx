@@ -144,8 +144,8 @@ const AddTradeDialog = ({ open, onOpenChange, onSubmit, editTrade, accounts, act
   const draftKey = `trade:${accounts.map(account=>account.id).sort().join(',')}:${defaultAccountId}:${editTrade?.id || 'new'}`;
   const draftReady = useRef(false);
   const draftCompleted = useRef(false);
-  const [draftStatus,setDraftStatus] = useState<'saved' | 'memory' | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [formError, setFormError] = useState('');
   const [imageError, setImageError] = useState('');
   const [pastingImage, setPastingImage] = useState(false);
@@ -176,7 +176,7 @@ const AddTradeDialog = ({ open, onOpenChange, onSubmit, editTrade, accounts, act
     draftReady.current = false;
     if (!open) return;
     draftCompleted.current = false;
-    setDraftStatus(null);
+    setSaved(false);
     setFormError('');
     setImageError('');
     const recovered = readFormDraft(draftKey,isTradeDraft);
@@ -184,7 +184,7 @@ const AddTradeDialog = ({ open, onOpenChange, onSubmit, editTrade, accounts, act
       setForm(recovered.form); setFeesOpen(recovered.feesOpen);
       setResultText(recovered.resultText); setCommissionText(recovered.commissionText);
       setSwapText(recovered.swapText); setRiskText(recovered.riskText);
-      setDraftStatus(saveFormDraft(draftKey,recovered));
+      saveFormDraft(draftKey, recovered);
     } else if (editTrade) {
       const { id, tradeNumber, ...rest } = editTrade;
       const screenshots = rest.screenshots?.length ? rest.screenshots : rest.screenshot ? [rest.screenshot] : [];
@@ -204,8 +204,14 @@ const AddTradeDialog = ({ open, onOpenChange, onSubmit, editTrade, accounts, act
 
   useEffect(() => {
     if (!open || !draftReady.current || draftCompleted.current) return;
-    setDraftStatus(saveFormDraft(draftKey,{form,resultText,commissionText,swapText,riskText,feesOpen} satisfies TradeDraft));
+    saveFormDraft(draftKey,{form,resultText,commissionText,swapText,riskText,feesOpen} satisfies TradeDraft);
   }, [open,editTrade,draftKey,form,resultText,commissionText,swapText,riskText,feesOpen]);
+
+  useEffect(() => {
+    if (!open || !saved) return;
+    const timer = window.setTimeout(() => onOpenChange(false), 650);
+    return () => window.clearTimeout(timer);
+  }, [open, saved, onOpenChange]);
 
   const set = <K extends keyof TradeFormData>(field: K, value: TradeFormData[K]) => {
     setFormError('');
@@ -472,7 +478,7 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (saving || clipboardBusy.current) return;
+    if (saving || draftCompleted.current || clipboardBusy.current) return;
     if (!selectedAccount) { setFormError('Sélectionnez un compte.'); return; }
     if (form.endDate && form.endDate < form.date) { setFormError('La clôture doit suivre la date d’ouverture.'); document.getElementById(`${fieldId}-end`)?.focus(); return; }
     if ((form.riskPercent || 0) > 100) { setFormError('Le risque ne peut pas dépasser 100 %.'); document.getElementById(`${fieldId}-risk`)?.focus(); return; }
@@ -485,7 +491,7 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
       await onSubmit(form);
       draftCompleted.current = true;
       removeFormDraft(draftKey);
-      onOpenChange(false);
+      setSaved(true);
     } catch (error) {
       setFormError(error instanceof Error ? error.message : 'Impossible d’enregistrer le trade.');
     } finally {
@@ -514,10 +520,9 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
           </DialogHeader>
           <form onSubmit={handleSubmit} onPaste={handlePasteEvent} className="flex min-h-0 flex-1 flex-col">
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
-              <fieldset disabled={saving} className="grid min-w-0 items-start gap-x-12 gap-y-10 p-5 sm:p-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+              <fieldset disabled={saving || saved} className="grid min-w-0 items-start gap-x-12 gap-y-10 p-5 sm:p-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                 <div className="min-w-0 space-y-8">
-                  <section aria-labelledby={`${fieldId}-technical`}>
-                    <h3 id={`${fieldId}-technical`} className="mb-5 text-lg font-semibold tracking-tight">Données techniques</h3>
+                  <section aria-label="Données techniques">
                     <div className="grid gap-5 min-[1440px]:grid-cols-2">
                       <section aria-labelledby={`${fieldId}-position`} className="space-y-4">
                         <h4 id={`${fieldId}-position`} className="text-sm font-semibold">Position</h4>
@@ -568,12 +573,7 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
                         </div>
                       </section>
                     </div>
-                  </section>
-
-                  <section aria-labelledby={`${fieldId}-journal`} className="space-y-4">
-                    <h3 id={`${fieldId}-journal`} className="text-lg font-semibold tracking-tight">Contexte du trade</h3>
-                    <div className="space-y-2"><Label htmlFor={`${fieldId}-notes`}>Notes</Label><Textarea id={`${fieldId}-notes`} value={form.notes || ''} onChange={e => set('notes', e.target.value)} placeholder="Contexte, raison de l’entrée, gestion du trade…" className="min-h-[clamp(12rem,28dvh,22rem)] resize-y rounded-xl border-transparent bg-secondary/35 text-sm leading-relaxed" /></div>
-                    <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex flex-wrap items-center justify-between gap-4 pt-5">
                       <div className="space-y-2">
                         <Label id={`${fieldId}-quality`}>Qualité du setup</Label>
                         <div role="group" aria-labelledby={`${fieldId}-quality`} className="flex gap-1.5">
@@ -583,37 +583,38 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
                       <div className="flex items-center gap-3"><Label htmlFor={`${fieldId}-strategy`}>Plan respecté</Label><Switch id={`${fieldId}-strategy`} checked={form.strategyRespected} onCheckedChange={v => set('strategyRespected', v)} /></div>
                     </div>
                   </section>
+
+                  <div>
+                    <div className="space-y-2"><Label htmlFor={`${fieldId}-notes`}>Note</Label><Textarea id={`${fieldId}-notes`} value={form.notes || ''} onChange={e => set('notes', e.target.value)} className="min-h-[clamp(12rem,28dvh,22rem)] resize-y rounded-xl border-transparent bg-secondary/35 text-sm leading-relaxed" /></div>
+                  </div>
                 </div>
 
                 <div className="min-w-0 space-y-5">
-                  <section aria-labelledby={`${fieldId}-captures`} className="space-y-4">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="flex items-center gap-2">
-                        <h3 id={`${fieldId}-captures`} className="text-lg font-semibold tracking-tight">Captures{screenshots.length > 0 ? ` · ${screenshots.length}` : ''}</h3>
-                        <kbd className="rounded-md border border-border/60 px-1.5 py-0.5 text-[11px] text-muted-foreground">Ctrl + V</kbd>
-                      </div>
-                      <div className="flex flex-wrap gap-2"><Button type="button" variant="ghost" size="sm" className="h-8 gap-1.5 rounded-lg" disabled={pastingImage} onClick={() => { void pasteImage(); }}>{pastingImage ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Clipboard className="h-3.5 w-3.5" />}Coller une image</Button><Button type="button" variant="ghost" size="sm" className="h-8 gap-1.5 rounded-lg" onClick={() => imageInput.current?.click()}><ImagePlus className="h-3.5 w-3.5" />Ajouter</Button></div>
+                  <section aria-label="Captures" className="trade-images relative space-y-3">
+                    <div className="trade-image-tools absolute left-2 top-2 z-10 flex gap-1 rounded-lg bg-background/95 p-1 shadow-sm">
+                      <Button type="button" variant="ghost" size="icon" aria-label="Coller une image" title="Coller une image" className="size-9" disabled={pastingImage} onClick={() => { void pasteImage(); }}>{pastingImage ? <Loader2 aria-hidden="true" className="size-4 animate-spin" /> : <Clipboard aria-hidden="true" className="size-4" />}</Button>
+                      <Button type="button" variant="ghost" size="icon" aria-label="Importer des captures" title="Importer des captures" className="size-9" onClick={() => imageInput.current?.click()}><ImagePlus aria-hidden="true" className="size-4" /></Button>
                     </div>
                     <input ref={imageInput} type="file" accept="image/*" multiple aria-label="Ajouter des captures" className="sr-only" tabIndex={-1} onChange={e => { void addFiles(e.target.files); e.target.value = ''; }} />
                     {screenshots.length > 0 ? (
                       <div className="grid gap-4">
                         {screenshots.map((image, index) => (
-                          <div key={index} className="relative">
+                          <div key={index} className="trade-image relative">
                             <button type="button" aria-label={`Agrandir la capture ${index + 1}`} aria-haspopup="dialog" onClick={event => {
                               previewTrigger.current = event.currentTarget;
                               setPreviewIndex(index);
-                            }} className="group relative block aspect-video w-full cursor-zoom-in overflow-hidden rounded-xl bg-secondary/35 focus-visible:ring-2 focus-visible:ring-primary">
-                              <img src={image} alt={`Capture ${index + 1}`} className="absolute inset-0 h-full w-full object-contain" />
-                              <span className="absolute bottom-2 right-2 grid size-9 place-items-center rounded-lg bg-background/90 text-foreground group-hover:bg-background">
+                            }} className="block w-full cursor-zoom-in focus-visible:ring-2 focus-visible:ring-primary">
+                              <img src={image} alt={`Capture ${index + 1}`} className="block h-auto w-full" />
+                              <span className="trade-image-tools pointer-events-none absolute bottom-2 right-2 grid size-9 place-items-center rounded-lg bg-background/90 text-foreground">
                                 <Maximize2 aria-hidden="true" className="size-4" />
                               </span>
                             </button>
-                            <Button type="button" variant="secondary" size="icon" aria-label={`Supprimer la capture ${index + 1}`} className="absolute right-2 top-2 size-9 rounded-lg" onClick={() => removeImage(index)}><X aria-hidden="true" className="size-4" /></Button>
+                            <Button type="button" variant="secondary" size="icon" aria-label={`Supprimer la capture ${index + 1}`} className="trade-image-tools absolute right-2 top-2 size-9 rounded-lg" onClick={() => removeImage(index)}><X aria-hidden="true" className="size-4" /></Button>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <button type="button" onClick={() => imageInput.current?.click()} className="flex aspect-video w-full flex-col items-center justify-center gap-3 rounded-xl bg-secondary/35 p-4 text-sm text-muted-foreground transition-colors hover:bg-secondary/60">
+                      <button type="button" onClick={() => imageInput.current?.click()} className="flex aspect-video w-full flex-col items-center justify-center gap-3 rounded-xl p-4 text-sm text-muted-foreground transition-colors hover:bg-secondary/40">
                         <ImagePlus aria-hidden="true" className="size-6" />
                         Importer une capture
                       </button>
@@ -639,9 +640,11 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
             </div>
             <footer className="ui-form-footer flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-border/60 bg-background/80 px-5 py-4 sm:px-7">
               {formError && <p role="alert" className="w-full text-sm text-loss">{formError}</p>}
-              <div className="ui-draft-status">{draftStatus === 'memory' ? 'Brouillon en mémoire · gardez cet onglet ouvert.' : draftStatus === 'saved' ? 'Brouillon sauvegardé dans cet onglet.' : 'La saisie sera conservée à la fermeture.'}</div>
-              <Button type="button" variant="ghost" disabled={saving} className="rounded-xl" onClick={() => onOpenChange(false)}>Fermer</Button>
-              <Button type="submit" disabled={saving || pastingImage || !accounts.length} className="gap-2 rounded-xl px-5">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}{editTrade ? 'Enregistrer' : 'Ajouter le trade'}</Button>
+              <Button type="submit" disabled={saving || saved || pastingImage || !accounts.length} className={`gap-2 rounded-xl px-5 ${saved ? 'trade-save-success' : ''}`}>
+                {saving ? <Loader2 aria-hidden="true" className="size-4 animate-spin" /> : saved ? <Check aria-hidden="true" className="size-4" /> : null}
+                {saved ? 'Enregistré' : 'Enregistrer'}
+              </Button>
+              <span aria-live="polite" className="sr-only">{saved ? 'Trade enregistré.' : ''}</span>
             </footer>
           </form>
           <Dialog open={Boolean(previewImage)} onOpenChange={isOpen => { if (!isOpen) setPreviewIndex(null); }}>

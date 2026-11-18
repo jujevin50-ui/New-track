@@ -36,7 +36,7 @@ describe('Trade entry', () => {
     const screenshots = ['data:image/png;base64,first', 'data:image/png;base64,second'];
     render(<AddTradeDialog open onOpenChange={onOpenChange} onSubmit={vi.fn()} editTrade={{ ...trade, screenshots }} accounts={[account]} activeAccountId={account.id} />);
 
-    fill('Notes', 'Contexte en cours');
+    fill('Note', 'Contexte en cours');
     const trigger = screen.getByRole('button', { name: 'Agrandir la capture 1' });
     fireEvent.click(trigger);
     const viewer = screen.getByRole('dialog', { name: 'Capture 1 sur 2' });
@@ -49,7 +49,7 @@ describe('Trade entry', () => {
 
     await waitFor(() => expect(viewer).not.toBeInTheDocument());
     await waitFor(() => expect(trigger).toHaveFocus());
-    expect(screen.getByLabelText('Notes')).toHaveValue('Contexte en cours');
+    expect(screen.getByLabelText('Note')).toHaveValue('Contexte en cours');
     expect(onOpenChange).not.toHaveBeenCalled();
   });
 
@@ -64,10 +64,10 @@ describe('Trade entry', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Short' }));
     fireEvent.click(screen.getByRole('button', { name: '3 étoiles' }));
     fireEvent.click(screen.getByRole('switch', { name: 'Plan respecté' }));
-    fill('Notes', 'Retest de la zone');
+    fill('Note', 'Retest de la zone');
     expect(screen.getByRole('status')).toHaveTextContent('+242,50');
     expect(screen.getByRole('status')).toHaveTextContent('+2.42R');
-    fireEvent.click(screen.getByRole('button', { name: 'Ajouter le trade' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
     await waitFor(() => expect(onSubmit).toHaveBeenCalledOnce());
     expect(onSubmit.mock.calls[0][0]).toMatchObject({
       accountId: account.id, result: 250.5, commission: 5.5, swap: -2.5,
@@ -82,7 +82,7 @@ describe('Trade entry', () => {
     expect(screen.getByLabelText('Commission (EUR)')).toHaveValue('5');
     expect(screen.getByLabelText('Clôture')).toHaveValue('2026-01-03');
     fireEvent.click(screen.getByRole('button', { name: 'Supprimer la capture 1' }));
-    fill('Notes', 'Note modifiée');
+    fill('Note', 'Note modifiée');
     fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
     await waitFor(() => expect(onSubmit).toHaveBeenCalledOnce());
     expect(onSubmit.mock.calls[0][0]).toMatchObject({
@@ -95,10 +95,10 @@ describe('Trade entry', () => {
     const onOpenChange = vi.fn();
     render(<AddTradeDialog open onOpenChange={onOpenChange} onSubmit={vi.fn().mockRejectedValue(new Error('Écriture impossible'))} accounts={[account]} activeAccountId={account.id} />);
     fill('P&L brut (EUR)', '-20');
-    fill('Notes', 'À conserver');
-    fireEvent.click(screen.getByRole('button', { name: 'Ajouter le trade' }));
+    fill('Note', 'À conserver');
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Écriture impossible');
-    expect(screen.getByLabelText('Notes')).toHaveValue('À conserver');
+    expect(screen.getByLabelText('Note')).toHaveValue('À conserver');
     expect(onOpenChange).not.toHaveBeenCalled();
   });
 
@@ -108,12 +108,14 @@ describe('Trade entry', () => {
     const onOpenChange = vi.fn();
     render(<AddTradeDialog open onOpenChange={onOpenChange} onSubmit={onSubmit} accounts={[account]} activeAccountId={account.id} />);
     fill('P&L brut (EUR)', '0');
-    const submit = screen.getByRole('button', { name: 'Ajouter le trade' });
+    const submit = screen.getByRole('button', { name: 'Enregistrer' });
     fireEvent.click(submit);
     expect(submit).toBeDisabled();
     expect(onSubmit).toHaveBeenCalledOnce();
     expect(onOpenChange).not.toHaveBeenCalled();
     complete();
+    expect(await screen.findByRole('button', { name: 'Enregistré' })).toBeDisabled();
+    expect(onOpenChange).not.toHaveBeenCalled();
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
   });
 
@@ -122,7 +124,7 @@ describe('Trade entry', () => {
     render(<AddTradeDialog open onOpenChange={vi.fn()} onSubmit={onSubmit} accounts={[account]} activeAccountId={account.id} />);
     fill('P&L brut (EUR)', '10');
     fill('Risque (%)', '101');
-    fireEvent.click(screen.getByRole('button', { name: 'Ajouter le trade' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
     expect(screen.getByRole('alert')).toHaveTextContent('100 %');
     expect(onSubmit).not.toHaveBeenCalled();
     fill('Risque (%)', '1');

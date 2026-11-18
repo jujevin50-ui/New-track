@@ -831,6 +831,30 @@ html [role="dialog"].trade-editor {
   scrollbar-gutter: auto;
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .trade-images:not(:hover):not(:focus-within) > .trade-image-tools,
+  .trade-image:not(:hover):not(:focus-within) .trade-image-tools {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+.trade-editor button.trade-save-success:disabled {
+  background: hsl(var(--profit));
+  color: hsl(var(--background));
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .trade-editor .trade-image-tools { transition: opacity 140ms ease; }
+  .trade-editor .trade-save-success { animation: trade-saved 480ms ease-out; }
+}
+
+@keyframes trade-saved {
+  0% { box-shadow: 0 0 0 0 hsl(var(--profit) / .48); }
+  100% { box-shadow: 0 0 0 10px hsl(var(--profit) / 0); }
+}
+
 @media (prefers-reduced-transparency: reduce) {
   html .bg-card, html .surface, html .metric-card, html [role="dialog"].trade-editor, .rb-liquid {
     background-color: hsl(var(--card));
