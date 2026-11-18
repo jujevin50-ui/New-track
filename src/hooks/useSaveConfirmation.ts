@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { queueBackgroundSave } from '@/lib/backgroundSaves';
 
-/** Briefly show a successful write before leaving the form. */
+/** Briefly acknowledge the action before leaving the form. */
 export function useSaveConfirmation() {
   const [saved, setSaved] = useState(false);
   const timer = useRef<number>();
@@ -28,5 +29,10 @@ export function useSaveConfirmation() {
     }, 220);
   };
 
-  return { saved, confirm, reset };
+  const saveInBackground = (write: () => Promise<unknown>, errorMessage: string, after?: () => void, onDiscard?: () => void) => {
+    confirm(after);
+    queueBackgroundSave(write, errorMessage, onDiscard);
+  };
+
+  return { saved, confirm, reset, saveInBackground };
 }

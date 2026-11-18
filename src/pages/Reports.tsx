@@ -210,9 +210,9 @@ const Reports = ({ accounts }: ReportsProps) => {
   const [query, setQuery] = usePagePreference('reports.search','');
   const [visibility, setVisibility] = usePagePreference('reports.visibility','all',oneOf('all','saved','draft'));
   const [dirty, setDirty] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const { saved, confirm } = useSaveConfirmation();
+  const { saved, saveInBackground } = useSaveConfirmation();
   const loadedForm = useRef<PeriodReportData | null>(null);
+  const pendingForms = useRef(new Map<string, PeriodReportData>());
   const formatMoney = (value: number, currency = scope.currency) => { try { return new Intl.NumberFormat('fr-FR', {style:'currency',currency,signDisplay:'exceptZero',maximumFractionDigits:2}).format(value); } catch {return value.toLocaleString('fr-FR',{signDisplay:'exceptZero',maximumFractionDigits:2});} };
   const pdfMoney = useCallback((value: number, currency = scope.currency) => `${value >= 0 ? '+' : ''}${value.toFixed(2)} ${currency}`, [scope.currency]);
   const [browseType, setBrowseType] = usePagePreference<PeriodType>('reports.type','weekly',oneOf('weekly','monthly','yearly'));
@@ -279,7 +279,7 @@ const Reports = ({ accounts }: ReportsProps) => {
 
   useEffect(() => {
     if (!selected || dirty) return;
-    const next = getReport(selected.type, selected.key);
+    const next = pendingForms.current.get(`${selected.type}/${selected.key}`) ?? getReport(selected.type, selected.key);
     // Un trade peut avoir changé de semaine (rangé par date de fin) : on retrouve ses notes saisies
     // dans un autre compte rendu de même type, sans écraser ce qui est déjà noté ici.
     let tradeNotes: Record<string, string> = next.tradeNotes || {};
@@ -345,7 +345,7 @@ const Reports = ({ accounts }: ReportsProps) => {
   const updateTradeNote = (tradeId: string, note: string) => { setDirty(true); setFormData(prev => ({ ...prev, tradeNotes: { ...prev.tradeNotes, [tradeId]: note } })); };
 
   const selectPeriod = (type: PeriodType, key: string) => {
-    if (saving || saved || dirty && !window.confirm('Changer de rapport sans enregistrer les modifications ?')) return false;
+    if (saved || dirty && !window.confirm('Changer de rapport sans enregistrer les modifications ?')) return false;
     setDirty(false);
     setSelected({ type, key });
     setIsEditing(false);
@@ -358,11 +358,26 @@ const Reports = ({ accounts }: ReportsProps) => {
     if (selectPeriod(type, key)) setIsEditing(true);
   };
 
-  const handleSave = async () => {
-    if (!selected) return;
-    if (saving || saved) return;
-    setSaving(true);
-    try { await saveReport(selected.type, selected.key, formData); loadedForm.current = formData; setDirty(false); confirm(() => { toast.success('Rapport enregistré'); setIsEditing(false); }); } catch { toast.error('Impossible d’enregistrer le rapport.'); } finally { setSaving(false); }
+  const handleSave = () => {
+    if (!selected || saved) return;
+    const key = `${selected.type}/${selected.key}`;
+    pendingForms.current.set(key, formData);
+    const clearPending = () => {
+      if (pendingForms.current.get(key) === formData) pendingForms.current.delete(key);
+    };
+    saveInBackground(
+      async () => {
+        await saveReport(selected.type, selected.key, formData);
+        clearPending();
+      },
+      'Impossible d’enregistrer le rapport.',
+      () => {
+        loadedForm.current = formData;
+        setDirty(false);
+        setIsEditing(false);
+      },
+      clearPending,
+    );
   };
 
   const handleDownloadPDF = useCallback(async (mode: 'download' | 'preview' = 'download'): Promise<string | undefined> => {
@@ -553,7 +568,7 @@ const Reports = ({ accounts }: ReportsProps) => {
       <h1 className="sr-only page-title-hidden">Rapports</h1>
       <div className="flex flex-wrap items-end gap-4">
         {scope.groups.length > 1 && <DashboardFilter label="Devise" ariaLabel="Devise des rapports" value={scope.currency || 'UNKNOWN'} onChange={value => {
-          if (!saving && !saved && (!dirty || window.confirm('Changer de devise sans enregistrer les modifications ?'))) {
+          if (!saved && (!dirty || window.confirm('Changer de devise sans enregistrer les modifications ?'))) {
             setDirty(false);
             setIsEditing(false);
             setPreferredCurrency(value);
@@ -573,7 +588,7 @@ const Reports = ({ accounts }: ReportsProps) => {
           <Input id="report-search" type="search" placeholder="Semaine, mois ou année…" value={query} onChange={event => setQuery(event.target.value)} className="h-11 rounded-[10px] bg-transparent text-xs" />
         </div>
         <DashboardFilter label="Afficher" ariaLabel="État des rapports" value={visibility} onChange={setVisibility} options={[{value:'all',label:'Toutes les périodes'},{value:'saved',label:'Enregistrés'},{value:'draft',label:'À rédiger'}]}/>
-        <Button variant="outline" className="h-11 rounded-[10px] text-xs" disabled={saving || saved} onClick={() => createCurrent(browseType)}>Nouveau rapport</Button>
+        <Button variant="outline" className="h-11 rounded-[10px] text-xs" disabled={saved} onClick={() => createCurrent(browseType)}>Nouveau rapport</Button>
       </div>
       <ReportTimeline entries={visibleEntries} type={browseType} selectedKey={selected?.type === browseType ? selected.key : undefined} onSelect={key => {
         if (selected?.type !== browseType || selected.key !== key) selectPeriod(browseType, key);
@@ -610,11 +625,11 @@ const Reports = ({ accounts }: ReportsProps) => {
                     </>
                   ) : (
                     <>
-                      <Button variant="outline" size="sm" disabled={saving || saved} onClick={() => { if(loadedForm.current) setFormData(loadedForm.current); setDirty(false); setIsEditing(false); }} className="gap-1.5 text-xs">
+                      <Button variant="outline" size="sm" disabled={saved} onClick={() => { if(loadedForm.current) setFormData(loadedForm.current); setDirty(false); setIsEditing(false); }} className="gap-1.5 text-xs">
                         Annuler
                       </Button>
-                      <Button size="sm" loading={saving} saved={saved} disabled={saved} onClick={handleSave} className="gap-1.5 text-xs">
-                        {!saving && !saved && <Save aria-hidden="true" />}{saved ? 'Enregistré' : 'Enregistrer' }
+                      <Button size="sm" saved={saved} disabled={saved} onClick={handleSave} className="gap-1.5 text-xs">
+                        {!saved && <Save aria-hidden="true" />}{saved ? 'Pris en compte' : 'Enregistrer' }
                       </Button>
                     </>
                   )}
@@ -622,7 +637,7 @@ const Reports = ({ accounts }: ReportsProps) => {
               </div>
 
               {isEditing ? (
-              <fieldset disabled={saving || saved} className="min-w-0 space-y-10 p-6 sm:p-12">
+              <fieldset disabled={saved} className="min-w-0 space-y-10 p-6 sm:p-12">
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                   {[
                     { label: 'P&L', value: formatMoney(stats.pnl), color: stats.pnl >= 0 ? 'text-profit' : 'text-loss' },
@@ -739,10 +754,10 @@ const Reports = ({ accounts }: ReportsProps) => {
                 </div>
 
                 <div className="flex items-center gap-2 pt-1">
-                  <Button loading={saving} saved={saved} disabled={saved} onClick={handleSave} className="gap-1.5 text-xs">
-                    {!saving && !saved && <Save aria-hidden="true" />}{saved ? 'Enregistré' : 'Enregistrer le rapport'}
+                  <Button saved={saved} disabled={saved} onClick={handleSave} className="gap-1.5 text-xs">
+                    {!saved && <Save aria-hidden="true" />}{saved ? 'Pris en compte' : 'Enregistrer le rapport'}
                   </Button>
-                  <Button variant="outline" disabled={saving || saved} onClick={() => setIsEditing(false)} className="gap-1.5 text-xs">
+                  <Button variant="outline" disabled={saved} onClick={() => setIsEditing(false)} className="gap-1.5 text-xs">
                     <Eye className="h-3.5 w-3.5" />Voir PDF
                   </Button>
                 </div>

@@ -145,8 +145,7 @@ const AddTradeDialog = ({ open, onOpenChange, onSubmit, editTrade, accounts, act
   const draftKey = `trade:${accounts.map(account=>account.id).sort().join(',')}:${defaultAccountId}:${editTrade?.id || 'new'}`;
   const draftReady = useRef(false);
   const draftCompleted = useRef(false);
-  const [saving, setSaving] = useState(false);
-  const { saved, confirm, reset: resetConfirmation } = useSaveConfirmation();
+  const { saved, saveInBackground, reset: resetConfirmation } = useSaveConfirmation();
   const [formError, setFormError] = useState('');
   const [imageError, setImageError] = useState('');
   const [pastingImage, setPastingImage] = useState(false);
@@ -471,9 +470,9 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
     }
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (saving || draftCompleted.current || clipboardBusy.current) return;
+    if (draftCompleted.current || clipboardBusy.current) return;
     if (!selectedAccount) { setFormError('Sélectionnez un compte.'); return; }
     if (form.endDate && form.endDate < form.date) { setFormError('La clôture doit suivre la date d’ouverture.'); document.getElementById(`${fieldId}-end`)?.focus(); return; }
     if ((form.riskPercent || 0) > 100) { setFormError('Le risque ne peut pas dépasser 100 %.'); document.getElementById(`${fieldId}-risk`)?.focus(); return; }
@@ -481,17 +480,9 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
       setFormError('Vérifiez les montants saisis.'); return;
     }
     setFormError('');
-    setSaving(true);
-    try {
-      await onSubmit(form);
-      draftCompleted.current = true;
-      removeFormDraft(draftKey);
-      confirm(() => onOpenChange(false));
-    } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'Impossible d’enregistrer le trade.');
-    } finally {
-      setSaving(false);
-    }
+    draftCompleted.current = true;
+    removeFormDraft(draftKey);
+    saveInBackground(async () => { await onSubmit(form); }, 'Impossible d’enregistrer le trade.', () => onOpenChange(false));
   };
 
   const invalidEnd = Boolean(form.endDate && form.endDate < form.date);
@@ -507,7 +498,7 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
 
   return (
     <>
-      <Dialog open={open} onOpenChange={value => { if (!saving && !saved) onOpenChange(value); }}>
+      <Dialog open={open} onOpenChange={value => { if (!saved) onOpenChange(value); }}>
         <DialogContent aria-describedby={undefined} className="trade-editor flex h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] max-w-[1760px] sm:h-[94dvh] sm:w-[96vw] flex-col gap-0 overflow-hidden rounded-3xl border-border/60 bg-card p-0 sm:rounded-3xl">
           <DialogHeader className="flex-row items-center justify-between gap-2 space-y-0 border-b border-border/60 px-5 py-5 !pr-14 text-left sm:px-7">
             <DialogTitle className="text-xl tracking-tight">{editTrade ? 'Modifier le trade' : 'Nouveau trade'}</DialogTitle>
@@ -515,7 +506,7 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
           </DialogHeader>
           <form onSubmit={handleSubmit} onPaste={handlePasteEvent} className="flex min-h-0 flex-1 flex-col">
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
-              <fieldset disabled={saving || saved} className="grid min-w-0 items-start gap-x-12 gap-y-10 p-5 sm:p-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+              <fieldset disabled={saved} className="grid min-w-0 items-start gap-x-12 gap-y-10 p-5 sm:p-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                 <div className="min-w-0 space-y-8">
                   <section aria-label="Données techniques">
                     <div className="grid gap-5 min-[1440px]:grid-cols-2">
@@ -635,10 +626,10 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
             </div>
             <footer className="ui-form-footer flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-border/60 bg-background/80 px-5 py-4 sm:px-7">
               {formError && <p role="alert" className="w-full text-sm text-loss">{formError}</p>}
-              <Button type="submit" loading={saving} saved={saved} disabled={saved || pastingImage || !accounts.length} className="gap-2 rounded-xl px-5">
-                {saved ? 'Enregistré' : 'Enregistrer'}
+              <Button type="submit" saved={saved} disabled={saved || pastingImage || !accounts.length} className="gap-2 rounded-xl px-5">
+                {saved ? 'Pris en compte' : 'Enregistrer'}
               </Button>
-              <span aria-live="polite" className="sr-only">{saved ? 'Trade enregistré.' : ''}</span>
+              <span aria-live="polite" className="sr-only">{saved ? 'Trade pris en compte.' : ''}</span>
             </footer>
           </form>
           <Dialog open={Boolean(previewImage)} onOpenChange={isOpen => { if (!isOpen) setPreviewIndex(null); }}>

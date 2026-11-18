@@ -1,3 +1,4 @@
+import { Toaster } from 'sonner';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import AddTradeDialog from './AddTradeDialog';
@@ -91,32 +92,35 @@ describe('Trade entry', () => {
     });
   });
 
-  it('keeps the form open and preserves input if saving fails', async () => {
+  it('retains the submitted values for retry after a background save fails', async () => {
     const onOpenChange = vi.fn();
-    render(<AddTradeDialog open onOpenChange={onOpenChange} onSubmit={vi.fn().mockRejectedValue(new Error('Écriture impossible'))} accounts={[account]} activeAccountId={account.id} />);
+    const onSubmit = vi.fn<(data: TradeFormData) => Promise<void>>()
+      .mockRejectedValueOnce(new Error('Écriture impossible')).mockResolvedValue(undefined);
+    render(<><Toaster /><AddTradeDialog open onOpenChange={onOpenChange} onSubmit={onSubmit} accounts={[account]} activeAccountId={account.id} /></>);
     fill('P&L brut (EUR)', '-20');
     fill('Note', 'À conserver');
     fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Écriture impossible');
-    expect(screen.getByLabelText('Note')).toHaveValue('À conserver');
-    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(await screen.findByText('Impossible d’enregistrer le trade.')).toBeVisible();
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+    fireEvent.click(screen.getByRole('button', { name: 'Réessayer' }));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(2));
+    expect(onSubmit.mock.calls[1][0]).toMatchObject({ notes: 'À conserver', result: -20 });
   });
 
-  it('blocks submission while the previous save is pending', async () => {
+  it('shows the green confirmation immediately and closes before the write finishes', async () => {
     let complete: () => void = () => {};
     const onSubmit = vi.fn(() => new Promise<void>(resolve => { complete = resolve; }));
     const onOpenChange = vi.fn();
     render(<AddTradeDialog open onOpenChange={onOpenChange} onSubmit={onSubmit} accounts={[account]} activeAccountId={account.id} />);
     fill('P&L brut (EUR)', '0');
-    const submit = screen.getByRole('button', { name: 'Enregistrer' });
-    fireEvent.click(submit);
-    expect(submit).toBeDisabled();
-    expect(onSubmit).toHaveBeenCalledOnce();
-    expect(onOpenChange).not.toHaveBeenCalled();
-    complete();
-    expect(await screen.findByRole('button', { name: 'Enregistré' })).toBeDisabled();
-    expect(onOpenChange).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    const accepted = screen.getByRole('button', { name: 'Pris en compte' });
+    expect(accepted).toHaveAttribute('data-feedback', 'success');
+    expect(accepted).toBeDisabled();
+    expect(onSubmit).not.toHaveBeenCalled();
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+    expect(onSubmit).toHaveBeenCalledOnce();
+    complete();
   });
 
   it('rejects an impossible risk without losing the form', async () => {

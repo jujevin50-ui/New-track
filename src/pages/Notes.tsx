@@ -22,7 +22,7 @@ function readScreenshot(file: File): Promise<Note['screenshots'][number]> {
 }
 
 export default function Notes() {
-  const { data, upsertRow, deleteRow } = useData();
+  const { data, upsertRow, updateRow, deleteRow } = useData();
   const [reading, setReading] = useState<string | null>(null);
   const [viewer, setViewer] = useState<{ images: Note['screenshots']; index: number } | null>(null);
   const [zoomed, setZoomed] = useState(false);
@@ -32,7 +32,7 @@ export default function Notes() {
   const [draft, setDraft] = useState<Note | null>(null);
   const [removing, setRemoving] = useState<Note | null>(null);
   const [busy, setBusy] = useState(false);
-  const { saved, confirm } = useSaveConfirmation();
+  const { saved, saveInBackground } = useSaveConfirmation();
   const [error, setError] = useState('');
   const notes = data.notes.filter(note => `${note.title} ${note.explanations}`.toLocaleLowerCase('fr').includes(query.trim().toLocaleLowerCase('fr'))).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   const report = (cause: unknown) => setError(cause instanceof Error ? cause.message : 'Impossible de sauvegarder la note.');
@@ -48,15 +48,15 @@ export default function Notes() {
     finally { importing.current = false; setBusy(false); }
   };
   const edit = (note: Note) => { setReading(null); setError(''); setDraft({ ...note, screenshots: [...note.screenshots] }); };
-  const save = async (event: FormEvent) => {
+  const save = (event: FormEvent) => {
     event.preventDefault();
     if (!draft || !draft.title.trim() || busy || saved) return;
-    setBusy(true); setError('');
-    try {
-      await upsertRow('notes', { ...draft, title: draft.title.trim(), updatedAt: new Date().toISOString() }, 'id');
-      confirm(() => setDraft(null));
-    } catch (cause) { report(cause); }
-    finally { setBusy(false); }
+    setError('');
+    const note = { ...draft, title: draft.title.trim(), updatedAt: new Date().toISOString() };
+    const write = data.notes.some(item => item.id === note.id)
+      ? () => updateRow('notes', note.id, note)
+      : () => upsertRow('notes', note, 'id');
+    saveInBackground(write, 'Impossible d’enregistrer la note.', () => setDraft(null));
   };
   return <div className="mx-auto w-full space-y-6 pb-10">
     <header className="flex flex-wrap items-center justify-between gap-4">
@@ -95,7 +95,7 @@ export default function Notes() {
           {draft.screenshots.length > 0 && <p className="text-sm text-muted-foreground">{draft.screenshots.length} capture{draft.screenshots.length > 1 ? 's' : ''} · Cliquez pour agrandir</p>}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{draft.screenshots.map((image, index) => <div key={image.id} className="min-w-0 rounded-xl border border-border p-2"><button type="button" className="block w-full rounded-lg focus-visible:ring-2 ring-primary" aria-label={`Agrandir ${image.name}`} onClick={() => preview(draft.screenshots, index)}><img src={image.content} alt={image.name} className="aspect-video w-full rounded-lg bg-muted/30 object-contain" /></button><Button type="button" variant="ghost" size="sm" disabled={busy || saved} className="mt-1 h-auto w-full whitespace-normal break-all text-destructive" onClick={() => setDraft({ ...draft, screenshots: draft.screenshots.filter(item => item.id !== image.id) })}>Retirer {image.name}</Button></div>)}</div>
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-          <div className="sticky -bottom-6 z-10 flex justify-end gap-2 border-t border-border bg-background py-4"><Button type="button" variant="outline" disabled={busy || saved} onClick={() => setDraft(null)}>Annuler</Button><Button type="submit" loading={busy} saved={saved} disabled={saved || !draft.title.trim()}>{saved ? 'Enregistré' : 'Enregistrer'}</Button></div>
+          <div className="sticky -bottom-6 z-10 flex justify-end gap-2 border-t border-border bg-background py-4"><Button type="button" variant="outline" disabled={busy || saved} onClick={() => setDraft(null)}>Annuler</Button><Button type="submit" loading={busy} saved={saved} disabled={saved || !draft.title.trim()}>{saved ? 'Pris en compte' : 'Enregistrer'}</Button></div>
         </form>}
       </DialogContent>
     </Dialog>

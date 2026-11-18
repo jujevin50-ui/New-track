@@ -44,7 +44,7 @@ export default function CalendarView({ activeAccount, accounts, onSelectAccount 
   const [preferredCurrency, setPreferredCurrency] = usePagePreference('calendar.currency','');
   const [draft, setDraft] = useState(() => getJournal(date) ?? newDailyJournal(date));
   const dirty = useRef(false);
-  const saving = useRef(false);
+  const pendingReviews = useRef(new Map<string, typeof draft>());
   const missions = completedMissions(draft);
   const updateDraft = (value: typeof draft) => {
     setDraft(value);
@@ -57,15 +57,12 @@ export default function CalendarView({ activeAccount, accounts, onSelectAccount 
       : [...tracking.missions, id];
     updateDraft({ ...draft, disciplineTracking: { ...tracking, missions: nextMissions } });
   };
+  const clearPending = (value: typeof draft) => {
+    if (pendingReviews.current.get(value.date) === value) pendingReviews.current.delete(value.date);
+  };
   const saveDay = async (value: typeof draft) => {
-    if (saving.current) return;
-    saving.current = true;
-    try {
-      await saveJournal(value);
-      dirty.current = false;
-    } finally {
-      saving.current = false;
-    }
+    await saveJournal(value);
+    clearPending(value);
   };
   const filteredAccounts = status === 'all' ? accounts : accounts.filter(account => account.status === status);
   const selectedAccount = filteredAccounts.find(account => account.id === activeAccount?.id) ?? filteredAccounts[0];
@@ -85,9 +82,9 @@ export default function CalendarView({ activeAccount, accounts, onSelectAccount 
   const rows = Math.ceil((offset + days) / 7);
   const cells = Array.from({length:rows * 7}, (_, index) => index >= offset && index < offset + days ? `${month}-${String(index-offset+1).padStart(2,'0')}` : null);
   const chooseDate = (next: string) => {
-    if (!next || !isTradingDay(next) || next > today || saving.current) return false;
+    if (!next || !isTradingDay(next) || next > today) return false;
     if (next !== date && dirty.current && !window.confirm('Changer de journée sans enregistrer les modifications ?')) return false;
-    if (next !== date) { setDate(next); setDraft(getJournal(next) ?? newDailyJournal(next)); dirty.current = false; }
+    if (next !== date) { setDate(next); setDraft(pendingReviews.current.get(next) ?? getJournal(next) ?? newDailyJournal(next)); dirty.current = false; }
     setMonth(next.slice(0,7));
     return true;
   };
@@ -138,7 +135,10 @@ export default function CalendarView({ activeAccount, accounts, onSelectAccount 
             </div>
             <Input aria-label="Date du bilan" type="date" max={today} value={date} onChange={event => chooseDate(event.target.value)} className="h-10 w-auto max-w-full rounded-[10px] bg-background/60 text-xs"/>
           </header>
-          <DailyReview key={date} currency={currency} date={date} existing={getJournal(date)} value={draft} onChange={updateDraft} psychologyElsewhere trades={dayTrades} saveLabel="Enregistrer la journée" onSave={saveDay}>
+          <DailyReview key={date} currency={currency} date={date} existing={getJournal(date)} value={draft} onChange={updateDraft} psychologyElsewhere trades={dayTrades} saveLabel="Enregistrer la journée" onSave={saveDay} onAccepted={value => {
+            pendingReviews.current.set(value.date, value);
+            dirty.current = false;
+          }} onDiscard={clearPending}>
             <section aria-labelledby="calendar-missions-title" className="overflow-hidden rounded-xl border border-border/70 bg-background/50">
               <div className="bg-primary/[.04] px-3.5 py-3 sm:px-4">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">

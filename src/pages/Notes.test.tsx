@@ -1,3 +1,4 @@
+import { Toaster } from 'sonner';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { DataProvider, useData } from '@/contexts/DataContext';
@@ -12,7 +13,7 @@ function ConnectedNotes() {
   return status === 'connected' ? <Notes /> : <p>Chargement</p>;
 }
 async function openNotes() {
-  render(<DataProvider><ConnectedNotes /></DataProvider>);
+  render(<><Toaster /><DataProvider><ConnectedNotes /></DataProvider></>);
   await screen.findByRole('heading', { name: 'Notes' });
 }
 it('normalizes older files without losing existing trades', () => {
@@ -58,15 +59,17 @@ it('creates, edits, searches, reloads and deletes notes with multiple screenshot
   fireEvent.click(screen.getByText('Confirmer la suppression'));
   await waitFor(() => expect(readLocalData()?.notes).toHaveLength(0));
 });
-it('keeps the draft and shows an error when persistence fails', async () => {
+it('keeps the submitted note in the retry queue when persistence fails', async () => {
   await openNotes();
   fireEvent.click(screen.getByText('Nouvelle note'));
   fireEvent.change(screen.getByLabelText('Titre'), { target: { value: 'À conserver' } });
-  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('Full', 'QuotaExceededError'); });
+  const failingStorage = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('Full', 'QuotaExceededError'); });
   fireEvent.click(screen.getByText('Enregistrer'));
-  expect(await screen.findByRole('alert')).toHaveTextContent('Stockage local plein');
-  expect(screen.getByLabelText('Titre')).toHaveValue('À conserver');
+  expect(await screen.findByText('Impossible d’enregistrer la note.')).toBeVisible();
   expect(readLocalData()?.notes).toHaveLength(0);
+  failingStorage.mockRestore();
+  fireEvent.click(screen.getByRole('button', { name: 'Réessayer' }));
+  await waitFor(() => expect(readLocalData()?.notes[0]?.title).toBe('À conserver'));
 });
 
 it('writes notes and embedded screenshots through the existing JSON file workflow', async () => {

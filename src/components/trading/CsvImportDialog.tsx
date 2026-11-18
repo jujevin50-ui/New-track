@@ -35,7 +35,7 @@ export const ACCOUNT_FIELD_LABELS: Record<string, string> = {
 };
 
 export function CsvImportDialog({ open, onOpenChange, accounts }: Props) {
-  const { data, saveData } = useData();
+  const { mutateData } = useData();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [step, setStep] = useState<'upload' | 'preview' | 'done'>('upload');
@@ -88,45 +88,49 @@ export function CsvImportDialog({ open, onOpenChange, accounts }: Props) {
     if (!preview) return;
     setBusy(true);
     try {
-      if (preview.csvType === 'trades') {
-        const existingIds = new Set((data.trades as any[]).map((t: any) => t.id));
-        const maxNum = (data.trades as any[]).reduce((m: number, t: any) => Math.max(m, t.tradeNumber || 0), 0);
-        const { imported, skipped, trades } = convertRows(parsedRows, preview.mapping, accountId, existingIds, maxNum + 1);
-        const withNumbers = trades.map((t, i) => ({ ...t, tradeNumber: maxNum + 1 + i }));
+      let result: { imported: number; skipped: number; type: 'trades' | 'accounts'; newAccounts: number };
+      await mutateData(data => {
+        if (preview.csvType === 'trades') {
+          const existingIds = new Set((data.trades as any[]).map((t: any) => t.id));
+          const maxNum = (data.trades as any[]).reduce((m: number, t: any) => Math.max(m, t.tradeNumber || 0), 0);
+          const { imported, skipped, trades } = convertRows(parsedRows, preview.mapping, accountId, existingIds, maxNum + 1);
+          const withNumbers = trades.map((t, i) => ({ ...t, tradeNumber: maxNum + 1 + i }));
 
-        // Auto-create accounts referenced by the CSV that don't exist yet
-        const existingAccountIds = new Set((data.accounts as any[]).map((a: any) => a.id));
-        const missingAccountIds = Array.from(new Set(
-          withNumbers.map(t => t.accountId).filter(id => id && !existingAccountIds.has(id))
-        ));
-        const createdAccounts: Account[] = missingAccountIds.map(id => ({
-          id,
-          accountCode: '',
-          name: `Compte importé ${id.slice(0, 8)}`,
-          broker: '',
-          initialBalance: 0,
-          currency: 'USD',
-          createdAt: new Date().toISOString().split('T')[0],
-          status: 'active',
-          category: '',
-          payoutIntervalDays: 0,
-          dailyDrawdownPct: 0,
-          maxDrawdownPct: 0,
-          riskPct: 1,
-        }));
+          // Auto-create accounts referenced by the CSV that don't exist yet
+          const existingAccountIds = new Set((data.accounts as any[]).map((a: any) => a.id));
+          const missingAccountIds = Array.from(new Set(
+            withNumbers.map(t => t.accountId).filter(id => id && !existingAccountIds.has(id))
+          ));
+          const createdAccounts: Account[] = missingAccountIds.map(id => ({
+            id,
+            accountCode: '',
+            name: `Compte importé ${id.slice(0, 8)}`,
+            broker: '',
+            initialBalance: 0,
+            currency: 'USD',
+            createdAt: new Date().toISOString().split('T')[0],
+            status: 'active',
+            category: '',
+            payoutIntervalDays: 0,
+            dailyDrawdownPct: 0,
+            maxDrawdownPct: 0,
+            riskPct: 1,
+          }));
 
-        await saveData({
-          ...data,
-          accounts: [...(data.accounts as any[]), ...createdAccounts],
-          trades: [...(data.trades as any[]), ...withNumbers],
-        });
-        setResult({ imported, skipped, type: 'trades', newAccounts: createdAccounts.length });
-      } else {
-        const existingIds = new Set((data.accounts as any[]).map((a: any) => a.id));
-        const { imported, skipped, accounts: newAccounts } = convertAccountRows(parsedRows, preview.mapping, existingIds);
-        await saveData({ ...data, accounts: [...(data.accounts as any[]), ...newAccounts] });
-        setResult({ imported, skipped, type: 'accounts', newAccounts: 0 });
-      }
+          result = { imported, skipped, type: 'trades', newAccounts: createdAccounts.length };
+          return {
+            ...data,
+            accounts: [...(data.accounts as any[]), ...createdAccounts],
+            trades: [...(data.trades as any[]), ...withNumbers],
+          };
+        } else {
+          const existingIds = new Set((data.accounts as any[]).map((a: any) => a.id));
+          const { imported, skipped, accounts: newAccounts } = convertAccountRows(parsedRows, preview.mapping, existingIds);
+          result = { imported, skipped, type: 'accounts', newAccounts: 0 };
+          return { ...data, accounts: [...data.accounts, ...newAccounts] };
+        }
+      });
+      setResult(result);
       setStep('done');
     } catch (e: any) {
       setError(e?.message || 'Erreur lors de l\'import');

@@ -1,3 +1,4 @@
+import { Toaster } from 'sonner';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -18,7 +19,7 @@ const date = previousTradingDay(localDay());
 const renderCalendar = () => render(
   <MemoryRouter>
     <TooltipProvider>
-      <CalendarView activeAccount={null} accounts={[]} onSelectAccount={vi.fn()} />
+      <Toaster /><CalendarView activeAccount={null} accounts={[]} onSelectAccount={vi.fn()} />
     </TooltipProvider>
   </MemoryRouter>
 );
@@ -34,8 +35,8 @@ describe('Calendar daily review', () => {
     fireEvent.click(screen.getByRole('button', { name: /Aucune entrée sans validation complète de la checklist/ }));
     fireEvent.change(screen.getByLabelText('Notes du jour'), { target: { value: 'J’ai pris une pause.' } });
     fireEvent.click(screen.getByRole('button', { name: 'Enregistrer la journée' }));
-    expect(await screen.findByRole('status')).toHaveTextContent('Enregistré');
-    expect(mock.save).toHaveBeenCalledWith(expect.objectContaining({ notes: 'J’ai pris une pause.', mood: 'bad', mistakes: ['Ancienne erreur'], event: 'challenge_realise', disciplineTracking: { missions: ['prepare'], stress: 4, triggers: ['FOMO'] } }));
+    expect(screen.getByRole('status')).toHaveTextContent('Bilan pris en compte');
+    await waitFor(() => expect(mock.save).toHaveBeenCalledWith(expect.objectContaining({ notes: 'J’ai pris une pause.', mood: 'bad', mistakes: ['Ancienne erreur'], event: 'challenge_realise', disciplineTracking: { missions: ['prepare'], stress: 4, triggers: ['FOMO'] } })));
   });
   it('keeps the whole draft editable if saving fails and does not award saved XP', async () => {
     mock.save.mockRejectedValue(new Error('Écriture impossible'));
@@ -43,9 +44,10 @@ describe('Calendar daily review', () => {
     fireEvent.click(screen.getByRole('button', { name: /Risque respecté/ }));
     fireEvent.change(screen.getByLabelText('À retenir'), { target: { value: 'Attendre.' } });
     fireEvent.click(screen.getByRole('button', { name: 'Enregistrer la journée' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Écriture impossible');
+    expect(await screen.findByText('Impossible d’enregistrer le bilan.')).toBeVisible();
     expect(screen.getByRole('button', { name: /Risque respecté/ })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByLabelText('À retenir')).toHaveValue('Attendre.');
+    fireEvent.click(screen.getByRole('button', { name: 'Abandonner' }));
     expect(screen.getByRole('button', { name: 'Enregistrer la journée' })).toBeEnabled();
   });
   it('restores saved missions and asks before discarding an unsaved day', async () => {

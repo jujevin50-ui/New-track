@@ -16,7 +16,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 interface Props { accounts:Account[]; activeAccountId:string|null; onSelectAccount:(id:string)=>void; }
 export default function Payouts({accounts,activeAccountId,onSelectAccount}:Props) {
-  const {data,saveData,updateRow,deleteRow}=useData();
+  const {data,mutateData,updateRow,deleteRow}=useData();
   const {allTrades}=useTrades(activeAccountId,0);
   const [open,setOpen]=useState(false);
   const [editing,setEditing]=useState<PayoutRecord|null>(null);
@@ -52,7 +52,11 @@ export default function Payouts({accounts,activeAccountId,onSelectAccount}:Props
     <div className="overflow-x-auto"><table className="w-full min-w-[650px] text-left text-xs"><thead className="text-muted-foreground"><tr>{['Date','Compte','Montant','Détails','Actions'].map(label=><th key={label} className="px-3 pb-5 font-normal">{label}</th>)}</tr></thead><tbody>{filtered.map(row=><tr key={row.id} className="hover:bg-secondary/30"><td className="whitespace-nowrap px-3 py-4">{new Date(`${row.date}T12:00:00`).toLocaleDateString('fr-FR')}</td><td className="px-3 py-4 font-medium">{accountName(row)}</td><td className="whitespace-nowrap px-3 py-4 font-medium tabular-nums text-profit">{money(row.amount,rowCurrency(row))}</td><td className="max-w-sm break-words px-3 py-4 text-muted-foreground">{row.note||'—'}</td><td className="px-3 py-4"><div className="flex items-center gap-1"><Button variant="ghost" size="icon" aria-label={`Modifier le payout du ${row.date}`} disabled={!accounts.some(account=>account.id===row.accountId)} onClick={()=>{setEditing(row);setOpen(true);}}><Pencil className="h-4 w-4"/></Button><Button variant="ghost" size="icon" aria-label={`Supprimer le payout du ${row.date}`} onClick={()=>{setError('');setRemoving(row);}}><Trash2 className="h-4 w-4 text-muted-foreground"/></Button></div></td></tr>)}</tbody></table>{!filtered.length&&<p className="py-16 text-center text-sm text-muted-foreground">Aucun payout dans cette sélection.</p>}</div>
     <PayoutDialog open={open} onOpenChange={setOpen} accounts={accounts} defaultAccountId={activeAccountId==='all'?undefined:activeAccountId??undefined} accountProfits={profits} payout={editing} onSubmit={async(accountId,amount,date,note,renew)=>{
       if(editing){await updateRow('payouts',editing.id,{amount,date,note});return;}
-      const account=accounts.find(account=>account.id===accountId);if(!account) throw new Error('Compte introuvable.');await saveData(createPayoutData(data,account,amount,date,note,renew));
+      await mutateData(current => {
+        const account = current.accounts.find(item => item.id === accountId && !item.hidden);
+        if (!account) throw new Error('Compte introuvable.');
+        return createPayoutData(current, account, amount, date, note, renew);
+      });
     }}/>
     <AlertDialog open={Boolean(removing)} onOpenChange={value=>{if(!value&&!deleting)setRemoving(null);}}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Supprimer ce payout ?</AlertDialogTitle><AlertDialogDescription>Le versement sera supprimé de l’historique.</AlertDialogDescription></AlertDialogHeader>{error&&<p role="alert" className="text-sm text-loss">{error}</p>}<AlertDialogFooter><AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel><AlertDialogAction disabled={deleting} onClick={async event=>{event.preventDefault();if(!removing||deleting)return;setDeleting(true);try{await deleteRow('payouts',removing.id);setRemoving(null);}catch{setError('Impossible de supprimer le payout.');}finally{setDeleting(false);}}}>Supprimer</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
   </div>;

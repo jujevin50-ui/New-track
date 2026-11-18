@@ -25,7 +25,7 @@ const formatDate = (day: string) => dateLabel.format(new Date(`${day}T00:00:00Z`
 type Draft = Omit<Objective, 'target' | 'manualProgress'> & { target: string; manualProgress: string };
 
 export default function Objectives() {
-  const { data, upsertRow, updateRow, deleteRow } = useData();
+  const { data, addRow, updateRow, deleteRow } = useData();
   const { journals } = useDailyJournal();
   const { allTrades } = useTrades(null, 0);
   const today = localDay();
@@ -35,7 +35,7 @@ export default function Objectives() {
   const [pending, setPending] = useState('');
   const [error, setError] = useState('');
   const lock = useRef(false);
-  const { saved, confirm } = useSaveConfirmation();
+  const { saved, saveInBackground } = useSaveConfirmation();
 
   const entries = data.objectives.map(objective => ({ objective, ...measureObjective(objective, today, journals, allTrades) }))
     .sort((a, b) => statusOrder[a.status] - statusOrder[b.status] || a.objective.end.localeCompare(b.objective.end));
@@ -69,7 +69,7 @@ export default function Objectives() {
 
   const save = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!draft || saved) return;
+    if (!draft || lock.current || saved) return;
     const title = draft.title.trim();
     const target = Number(draft.target);
     const manualProgress = draft.metric === 'manual' ? Number(draft.manualProgress) : 0;
@@ -78,10 +78,13 @@ export default function Objectives() {
       return;
     }
     const objective: Objective = { ...draft, id: draft.id || crypto.randomUUID(), title, note: draft.note.trim(), target, manualProgress };
-    void write('editor', () => upsertRow('objectives', objective, 'id'), () => {
-      setFilter('all');
-      confirm(() => setDraft(null));
-    }, 'Impossible d’enregistrer cet objectif.');
+    setError('');
+    setFilter('all');
+    saveInBackground(
+      () => draft.id ? updateRow('objectives', objective.id, objective) : addRow('objectives', objective),
+      'Impossible d’enregistrer cet objectif.',
+      () => setDraft(null),
+    );
   };
 
   const changeProgress = (objective: Objective, step: number) => {
@@ -202,7 +205,7 @@ export default function Objectives() {
             {error && <p role="alert" className="text-sm text-loss">{error}</p>}
             <div className="ui-form-footer">
               <Button type="button" variant="ghost" disabled={Boolean(pending) || saved} onClick={() => setDraft(null)}>Annuler</Button>
-              <Button type="submit" loading={pending === 'editor'} saved={saved} disabled={saved}>{saved ? 'Enregistré' : 'Enregistrer'}</Button>
+              <Button type="submit" saved={saved} disabled={saved}>{saved ? 'Pris en compte' : 'Enregistrer'}</Button>
             </div>
           </form>}
         </DialogContent>

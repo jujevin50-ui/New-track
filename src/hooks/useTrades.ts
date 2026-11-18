@@ -4,7 +4,7 @@ import { Account } from '@/types/account';
 import { useData } from '@/contexts/DataContext';
 
 export const useTrades = (accountId: string | null, initialBalance: number, { includeHidden = false } = {}) => {
-  const { data, addRow, updateRow, deleteRow } = useData();
+  const { data, mutateData, updateRow, deleteRow } = useData();
 
   const validAccountIds = useMemo(
     () => new Set((data.accounts as Account[]).filter(account => includeHidden || !account.hidden).map(account => account.id)),
@@ -50,29 +50,25 @@ export const useTrades = (accountId: string | null, initialBalance: number, { in
     return allTrades.filter(t => t.accountId === accountId).sort((a, b) => a.date.localeCompare(b.date));
   }, [allTrades, accountId]);
 
-  const addTrade = useCallback(async (formData: TradeFormData) => {
-    const max = (data.trades as Trade[]).reduce((m, t) => Math.max(m, t.tradeNumber || 0), 0);
-    const tradeNumber = max + 1;
-    const screenshots = formData.screenshots?.length ? formData.screenshots : formData.screenshot ? [formData.screenshot] : [];
-    const trade: Trade = { ...formData, id: crypto.randomUUID(), tradeNumber, screenshots };
-    await addRow('trades', trade);
-  }, [addRow, data.trades]);
-
-  /* Bulk add with sequential trade numbers (calling addTrade in a loop would reuse the same number) */
   const addTrades = useCallback(async (formDataList: TradeFormData[]) => {
-    let max = (data.trades as Trade[]).reduce((m, t) => Math.max(m, t.tradeNumber || 0), 0);
-    for (const formData of formDataList) {
-      const screenshots = formData.screenshots?.length ? formData.screenshots : formData.screenshot ? [formData.screenshot] : [];
-      const trade: Trade = { ...formData, id: crypto.randomUUID(), tradeNumber: ++max, screenshots };
-      await addRow('trades', trade);
-    }
-  }, [addRow, data.trades]);
+    await mutateData(current => {
+      let max = (current.trades as Trade[]).reduce((m, trade) => Math.max(m, trade.tradeNumber || 0), 0);
+      const trades = formDataList.map(formData => ({
+        ...formData,
+        id: crypto.randomUUID(),
+        tradeNumber: ++max,
+        screenshots: formData.screenshots?.length ? formData.screenshots : formData.screenshot ? [formData.screenshot] : [],
+      }));
+      return { ...current, trades: [...current.trades, ...trades] };
+    });
+  }, [mutateData]);
+
+  const addTrade = useCallback((formData: TradeFormData) => addTrades([formData]), [addTrades]);
 
   const updateTrade = useCallback(async (id: string, formData: TradeFormData) => {
     const screenshots = formData.screenshots?.length ? formData.screenshots : formData.screenshot ? [formData.screenshot] : [];
-    const existing = allTrades.find(t => t.id === id);
-    await updateRow('trades', id, { ...formData, id, screenshots, tradeNumber: existing?.tradeNumber });
-  }, [updateRow, allTrades]);
+    await updateRow('trades', id, { ...formData, id, screenshots });
+  }, [updateRow]);
 
   const deleteTrade = useCallback(async (id: string) => {
     await deleteRow('trades', id);

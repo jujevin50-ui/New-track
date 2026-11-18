@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { toast } from 'sonner';
+import { hasBackgroundSaves } from '@/lib/backgroundSaves';
 import {
   AppData, DEFAULT_DATA,
   getStoredHandle, storeHandle, clearHandle,
@@ -21,6 +23,7 @@ interface DataContextValue {
   reconnect: () => Promise<void>;
   disconnect: () => Promise<void>;
   saveData: (newData: AppData) => Promise<void>;
+  mutateData: (change: (current: AppData) => AppData) => Promise<void>;
   saveTable: (table: TableKey, rows: any[]) => Promise<void>;
   addRow: (table: TableKey, row: any) => Promise<void>;
   updateRow: (table: TableKey, id: string, updates: any) => Promise<void>;
@@ -78,8 +81,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     };
 
     if (!handle) {
+      if (!fallbackRef.current) throw new Error('Aucun fichier de données connecté.');
       const next = change(dataRef.current);
-      if (fallbackRef.current) writeLocalData(next);
+      writeLocalData(next);
       commit(next);
       return;
     }
@@ -169,6 +173,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const disconnect = useCallback(async () => {
+    if (hasBackgroundSaves()) {
+      toast.error('Termine les sauvegardes en attente avant de changer de fichier.');
+      return;
+    }
+    setStatus('loading');
     const close = fileQueue.current.then(async () => {
       await clearHandle();
       clearLocalData();
@@ -179,7 +188,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setStatus('disconnected');
     });
     fileQueue.current = close.catch(() => {});
-    await close;
+    try {
+      await close;
+    } catch {
+      setStatus('connected');
+      toast.error('Impossible de changer de fichier de données.');
+    }
   }, []);
 
   const saveTable = useCallback((table: TableKey, rows: any[]) =>
@@ -202,7 +216,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }), [persist]);
 
   return (
-    <DataContext.Provider value={{ data, status, connectNew, connectExisting, reconnect, disconnect, saveData, saveTable, addRow, updateRow, deleteRow, upsertRow }}>
+    <DataContext.Provider value={{ data, status, connectNew, connectExisting, reconnect, disconnect, saveData, mutateData: persist, saveTable, addRow, updateRow, deleteRow, upsertRow }}>
       {children}
     </DataContext.Provider>
   );

@@ -6,7 +6,7 @@ import DashboardFilter from '@/components/trading/DashboardFilter';
 import { useFinanceAccount } from '@/hooks/useFinanceAccount';
 import SlidingRailLinks from '@/components/trading/SlidingRailLinks';
 import type { LucideIcon } from 'lucide-react';
-import { useMemo, useState, useRef, useEffect, type ReactNode, type FormEvent } from 'react';
+import { useMemo, useState, useEffect, type ReactNode, type FormEvent } from 'react';
 import WorkspaceRail from '@/components/trading/WorkspaceRail';
 import { TopNav } from '@/components/trading/TopNav';
 import { InvestmentView } from '@/components/finance/InvestmentView';
@@ -46,8 +46,16 @@ const monthKeyOf = (d: Date) => localDate(d).slice(0, 7);
 
 const emptyTx: FinanceTransaction = { id: '', date: todayStr(), description: '', amount: 0, type: 'expense', accountId: '', category: 'Autre', notes: '' };
 
+function financeAccountMovement(accountId: string, transactions: FinanceTransaction[], transfers: FinanceTransfer[]) {
+  const txNet = transactions.filter(tx => tx.accountId === accountId).reduce((sum, tx) =>
+    sum + (tx.type === 'income' ? Number(tx.amount) : -Number(tx.amount)), 0);
+  return transfers.reduce((sum, transfer) => sum
+    + (transfer.toAccountId === accountId ? Number(transfer.amount) : 0)
+    - (transfer.fromAccountId === accountId ? Number(transfer.amount) : 0), txNet);
+}
+
 export default function Finance() {
-  const { data, addRow, updateRow, deleteRow } = useData();
+  const { data, addRow, updateRow, deleteRow, mutateData } = useData();
   const accounts = useMemo(() => Array.isArray(data?.financeAccounts) ? data.financeAccounts : [], [data?.financeAccounts]) as FinanceAccount[];
   const transactions = useMemo(() => Array.isArray(data?.financeTransactions) ? data.financeTransactions : [], [data?.financeTransactions]) as FinanceTransaction[];
   const subscriptions = useMemo(() => Array.isArray(data?.financeSubscriptions) ? data.financeSubscriptions : [], [data?.financeSubscriptions]) as FinanceSubscription[];
@@ -67,10 +75,7 @@ export default function Finance() {
   const [accountOpen, setAccountOpen] = useState(false);
   const [subOpen, setSubOpen] = useState(false);
   const [financeAttempt,setFinanceAttempt] = useState('');
-  const [financeBusy,setFinanceBusy] = useState(false);
-  const [financeError,setFinanceError] = useState('');
-  const financeLock = useRef(false);
-  const { saved: financeSaved, confirm: confirmFinance } = useSaveConfirmation();
+  const { saved: financeSaved, saveInBackground } = useSaveConfirmation();
   const [transferOpen, setTransferOpen] = useState(false);
   const [tx, setTx] = useState<FinanceTransaction>({ ...emptyTx });
   const [editingAccount, setEditingAccount] = useState<FinanceAccount | null>(null);
@@ -157,41 +162,47 @@ export default function Finance() {
   const saveTx = async () => {
     const row = { ...tx, id: tx.id || id('tx'), amount: Math.abs(Number(tx.amount)) };
     if (tx.id) await updateRow('financeTransactions', tx.id, row); else await addRow('financeTransactions', row);
-    return () => { setTxOpen(false); setTx({ ...emptyTx, accountId: selectedAccount !== 'all' ? selectedAccount : accounts[0]?.id || '' }); toast.success('Transaction enregistrée'); };
   };
 
   const saveAccount = async () => {
-    const txNet = editingAccount ? transactions.filter(t => t.accountId === editingAccount.id).reduce((sum, t) => sum + (t.type === 'income' ? Number(t.amount) : -Number(t.amount)), 0) : 0;
-    const transferNet = editingAccount ? transfers.reduce((sum, t) => sum + (t.toAccountId === editingAccount.id ? Number(t.amount) : t.fromAccountId === editingAccount.id ? -Number(t.amount) : 0), 0) : 0;
-    const openingBalance = editingAccount ? Number(accountForm.balance) - txNet - transferNet : Number(accountForm.balance);
-    const row = { ...accountForm, id: accountForm.id || id('acc'), balance: Number(accountForm.balance), openingBalance };
-    if (editingAccount) await updateRow('financeAccounts', editingAccount.id, row); else await addRow('financeAccounts', row);
-    return () => { setAccountOpen(false); setEditingAccount(null); toast.success('Compte enregistré'); };
+    const row = { ...accountForm, id: accountForm.id || id('acc'), balance: Number(accountForm.balance) };
+    await mutateData(current => {
+      const openingBalance = editingAccount
+        ? row.balance - financeAccountMovement(editingAccount.id, current.financeTransactions, current.financeTransfers)
+        : row.balance;
+      const updated = { ...row, openingBalance };
+      return {
+        ...current,
+        financeAccounts: editingAccount
+          ? current.financeAccounts.map(account => account.id === editingAccount.id ? { ...account, ...updated } : account)
+          : [...current.financeAccounts, updated],
+      };
+    });
   };
 
   const saveSub = async () => {
     const row = { ...subForm, id: subForm.id || id('sub'), amount: Math.abs(Number(subForm.amount)) };
     if (subForm.id) await updateRow('financeSubscriptions', subForm.id, row); else await addRow('financeSubscriptions', row);
-    return () => { setSubOpen(false); setSubForm({ ...subForm, id: '', name: '', amount: 0 }); toast.success('Abonnement enregistré'); };
   };
 
   const saveTransfer = async () => {
     await addRow('financeTransfers', { ...transferForm, id: id('trf'), amount: Math.abs(Number(transferForm.amount)) });
-    return () => { setTransferOpen(false); toast.success('Virement enregistré'); };
   };
 
-  const saveStatement = async (statement: FinanceStatement, isEdit: boolean, applyBalance: boolean) => {
-    if (isEdit) await updateRow('financeStatements', statement.id, statement); else await addRow('financeStatements', statement);
-    if (!applyBalance) return;
-    // Applique la valeur au solde du compte seulement si c'est le relevé le plus récent
-    const latest = [...statements.filter(x => x.accountId === statement.accountId && x.id !== statement.id), statement].sort((a, b) => a.date.localeCompare(b.date)).pop();
-    if (latest?.id !== statement.id) return;
-    const acc = accounts.find(a => a.id === statement.accountId);
-    if (!acc) return;
-    const txNet = transactions.filter(t => t.accountId === acc.id).reduce((sum, t) => sum + (t.type === 'income' ? Number(t.amount) : -Number(t.amount)), 0);
-    const transferNet = transfers.reduce((sum, t) => sum + (t.toAccountId === acc.id ? Number(t.amount) : t.fromAccountId === acc.id ? -Number(t.amount) : 0), 0);
-    await updateRow('financeAccounts', acc.id, { balance: statement.totalValue, openingBalance: statement.totalValue - txNet - transferNet });
-  };
+  const saveStatement = (statement: FinanceStatement, isEdit: boolean, applyBalance: boolean) => mutateData(current => {
+    const financeStatements = isEdit
+      ? current.financeStatements.map(row => row.id === statement.id ? statement : row)
+      : [...current.financeStatements, statement];
+    const latest = financeStatements
+      .filter(row => row.accountId === statement.accountId)
+      .sort((a, b) => a.date.localeCompare(b.date)).at(-1);
+    if (!applyBalance || latest?.id !== statement.id) return { ...current, financeStatements };
+    const openingBalance = statement.totalValue - financeAccountMovement(statement.accountId, current.financeTransactions, current.financeTransfers);
+    const financeAccounts = current.financeAccounts.map(account => account.id === statement.accountId
+      ? { ...account, balance: statement.totalValue, openingBalance }
+      : account);
+    return { ...current, financeStatements, financeAccounts };
+  });
 
   const deleteStatement = async (statement: FinanceStatement) => { await deleteRow('financeStatements', statement.id); };
 
@@ -206,27 +217,28 @@ export default function Finance() {
     transfer: { from: !transferForm.fromAccountId ? 'Choisis le compte source.' : '', to: !transferForm.toAccountId ? 'Choisis le compte destination.' : transferForm.toAccountId === transferForm.fromAccountId ? 'Choisis un compte différent de la source.' : '', amount: !(transferForm.amount > 0) ? 'Indique un montant supérieur à zéro.' : '' },
   };
   const fieldError = (kind: keyof typeof financeErrors, key: string) => financeAttempt === kind ? (financeErrors[kind] as Record<string,string>)[key] : undefined;
-  const submitFinance = async (event: FormEvent<HTMLFormElement>, kind: keyof typeof financeErrors, action: () => Promise<() => void>) => {
-    event.preventDefault(); if (financeLock.current || financeSaved) return;
-    setFinanceAttempt(kind); setFinanceError('');
+  const submitFinance = (event: FormEvent<HTMLFormElement>, kind: keyof typeof financeErrors, action: () => Promise<void>) => {
+    event.preventDefault();
+    if (financeSaved) return;
+    setFinanceAttempt(kind);
     if (Object.values(financeErrors[kind]).some(Boolean)) {
       const form = event.currentTarget;
-      requestAnimationFrame(()=>form.querySelector<HTMLElement>('[aria-invalid=true]')?.focus());
+      requestAnimationFrame(() => form.querySelector<HTMLElement>('[aria-invalid=true]')?.focus());
       return;
     }
-    financeLock.current=true; setFinanceBusy(true);
-    try {
-      const closeSavedForm = await action();
-      ({ tx: txDraft, account: accountDraft, sub: subDraft, transfer: transferDraft }[kind]).clear();
+    const drafts = { tx: txDraft, account: accountDraft, sub: subDraft, transfer: transferDraft };
+    const dialogs = { tx: setTxOpen, account: setAccountOpen, sub: setSubOpen, transfer: setTransferOpen };
+    drafts[kind].clear();
+    saveInBackground(action, 'Impossible d’enregistrer la modification Finance.', () => {
+      dialogs[kind](false);
       setFinanceAttempt('');
-      confirmFinance(closeSavedForm);
-    }
-    catch (error) { setFinanceError(error instanceof Error ? error.message : 'L’enregistrement a échoué. La saisie est conservée ; réessaie.'); }
-    finally { financeLock.current=false; setFinanceBusy(false); }
+    });
   };
-  const closeFinance = (setter: (open:boolean)=>void, value:boolean) => {
-    if (financeLock.current || financeSaved) return;
-    setter(value); setFinanceError(''); setFinanceAttempt('');
+
+  const closeFinance = (setter: (open: boolean) => void, value: boolean) => {
+    if (financeSaved) return;
+    setter(value);
+    setFinanceAttempt('');
   };
 
   const TABS: [Tab, string, LucideIcon][] = [['overview', 'Vue d’ensemble', LayoutDashboard], ['transactions', 'Transactions', List], ['accounts', 'Comptes', Landmark], ['invest', 'Invest', TrendingUp], ['subscriptions', 'Abonnements', Repeat2], ['transfers', 'Virements', ArrowRightLeft]];
@@ -357,7 +369,7 @@ export default function Finance() {
       <Dialog open={txOpen} onOpenChange={value=>closeFinance(setTxOpen,value)}>
         <DialogContent className="finance-editor bg-background sm:max-w-xl" aria-describedby={undefined}>
           <DialogHeader><DialogTitle>{tx.id ? 'Modifier la transaction' : 'Nouvelle transaction'}</DialogTitle></DialogHeader>
-          <FinanceForm draftStatus={txDraft.status} busy={financeBusy} saved={financeSaved} error={financeError} onSubmit={event=>submitFinance(event,'tx',saveTx)}>
+          <FinanceForm draftStatus={txDraft.status} saved={financeSaved} onSubmit={event=>submitFinance(event,'tx',saveTx)}>
             <div className="dashboard-switch w-full" role="group" aria-label="Nature de l’opération">
               <button type="button" aria-pressed={tx.type==='expense'} onClick={()=>setTx(x=>({...x,type:'expense',category:'Autre'}))}>Dépense</button>
               <button type="button" aria-pressed={tx.type==='income'} onClick={()=>setTx(x=>({...x,type:'income',category:'Autre'}))}>Revenu</button>
@@ -379,7 +391,7 @@ export default function Finance() {
       <Dialog open={accountOpen} onOpenChange={value=>closeFinance(setAccountOpen,value)}>
         <DialogContent className="finance-editor bg-background sm:max-w-xl" aria-describedby={undefined}>
           <DialogHeader><DialogTitle>{editingAccount?'Modifier le compte':'Nouveau compte'}</DialogTitle></DialogHeader>
-          <FinanceForm draftStatus={accountDraft.status} busy={financeBusy} saved={financeSaved} error={financeError} onSubmit={event=>submitFinance(event,'account',saveAccount)}>
+          <FinanceForm draftStatus={accountDraft.status} saved={financeSaved} onSubmit={event=>submitFinance(event,'account',saveAccount)}>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField label="Nom" required error={fieldError('account','name')}>{field=><Input {...field} value={accountForm.name} onChange={event=>setAccountForm(x=>({...x,name:event.target.value}))} placeholder="Compte courant" />}</FormField>
               <FormField label="Banque / établissement">{field=><Input {...field} value={accountForm.institution} onChange={event=>setAccountForm(x=>({...x,institution:event.target.value}))} placeholder="Boursobank, Fortuneo…" />}</FormField>
@@ -394,7 +406,7 @@ export default function Finance() {
       <Dialog open={subOpen} onOpenChange={value=>closeFinance(setSubOpen,value)}>
         <DialogContent className="finance-editor bg-background sm:max-w-xl" aria-describedby={undefined}>
           <DialogHeader><DialogTitle>{subForm.id?'Modifier l’abonnement':'Nouvel abonnement'}</DialogTitle></DialogHeader>
-          <FinanceForm draftStatus={subDraft.status} busy={financeBusy} saved={financeSaved} error={financeError} onSubmit={event=>submitFinance(event,'sub',saveSub)}>
+          <FinanceForm draftStatus={subDraft.status} saved={financeSaved} onSubmit={event=>submitFinance(event,'sub',saveSub)}>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField label="Nom" required error={fieldError('sub','name')}>{field=><Input {...field} value={subForm.name} onChange={event=>setSubForm(x=>({...x,name:event.target.value}))} placeholder="Netflix, salle, téléphone…" />}</FormField>
               <FormField label="Montant" required error={fieldError('sub','amount')}>{field=><Input {...field} type="number" inputMode="decimal" step="0.01" min="0.01" value={subForm.amount||''} onChange={event=>setSubForm(x=>({...x,amount:Number(event.target.value)}))} />}</FormField>
@@ -409,7 +421,7 @@ export default function Finance() {
       <Dialog open={transferOpen} onOpenChange={value=>closeFinance(setTransferOpen,value)}>
         <DialogContent className="finance-editor bg-background sm:max-w-xl" aria-describedby={undefined}>
           <DialogHeader><DialogTitle>Nouveau virement</DialogTitle></DialogHeader>
-          <FinanceForm draftStatus={transferDraft.status} busy={financeBusy} saved={financeSaved} error={financeError} onSubmit={event=>submitFinance(event,'transfer',saveTransfer)}>
+          <FinanceForm draftStatus={transferDraft.status} saved={financeSaved} onSubmit={event=>submitFinance(event,'transfer',saveTransfer)}>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField label="Compte source" required error={fieldError('transfer','from')}>{field=><Select value={transferForm.fromAccountId} onValueChange={value=>setTransferForm(x=>({...x,fromAccountId:value}))}><SelectTrigger {...field}><SelectValue placeholder="Choisir un compte" /></SelectTrigger><SelectContent className="dashboard-filter-menu-account">{accounts.map(account=><SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>)}</SelectContent></Select>}</FormField>
               <FormField label="Compte destination" required error={fieldError('transfer','to')}>{field=><Select value={transferForm.toAccountId} onValueChange={value=>setTransferForm(x=>({...x,toAccountId:value}))}><SelectTrigger {...field}><SelectValue placeholder="Choisir un compte" /></SelectTrigger><SelectContent className="dashboard-filter-menu-account">{accounts.map(account=><SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>)}</SelectContent></Select>}</FormField>
@@ -429,11 +441,10 @@ export default function Finance() {
   );
 }
 
-function FinanceForm({ children, busy, saved, error, draftStatus, onSubmit }: {children:ReactNode;busy:boolean;saved:boolean;error:string;draftStatus:'saved'|'memory'|null;onSubmit:(event:FormEvent<HTMLFormElement>)=>void}) {
+function FinanceForm({ children, saved, draftStatus, onSubmit }: {children:ReactNode;saved:boolean;draftStatus:'saved'|'memory'|null;onSubmit:(event:FormEvent<HTMLFormElement>)=>void}) {
   return <form noValidate onSubmit={onSubmit} className="space-y-6">
-    <fieldset disabled={busy || saved} className="space-y-5">{children}</fieldset>
-    {error && <p role="alert" className="ui-field-error">{error}</p>}
-    <div className="ui-form-footer"><p className="ui-draft-status" role="status">{draftStatus==='memory'?'Brouillon en mémoire · gardez cet onglet ouvert.':'Brouillon conservé dans cet onglet.'}</p><Button type="submit" loading={busy} saved={saved} disabled={saved} className="w-full sm:w-auto">{saved ? 'Enregistré' : 'Enregistrer'}</Button></div>
+    <fieldset disabled={saved} className="space-y-5">{children}</fieldset>
+    <div className="ui-form-footer"><p className="ui-draft-status" role="status">{draftStatus==='memory'?'Brouillon en mémoire · gardez cet onglet ouvert.':'Brouillon conservé dans cet onglet.'}</p><Button type="submit" saved={saved} disabled={saved} className="w-full sm:w-auto">{saved ? 'Pris en compte' : 'Enregistrer'}</Button></div>
   </form>;
 }
 

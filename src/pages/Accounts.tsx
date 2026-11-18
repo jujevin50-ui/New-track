@@ -54,9 +54,7 @@ const Accounts = ({ accounts, onAdd, onUpdate, onDelete, onSetHidden, allTrades 
   const [form, setForm] = useState<AccountFormData>(emptyForm);
   const [filterStatus, setFilterStatus] = usePagePreference<AccountStatus|'all'>('accounts.status','all');
   const [query, setQuery] = usePagePreference('accounts.search','');
-  const [saving, setSaving] = useState(false);
-  const { saved, confirm } = useSaveConfirmation();
-  const [saveError, setSaveError] = useState('');
+  const { saved, saveInBackground } = useSaveConfirmation();
   const [showHidden, setShowHidden] = useState(false);
   const [changingVisibility, setChangingVisibility] = useState(false);
   const [visibilityError, setVisibilityError] = useState('');
@@ -95,14 +93,21 @@ const Accounts = ({ accounts, onAdd, onUpdate, onDelete, onSetHidden, allTrades 
     return map;
   }, [accounts, allTrades]);
 
-  const openAdd = () => { setSaveError(''); setEditAccount(null); setForm({ ...emptyForm, createdAt: localDay() }); setDialogOpen(true); };
+  const openAdd = () => { setEditAccount(null); setForm({ ...emptyForm, createdAt: localDay() }); setDialogOpen(true); };
   const openEdit = (account: Account) => {
-    setSaveError('');
     setEditAccount(account);
     setForm({ accountCode: account.accountCode || '', name: account.name, broker: account.broker, initialBalance: account.initialBalance, currency: account.currency, createdAt: account.createdAt, status: account.status || 'active', category: account.category || '', payoutIntervalDays: account.payoutIntervalDays || 0, dailyDrawdownPct: account.dailyDrawdownPct || 0, maxDrawdownPct: account.maxDrawdownPct || 0, riskPct: account.riskPct ?? 1 });
     setDialogOpen(true);
   };
-  const handleSubmit = async (e: React.FormEvent) => { e.preventDefault(); if(saving || saved) return; setSaving(true); setSaveError(''); try {if(editAccount) await onUpdate(editAccount.id, form); else await onAdd(form); confirm(() => setDialogOpen(false));} catch {setSaveError('Impossible d’enregistrer ce compte.');} finally {setSaving(false);} };
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (saved) return;
+    saveInBackground(
+      async () => { if (editAccount) await onUpdate(editAccount.id, form); else await onAdd(form); },
+      'Impossible d’enregistrer ce compte.',
+      () => setDialogOpen(false),
+    );
+  };
 
   const filtered = useMemo(() => {
     let list = inView;
@@ -138,47 +143,46 @@ const Accounts = ({ accounts, onAdd, onUpdate, onDelete, onSetHidden, allTrades 
           onClick={() => void toggleAccountVisibility(account)}
         >{account.hidden ? <Eye className="h-4 w-4" aria-hidden="true" /> : <EyeOff className="h-4 w-4" aria-hidden="true" />}</Button><Button variant="ghost" size="icon" aria-label={`Supprimer ${account.name}`} onClick={()=>setDeleteId(account.id)}><Trash2 className="h-4 w-4 text-muted-foreground"/></Button></div></td></tr>)}</tbody></table>{!filtered.length && <p className="py-16 text-center text-sm text-muted-foreground">Aucun compte dans cette sélection.</p>}</div>}
 
-      <Dialog open={dialogOpen} onOpenChange={open => { if (!saving && !saved) setDialogOpen(open); }}>
+      <Dialog open={dialogOpen} onOpenChange={open => { if (!saved) setDialogOpen(open); }}>
         <DialogContent className="account-editor w-[calc(100vw-32px)] sm:max-w-2xl max-h-[90dvh] overflow-y-auto bg-background border-border">
           <DialogHeader><DialogTitle>{editAccount ? 'Modifier le compte' : 'Nouveau compte'}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div><Label className="text-xs text-muted-foreground" htmlFor="account-name">Nom du compte</Label><Input disabled={saving || saved} id="account-name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex. FTMO 100K" required className="bg-secondary border-border" /></div>
-              <div><Label className="text-xs text-muted-foreground" htmlFor="account-code">Code du compte</Label><Input disabled={saving || saved} id="account-code" value={form.accountCode} onChange={e => setForm(f => ({ ...f, accountCode: e.target.value }))} placeholder="Ex. 7UP-001" className="font-mono bg-secondary border-border" /></div>
+              <div><Label className="text-xs text-muted-foreground" htmlFor="account-name">Nom du compte</Label><Input disabled={saved} id="account-name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex. FTMO 100K" required className="bg-secondary border-border" /></div>
+              <div><Label className="text-xs text-muted-foreground" htmlFor="account-code">Code du compte</Label><Input disabled={saved} id="account-code" value={form.accountCode} onChange={e => setForm(f => ({ ...f, accountCode: e.target.value }))} placeholder="Ex. 7UP-001" className="font-mono bg-secondary border-border" /></div>
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">Famille</Label>
               <div className="flex gap-2 mt-1.5">
-                {PRESET_CATEGORIES.map(c => (<button disabled={saving || saved} key={c} type="button" onClick={() => setForm(f => ({ ...f, category: c }))} className={`flex-1 px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${form.category === c ? 'bg-primary/15 text-primary border-primary/40' : 'bg-secondary border-border text-muted-foreground'}`}>{c}</button>))}
+                {PRESET_CATEGORIES.map(c => (<button disabled={saved} key={c} type="button" onClick={() => setForm(f => ({ ...f, category: c }))} className={`flex-1 px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${form.category === c ? 'bg-primary/15 text-primary border-primary/40' : 'bg-secondary border-border text-muted-foreground'}`}>{c}</button>))}
               </div>
             </div>
             <div>
               <Label htmlFor="account-broker" className="text-xs text-muted-foreground">Courtier</Label>
-              <Input disabled={saving || saved} id="account-broker" value={form.broker} onChange={e => setForm(f => ({ ...f, broker: e.target.value }))} onBlur={() => { if (form.broker && !allBrokers.includes(form.broker)) setCustomBrokers(prev => [...prev, form.broker]); }} placeholder="Saisir un courtier" list="broker-list" required className="bg-secondary border-border" />
+              <Input disabled={saved} id="account-broker" value={form.broker} onChange={e => setForm(f => ({ ...f, broker: e.target.value }))} onBlur={() => { if (form.broker && !allBrokers.includes(form.broker)) setCustomBrokers(prev => [...prev, form.broker]); }} placeholder="Saisir un courtier" list="broker-list" required className="bg-secondary border-border" />
               <datalist id="broker-list">{allBrokers.map(b => <option key={b} value={b} />)}</datalist>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label className="text-xs text-muted-foreground" htmlFor="account-capital">Capital initial</Label><Input disabled={saving || saved} id="account-capital" type="number" min="0" step="0.01" value={form.initialBalance} onChange={e => setForm(f => ({ ...f, initialBalance: parseFloat(e.target.value) || 0 }))} required className="font-mono bg-secondary border-border" /></div>
-              <div><Label className="text-xs text-muted-foreground" htmlFor="account-currency">Devise</Label><Input disabled={saving || saved} id="account-currency" value={form.currency} onChange={e => setForm(f => ({ ...f, currency: e.target.value.toUpperCase().trim() }))} placeholder="USD" required className="bg-secondary border-border" /></div>
+              <div><Label className="text-xs text-muted-foreground" htmlFor="account-capital">Capital initial</Label><Input disabled={saved} id="account-capital" type="number" min="0" step="0.01" value={form.initialBalance} onChange={e => setForm(f => ({ ...f, initialBalance: parseFloat(e.target.value) || 0 }))} required className="font-mono bg-secondary border-border" /></div>
+              <div><Label className="text-xs text-muted-foreground" htmlFor="account-currency">Devise</Label><Input disabled={saved} id="account-currency" value={form.currency} onChange={e => setForm(f => ({ ...f, currency: e.target.value.toUpperCase().trim() }))} placeholder="USD" required className="bg-secondary border-border" /></div>
             </div>
             <div className="grid grid-cols-4 gap-3">
 
-              <div><Label className="text-xs text-muted-foreground">Repli quotidien (%)</Label><Input disabled={saving || saved} type="number" step="0.1" value={form.dailyDrawdownPct} onChange={e => setForm(f => ({ ...f, dailyDrawdownPct: parseFloat(e.target.value) || 0 }))} className="font-mono bg-secondary border-border" /></div>
-              <div><Label className="text-xs text-muted-foreground">Repli maximal (%)</Label><Input disabled={saving || saved} type="number" step="0.1" value={form.maxDrawdownPct} onChange={e => setForm(f => ({ ...f, maxDrawdownPct: parseFloat(e.target.value) || 0 }))} className="font-mono bg-secondary border-border" /></div>
-              <div><Label className="text-xs text-muted-foreground">Risque (%)</Label><Input disabled={saving || saved} type="number" step="0.01" min="0" max="100" value={form.riskPct} onChange={e => setForm(f => ({ ...f, riskPct: parseFloat(e.target.value) || 0 }))} className="font-mono bg-secondary border-border" /></div>
+              <div><Label className="text-xs text-muted-foreground">Repli quotidien (%)</Label><Input disabled={saved} type="number" step="0.1" value={form.dailyDrawdownPct} onChange={e => setForm(f => ({ ...f, dailyDrawdownPct: parseFloat(e.target.value) || 0 }))} className="font-mono bg-secondary border-border" /></div>
+              <div><Label className="text-xs text-muted-foreground">Repli maximal (%)</Label><Input disabled={saved} type="number" step="0.1" value={form.maxDrawdownPct} onChange={e => setForm(f => ({ ...f, maxDrawdownPct: parseFloat(e.target.value) || 0 }))} className="font-mono bg-secondary border-border" /></div>
+              <div><Label className="text-xs text-muted-foreground">Risque (%)</Label><Input disabled={saved} type="number" step="0.01" min="0" max="100" value={form.riskPct} onChange={e => setForm(f => ({ ...f, riskPct: parseFloat(e.target.value) || 0 }))} className="font-mono bg-secondary border-border" /></div>
             </div>
-            <div><Label className="text-xs text-muted-foreground" htmlFor="account-created">Date de création</Label><Input disabled={saving || saved} id="account-created" type="date" value={form.createdAt} onChange={e => setForm(f => ({ ...f, createdAt: e.target.value }))} required className="bg-secondary border-border" /></div>
+            <div><Label className="text-xs text-muted-foreground" htmlFor="account-created">Date de création</Label><Input disabled={saved} id="account-created" type="date" value={form.createdAt} onChange={e => setForm(f => ({ ...f, createdAt: e.target.value }))} required className="bg-secondary border-border" /></div>
             <div>
               <Label className="text-xs text-muted-foreground">Statut</Label>
               <div className="flex gap-2 mt-1.5">
                 {(['active', 'pending', 'terminated', 'paid_out'] as AccountStatus[]).map(s => {
                   const conf = STATUS_CONFIG[s];
-                  return (<button disabled={saving || saved} key={s} type="button" onClick={() => setForm(f => ({ ...f, status: s }))} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${form.status === s ? conf.className : 'bg-secondary border-border text-muted-foreground'}`}><conf.icon className="h-3 w-3" />{conf.label}</button>);
+                  return (<button disabled={saved} key={s} type="button" onClick={() => setForm(f => ({ ...f, status: s }))} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${form.status === s ? conf.className : 'bg-secondary border-border text-muted-foreground'}`}><conf.icon className="h-3 w-3" />{conf.label}</button>);
                 })}
               </div>
             </div>
-            {saveError && <p role="alert" className="text-sm text-loss">{saveError}</p>}
-            <Button loading={saving} saved={saved} disabled={saved} type="submit" className="w-full">{saved ? 'Enregistré' : editAccount ? 'Enregistrer' : 'Créer le compte'}</Button>
+            <Button saved={saved} disabled={saved} type="submit" className="w-full">{saved ? 'Pris en compte' : editAccount ? 'Enregistrer' : 'Créer le compte'}</Button>
           </form>
         </DialogContent>
       </Dialog>

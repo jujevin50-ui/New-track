@@ -1,12 +1,13 @@
 import DashboardFilter from './DashboardFilter';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Check, Save } from 'lucide-react';
+import { Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import type { DailyJournal } from '@/hooks/useDailyJournal';
 import { getNetResult, type Trade } from '@/types/trade';
+import { queueBackgroundSave } from '@/lib/backgroundSaves';
 
 interface Props {
   children?: ReactNode;
@@ -19,22 +20,22 @@ interface Props {
   existing: DailyJournal | null;
   trades: Trade[];
   onSave: (journal: DailyJournal) => Promise<void>;
+  onAccepted?: (journal: DailyJournal) => void;
+  onDiscard?: (journal: DailyJournal) => void;
 }
 
-export default function DailyReview({ children, date, existing, trades, onSave, currency = 'USD', value, onChange, psychologyElsewhere = false, saveLabel = 'Enregistrer le bilan' }: Props) {
+export default function DailyReview({ children, date, existing, trades, onSave, onAccepted, onDiscard, currency = 'USD', value, onChange, psychologyElsewhere = false, saveLabel = 'Enregistrer le bilan' }: Props) {
   const [internalDraft, setInternalDraft] = useState<DailyJournal>(() => existing || {
     date, strategyRespected: true, productive: false, mood: 'neutral', discipline: 3, confidence: 3,
     notes: '', lessonsLearned: '', mistakes: [], goals: '', event: null,
   });
   const draft = value ?? internalDraft;
-  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [error, setError] = useState('');
-  useEffect(() => { setSaved(false); setError(''); }, [draft]);
+  useEffect(() => { setSaved(false); }, [draft]);
   const set = <K extends keyof DailyJournal>(field: K, value: DailyJournal[K]) => {
     const next = { ...draft, [field]: value };
     if (onChange) onChange(next); else setInternalDraft(next);
-    setSaved(false); setError('');
+    setSaved(false);
   };
   const pnl = trades.reduce((sum, trade) => sum + getNetResult(trade), 0);
   const money = (value: number) => {
@@ -43,14 +44,17 @@ export default function DailyReview({ children, date, existing, trades, onSave, 
   };
 
   return (
-    <form onSubmit={async event => {
-      event.preventDefault(); if (saving) return;
-      setSaving(true); setError('');
-      try { await onSave(draft); setSaved(true); }
-      catch (cause) { setError(cause instanceof Error ? cause.message : 'Impossible d’enregistrer le bilan.'); }
-      finally { setSaving(false); }
+    <form onSubmit={event => {
+      event.preventDefault();
+      if (saved) return;
+      setSaved(true);
+      onAccepted?.(draft);
+      queueBackgroundSave(() => onSave(draft), 'Impossible d’enregistrer le bilan.', () => {
+        onDiscard?.(draft);
+        setSaved(false);
+      });
     }}>
-      <fieldset disabled={saving} className="min-w-0 space-y-6">
+      <fieldset className="min-w-0 space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border/60 pb-5">
           <div className="flex items-baseline gap-3"><span className={`font-mono text-2xl font-semibold ${pnl > 0 ? 'text-profit' : pnl < 0 ? 'text-loss' : 'text-foreground'}`}>{money(pnl)}</span><span className="text-xs text-muted-foreground">{trades.length} trade{trades.length !== 1 ? 's' : ''}</span></div>
           <div className="flex items-center gap-3"><Label htmlFor="review-productive">Journée productive</Label><Switch id="review-productive" checked={draft.productive === true} onCheckedChange={value => set('productive', value)} /></div>
@@ -67,9 +71,8 @@ export default function DailyReview({ children, date, existing, trades, onSave, 
           <div className="space-y-2"><Label htmlFor="review-goals">Objectif pour la prochaine séance</Label><Textarea id="review-goals" value={draft.goals} onChange={event => set('goals', event.target.value)} className="min-h-24 resize-y rounded-xl border-border/60 bg-secondary/30" /></div>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-3">
-          {error && <p role="alert" className="mr-auto text-sm text-loss">{error}</p>}
-          {saved && <span role="status" className="inline-flex items-center gap-1.5 text-xs text-profit"><Check className="h-3.5 w-3.5" />Enregistré</span>}
-          <Button type="submit" className="gap-2 rounded-xl" loading={saving} saved={saved}>{!saving && !saved && <Save aria-hidden="true" />}{saveLabel}</Button>
+          {saved && <span role="status" className="sr-only">Bilan pris en compte</span>}
+          <Button type="submit" className="gap-2 rounded-xl" disabled={saved} saved={saved}>{!saved && <Save aria-hidden="true" />}{saved ? 'Pris en compte' : saveLabel}</Button>
         </div>
       </fieldset>
     </form>
