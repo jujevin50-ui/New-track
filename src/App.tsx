@@ -68,7 +68,7 @@ function FileSetupScreen() {
 
 const AppContent = () => {
   const { status, data } = useData();
-  const { accounts, activeAccount, activeAccountId, setActiveAccountId, addAccount, updateAccount, deleteAccount, categories } = useAccounts();
+  const { accounts, allAccounts, activeAccount, activeAccountId, setActiveAccountId, addAccount, updateAccount, setAccountHidden, deleteAccount } = useAccounts();
   const { userName } = useUserProfile();
   const location = useLocation();
   const navigate = useNavigate();
@@ -140,7 +140,7 @@ const AppContent = () => {
                 <Route path="/daily-report" element={<Navigate to="/calendar#daily-review" replace />} />
                 <Route path="/ai-assistant" element={<AiAssistant activeAccount={displayAccount} accounts={accounts} onSelectAccount={setActiveAccountId} />} />
                 <Route path="/payout" element={<Payouts accounts={accounts} activeAccountId={activeAccountId} onSelectAccount={setActiveAccountId} />} />
-                <Route path="/accounts" element={<Accounts accounts={accounts} onAdd={addAccount} onUpdate={updateAccount} onDelete={deleteAccount} categories={categories} allTrades={allTrades} />} />
+                <Route path="/accounts" element={<Accounts accounts={allAccounts} onAdd={addAccount} onUpdate={updateAccount} onSetHidden={setAccountHidden} onDelete={deleteAccount} allTrades={allTrades} />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>

@@ -1,11 +1,15 @@
 import { useCallback } from 'react';
 import { PendingOrder, PendingOrderFormData } from '@/types/pendingOrder';
+import type { Account } from '@/types/account';
 import { useData } from '@/contexts/DataContext';
 
 export const usePendingOrders = (accountId: string | null) => {
   const { data, addRow, updateRow, deleteRow } = useData();
 
-  const allOrders: PendingOrder[] = (data.pendingOrders as any[]).map(o => ({
+  const hiddenAccountIds = new Set((data.accounts as Account[]).filter(account => account.hidden).map(account => account.id));
+  const allOrders: PendingOrder[] = (data.pendingOrders as any[])
+    .filter(order => !hiddenAccountIds.has(order.accountId))
+    .map(o => ({
     id: o.id,
     date: o.date,
     pair: o.pair,

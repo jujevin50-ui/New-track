@@ -26,7 +26,10 @@ export default function Payouts({accounts,activeAccountId,onSelectAccount}:Props
   const [year,setYear]=usePagePreference('payout.year','all');
   const [preferredCurrency,setPreferredCurrency]=usePagePreference('payout.currency','');
   const [query,setQuery]=usePagePreference('payout.search','');
-  const allPayouts=(data.payouts as PayoutRecord[]).map(row=>({...row,amount:Number(row.amount)}));
+  const hiddenAccountIds = new Set((data.accounts as Account[]).filter(account => account.hidden).map(account => account.id));
+  const allPayouts=(data.payouts as PayoutRecord[])
+    .filter(row => !hiddenAccountIds.has(row.accountId))
+    .map(row=>({...row,amount:Number(row.amount)}));
   const accountName=(row:PayoutRecord)=>accounts.find(account=>account.id===row.accountId)?.name || row.accountName || 'Compte supprimé';
   const rowCurrency=(row:PayoutRecord)=>(row.currency || accounts.find(account=>account.id===row.accountId)?.currency || '').trim().toUpperCase();
   const scoped=allPayouts.filter(row=>activeAccountId==='all'||row.accountId===activeAccountId);

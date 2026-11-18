@@ -2,6 +2,7 @@ export type AccountStatus = 'active' | 'terminated' | 'pending' | 'paid_out';
 
 export interface Account {
   id: string;
+  hidden?: boolean;
   accountCode: string;
   name: string;
   broker: string;
@@ -16,4 +17,4 @@ export interface Account {
   riskPct: number;
 }
 
-export type AccountFormData = Omit<Account, 'id'>;
+export type AccountFormData = Omit<Account, 'id' | 'hidden'>;

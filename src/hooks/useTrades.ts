@@ -6,21 +6,21 @@ import { useData } from '@/contexts/DataContext';
 export const useTrades = (accountId: string | null, initialBalance: number) => {
   const { data, addRow, updateRow, deleteRow } = useData();
 
+  const validAccountIds = useMemo(
+    () => new Set((data.accounts as Account[]).filter(account => !account.hidden).map(account => account.id)),
+    [data.accounts]
+  );
+
   const accountPayouts = useMemo(() => {
-    if (!accountId) return [];
+    if (!accountId || !validAccountIds.has(accountId)) return [];
     return (data.payouts as any[] || [])
       .filter((p: any) => p.accountId === accountId)
       .map((p: any) => ({ id: p.id, amount: Number(p.amount), date: p.date }));
-  }, [data.payouts, accountId]);
+  }, [data.payouts, accountId, validAccountIds]);
 
   const totalPayouts = useMemo(
     () => accountPayouts.reduce((s, p) => s + p.amount, 0),
     [accountPayouts]
-  );
-
-  const validAccountIds = useMemo(
-    () => new Set((data.accounts as any[]).map((a: any) => a.id)),
-    [data.accounts]
   );
 
   const allTrades: Trade[] = useMemo(() => (data.trades as any[])
@@ -51,22 +51,22 @@ export const useTrades = (accountId: string | null, initialBalance: number) => {
   }, [allTrades, accountId]);
 
   const addTrade = useCallback(async (formData: TradeFormData) => {
-    const max = allTrades.reduce((m, t) => Math.max(m, t.tradeNumber || 0), 0);
+    const max = (data.trades as Trade[]).reduce((m, t) => Math.max(m, t.tradeNumber || 0), 0);
     const tradeNumber = max + 1;
     const screenshots = formData.screenshots?.length ? formData.screenshots : formData.screenshot ? [formData.screenshot] : [];
     const trade: Trade = { ...formData, id: crypto.randomUUID(), tradeNumber, screenshots };
     await addRow('trades', trade);
-  }, [addRow, allTrades]);
+  }, [addRow, data.trades]);
 
   /* Bulk add with sequential trade numbers (calling addTrade in a loop would reuse the same number) */
   const addTrades = useCallback(async (formDataList: TradeFormData[]) => {
-    let max = allTrades.reduce((m, t) => Math.max(m, t.tradeNumber || 0), 0);
+    let max = (data.trades as Trade[]).reduce((m, t) => Math.max(m, t.tradeNumber || 0), 0);
     for (const formData of formDataList) {
       const screenshots = formData.screenshots?.length ? formData.screenshots : formData.screenshot ? [formData.screenshot] : [];
       const trade: Trade = { ...formData, id: crypto.randomUUID(), tradeNumber: ++max, screenshots };
       await addRow('trades', trade);
     }
-  }, [addRow, allTrades]);
+  }, [addRow, data.trades]);
 
   const updateTrade = useCallback(async (id: string, formData: TradeFormData) => {
     const screenshots = formData.screenshots?.length ? formData.screenshots : formData.screenshot ? [formData.screenshot] : [];
