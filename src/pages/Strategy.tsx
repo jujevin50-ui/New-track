@@ -7,7 +7,7 @@ import { BookOpen, Download, FileText, Loader2, Plus, Trash2 } from 'lucide-reac
 import { useData } from '@/contexts/DataContext';
 import { Button } from '@/components/ui/button';
 import { htmlFrame } from '@/lib/htmlDocument';
-import { importStrategyDocument, documentBuffer, wordPreview, wordFrame, type StrategyDocument } from '@/lib/strategyDocuments';
+import { importStrategyDocument, documentBuffer, wordPreview, wordFrame, PDF_MIN_ZOOM, PDF_MAX_ZOOM, type StrategyDocument } from '@/lib/strategyDocuments';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const StrategyPdfViewer = lazy(() => import('@/components/trading/StrategyPdfViewer'));
@@ -20,6 +20,8 @@ export default function Strategy({ accounts, activeAccountId, onSelectAccount }:
   const documents = data.strategyDocuments.filter(document => (!document.accountId || activeAccountId === 'all' || document.accountId === activeAccountId) && (kind === 'all' || document.kind === kind) && document.name.toLocaleLowerCase('fr-FR').includes(query.trim().toLocaleLowerCase('fr-FR'))).sort((a,b) => order === 'name' ? a.name.localeCompare(b.name,'fr') : b.createdAt.localeCompare(a.createdAt));
   const [selectedId, setSelectedId] = usePagePreference<string|null>('strategy.selected',null,value=>value===null||typeof value==='string');
   const selected = documents.find(document => document.id === selectedId) || documents[0];
+  const [pdfZoom, setPdfZoom] = usePagePreference(`strategy.pdfZoom.${selected?.id ?? ''}`, 1,
+    value => typeof value === 'number' && value >= PDF_MIN_ZOOM && value <= PDF_MAX_ZOOM);
   const [preview, setPreview] = useState<{ id: string; url: string; html?: string } | null>(null);
   const [readingError, setReadingError] = useState('');
   const [error, setError] = useState('');
@@ -68,6 +70,12 @@ export default function Strategy({ accounts, activeAccountId, onSelectAccount }:
 
   const currentPreview = preview?.id === selected?.id ? preview : null;
 
+  useEffect(() => {
+    if (currentPreview && !data.strategyDocuments.some(document => document.id === selectedId)) {
+      setSelectedId(currentPreview.id);
+    }
+  }, [currentPreview, data.strategyDocuments, selectedId, setSelectedId]);
+
   return (
     <div className="strategy-page mx-auto w-full space-y-8 pb-10">
       <header className="flex flex-wrap items-center justify-end gap-4">
@@ -104,7 +112,7 @@ export default function Strategy({ accounts, activeAccountId, onSelectAccount }:
             {readingError ? <p role="alert" className="p-8 text-sm text-loss">{readingError}</p> : currentPreview ? (
               currentPreview.html !== undefined
                 ? <iframe title={`Document de stratégie ${selected.kind === 'html' ? 'HTML' : 'Word'}`} srcDoc={currentPreview.html} sandbox={selected.kind === 'html' ? 'allow-scripts' : ''} referrerPolicy="no-referrer" className="block h-[75dvh] min-h-[500px] w-full bg-white" />
-                : <Suspense fallback={<div role="status" className="p-8 text-sm text-muted-foreground">Ouverture du PDF…</div>}><StrategyPdfViewer key={selected.id} content={selected.content} /></Suspense>
+                : <Suspense fallback={<div role="status" className="p-8 text-sm text-muted-foreground">Ouverture du PDF…</div>}><StrategyPdfViewer key={selected.id} content={selected.content} zoom={pdfZoom} onZoomChange={setPdfZoom} /></Suspense>
             ) : <div role="status" className="flex min-h-[500px] items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Ouverture du document…</div>}
           </section>
         </div>

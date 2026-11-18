@@ -2,15 +2,24 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Loader2, Minus, Plus } from 'lucide-react';
 import { getDocument, GlobalWorkerOptions, type PDFDocumentProxy, type RenderTask } from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-import { documentBuffer } from '@/lib/strategyDocuments';
+import { documentBuffer, PDF_MIN_ZOOM, PDF_MAX_ZOOM } from '@/lib/strategyDocuments';
 import { Button } from '@/components/ui/button';
 
 GlobalWorkerOptions.workerSrc = workerUrl;
 
-export default function StrategyPdfViewer({ content, label = 'Document de stratégie PDF', initialZoom = 1 }: { content: string; label?: string; initialZoom?: number }) {
+interface Props {
+  content: string;
+  label?: string;
+  initialZoom?: number;
+  zoom?: number;
+  onZoomChange?: (zoom: number) => void;
+}
+
+export default function StrategyPdfViewer({ content, label = 'Document de stratégie PDF', initialZoom = 1, zoom: controlledZoom, onZoomChange }: Props) {
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
-  const [zoom, setZoom] = useState(initialZoom);
+  const [internalZoom, setInternalZoom] = useState(initialZoom);
+  const zoom = controlledZoom ?? internalZoom;
   const [width, setWidth] = useState(0);
   const [rendering, setRendering] = useState(true);
   const [text, setText] = useState('');
@@ -18,9 +27,15 @@ export default function StrategyPdfViewer({ content, label = 'Document de strat�
   const container = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
 
+  const changeZoom = (step: number) => {
+    const nextZoom = Math.max(PDF_MIN_ZOOM, Math.min(PDF_MAX_ZOOM, zoom + step));
+    if (onZoomChange) onZoomChange(nextZoom);
+    else setInternalZoom(nextZoom);
+  };
+
   useEffect(() => {
     let cancelled = false;
-    setPdf(null); setError(''); setPageNumber(1); setZoom(initialZoom);
+    setPdf(null); setError(''); setPageNumber(1); setInternalZoom(initialZoom);
     const task = getDocument({ data: new Uint8Array(documentBuffer(content)) });
     task.promise.then(document => { if (!cancelled) setPdf(document); }).catch(() => {
       if (!cancelled) setError('Impossible de lire ce PDF. Vérifiez le fichier original.');
@@ -77,9 +92,9 @@ export default function StrategyPdfViewer({ content, label = 'Document de strat�
           <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Page suivante" disabled={!pdf || pageNumber === pdf.numPages} onClick={() => setPageNumber(number => number + 1)}><ChevronRight className="h-4 w-4" /></Button>
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Réduire le zoom" disabled={!pdf || zoom <= 0.5} onClick={() => setZoom(value => Math.max(0.5, value - 0.25))}><Minus className="h-3.5 w-3.5" /></Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Réduire le zoom" disabled={!pdf || zoom <= PDF_MIN_ZOOM} onClick={() => changeZoom(-0.25)}><Minus className="h-3.5 w-3.5" /></Button>
           <span className="min-w-10 text-center text-xs tabular-nums">{Math.round(zoom * 100)} %</span>
-          <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Augmenter le zoom" disabled={!pdf || zoom >= 2} onClick={() => setZoom(value => Math.min(2, value + 0.25))}><Plus className="h-3.5 w-3.5" /></Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Augmenter le zoom" disabled={!pdf || zoom >= PDF_MAX_ZOOM} onClick={() => changeZoom(0.25)}><Plus className="h-3.5 w-3.5" /></Button>
         </div>
       </div>
       <div ref={container} className="relative min-h-0 flex-1 overflow-auto bg-secondary/60 p-4">

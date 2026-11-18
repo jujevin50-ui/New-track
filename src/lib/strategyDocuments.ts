@@ -1,3 +1,6 @@
+export const PDF_MIN_ZOOM = 0.5;
+export const PDF_MAX_ZOOM = 2;
+
 export interface StrategyDocument {
   accountId?: string;
   id: string;
