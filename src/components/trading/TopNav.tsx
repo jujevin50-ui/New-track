@@ -9,6 +9,7 @@ import { SettingsDialog } from './SettingsDialog';
 import { CsvImportDialog } from './CsvImportDialog';
 import { NotionImportDialog } from './NotionImportDialog';
 import { useAccounts } from '@/hooks/useAccounts';
+import { useReportReminders, type PeriodType } from '@/hooks/usePeriodReports';
 import { NAV_PILL, navItemClass } from './navStyles';
 import { HeaderNavLinks } from './HeaderNavLinks';
 
@@ -24,6 +25,12 @@ const NAV_ITEMS = [
   { id: 'accounts', title: 'Accounts', url: '/accounts', Icon: Wallet },
 ];
 
+const reportNames: Record<PeriodType, string> = {
+  weekly: 'hebdomadaires',
+  monthly: 'mensuels',
+  yearly: 'annuels',
+};
+
 export function TopNav({ sidebar = false, utilitiesOnly = false }: { sidebar?: boolean; utilitiesOnly?: boolean } = {}) {
   const location = useLocation();
   const { theme, mode, setColor, toggleMode, presets } = useTheme();
@@ -33,6 +40,8 @@ export function TopNav({ sidebar = false, utilitiesOnly = false }: { sidebar?: b
   const [csvOpen, setCsvOpen] = useState(false);
   const [notionOpen, setNotionOpen] = useState(false);
   const { accounts } = useAccounts();
+  const pendingReports = useReportReminders();
+  const reportReminder = pendingReports.length ? `Rapports à rédiger : ${pendingReports.map(type => reportNames[type]).join(', ')}` : '';
 
   const links = navItems.filter(item => item.visible).map(item => {
     if (item.type === 'separator') {
@@ -41,15 +50,18 @@ export function TopNav({ sidebar = false, utilitiesOnly = false }: { sidebar?: b
 
     const entry = NAV_ITEMS.find(link => link.id === item.id);
     if (!entry) return null;
+    const reminder = entry.id === 'reports' ? reportReminder : '';
 
     return (
       <NavLink
         key={entry.id}
         to={entry.url}
         end={entry.url === '/'}
+        title={reminder || undefined}
         className={({ isActive }) => sidebar ? `rail-link${isActive ? ' is-current' : ''}` : navItemClass(isActive)}
       >
         <entry.Icon className="header-nav-icon" aria-hidden="true" strokeWidth={1.8} /><span>{entry.title}</span>
+        {reminder && <><span className="rail-report-reminder" aria-hidden="true" /><span className="sr-only"> — {reminder}</span></>}
       </NavLink>
     );
   });

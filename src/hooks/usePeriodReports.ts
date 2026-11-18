@@ -1,5 +1,6 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useData } from '@/contexts/DataContext';
+import { localDay } from '@/lib/discipline';
 
 export type PeriodType = 'weekly' | 'monthly' | 'yearly';
 
@@ -116,6 +117,57 @@ const tableFor = (type: PeriodType) =>
 
 const keyFor = (type: PeriodType) =>
   type === 'weekly' ? 'weekKey' : type === 'monthly' ? 'monthKey' : 'yearKey';
+
+const reportTypes = ['weekly', 'monthly', 'yearly'] as const;
+
+export function pendingReportTypes(
+  trades: readonly { endDate?: string }[],
+  saved: Record<PeriodType, ReadonlySet<string>>,
+  today: string,
+): PeriodType[] {
+  const currentDate = new Date(`${today}T00:00:00Z`);
+  const closedDates = trades.flatMap(({ endDate }) => {
+    const day = typeof endDate === 'string' ? endDate.slice(0, 10) : '';
+    if (!day || day >= today || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return [];
+    const date = new Date(`${day}T00:00:00Z`);
+    return Number.isNaN(date.getTime()) ? [] : [date];
+  });
+
+  return reportTypes.filter(type => {
+    const currentKey = getPeriodKey(type, currentDate);
+    return closedDates.some(date => {
+      const key = getPeriodKey(type, date);
+      return key < currentKey && !saved[type].has(key);
+    });
+  });
+}
+
+export function useReportReminders() {
+  const { data } = useData();
+  const [today, setToday] = useState(localDay);
+
+  useEffect(() => {
+    const nextDay = new Date();
+    nextDay.setHours(24, 0, 0, 0);
+    const timer = window.setTimeout(() => setToday(localDay()), nextDay.getTime() - Date.now());
+    const refresh = () => setToday(localDay());
+    window.addEventListener('focus', refresh);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [today]);
+
+  return useMemo(() => {
+    const accountIds = new Set(data.accounts.map(account => account.id));
+    const savedKeys = (type: PeriodType) => new Set<string>(data[tableFor(type)].map(row => row[keyFor(type)]));
+    return pendingReportTypes(
+      data.trades.filter(trade => accountIds.has(trade.accountId)),
+      { weekly: savedKeys('weekly'), monthly: savedKeys('monthly'), yearly: savedKeys('yearly') },
+      today,
+    );
+  }, [data.accounts, data.trades, data.weeklyReports, data.monthlyReports, data.yearlyReports, today]);
+}
 
 export const usePeriodReports = () => {
   const { data, upsertRow } = useData();
