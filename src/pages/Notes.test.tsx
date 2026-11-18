@@ -74,7 +74,15 @@ it('writes notes and embedded screenshots through the existing JSON file workflo
   const handle = {
     queryPermission: async () => 'granted',
     getFile: async () => ({ text: async () => saved }),
-    createWritable: async () => ({ write: async (value: string) => { saved = value; }, close: async () => {} }),
+    createWritable: async () => ({
+      write: (value: Blob) => new Promise<void>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => { saved = String(reader.result); resolve(); };
+        reader.onerror = () => reject(reader.error);
+        reader.readAsText(value);
+      }),
+      close: async () => {},
+    }),
   } as unknown as FileSystemFileHandle;
   vi.spyOn(fileStorage, 'getStoredHandle').mockResolvedValue(handle);
   await openNotes();

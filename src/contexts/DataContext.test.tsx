@@ -1,7 +1,8 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
 import { DataProvider, useData } from './DataContext';
+import * as fileStorage from '@/lib/fileStorage';
 import { DEFAULT_DATA, normalizeData, readLocalData, writeLocalData } from '@/lib/fileStorage';
 import type { StrategyDocument } from '@/lib/strategyDocuments';
 
@@ -52,5 +53,40 @@ describe('Strategy document persistence', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Échec de sauvegarde');
     expect(screen.getByTestId('count')).toHaveTextContent('0');
     expect(readLocalData()?.strategyDocuments).toEqual([]);
+  });
+});
+
+describe('queued file saves', () => {
+  it.each([false, true])('commits saves in order even with a failed first write (%s)', async firstFails => {
+    const initial = { ...DEFAULT_DATA };
+    const handle = {} as FileSystemFileHandle;
+    vi.spyOn(fileStorage, 'getStoredHandle').mockResolvedValue(handle);
+    vi.spyOn(fileStorage, 'queryPermission').mockResolvedValue('granted');
+    vi.spyOn(fileStorage, 'readFileData').mockResolvedValue(initial);
+    let finishFirst: () => void;
+    const firstWrite = new Promise<void>((resolve, reject) => {
+      finishFirst = () => firstFails ? reject(new Error('Écriture interrompue')) : resolve();
+    });
+    const write = vi.spyOn(fileStorage, 'writeFileData').mockResolvedValue(undefined).mockImplementationOnce(() => firstWrite);
+
+    let context: ReturnType<typeof useData>;
+    function Reader() {
+      context = useData();
+      return <p>{context.status}</p>;
+    }
+    render(<DataProvider><Reader /></DataProvider>);
+    await screen.findByText('connected');
+
+    const secondDoc = { ...document, id: 'doc-2' };
+    const first = context.addRow('strategyDocuments', document);
+    const second = context.addRow('strategyDocuments', secondDoc);
+    const writes = Promise.allSettled([first, second]);
+    await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
+    expect(context.data.strategyDocuments).toEqual([]);
+    await act(async () => { finishFirst(); await writes; });
+    expect((await writes).map(result => result.status)).toEqual([firstFails ? 'rejected' : 'fulfilled', 'fulfilled']);
+    const expected = firstFails ? [secondDoc] : [document, secondDoc];
+    expect(write).toHaveBeenLastCalledWith(handle, expect.objectContaining({ strategyDocuments: expected }));
+    expect(context.data.strategyDocuments).toEqual(expected);
   });
 });

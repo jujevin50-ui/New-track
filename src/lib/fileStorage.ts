@@ -144,10 +144,62 @@ export async function readFileData(handle: FileSystemFileHandle): Promise<AppDat
   } catch { return { ...DEFAULT_DATA }; }
 }
 
+// Data updates replace changed rows and tables, so unchanged attachments can reuse their encoded bytes.
+const encodedTables = new WeakMap<unknown[], Blob>();
+const encodedLargeRows = new WeakMap<object, Blob>();
+
+function encodeTable(rows: unknown[]): Blob {
+  const cached = encodedTables.get(rows);
+  if (cached) return cached;
+
+  const parts: BlobPart[] = ['['];
+  let smallRows = '';
+  for (let index = 0; index < rows.length; index++) {
+    const row = rows[index];
+    const object = row !== null && typeof row === 'object' ? row : null;
+    let encoded: string | Blob | undefined = object ? encodedLargeRows.get(object) : undefined;
+    if (!encoded) {
+      encoded = JSON.stringify(row) ?? 'null';
+      if (object && encoded.length >= 64 * 1024) {
+        encoded = new Blob([encoded]);
+        encodedLargeRows.set(object, encoded);
+      }
+    }
+    if (index > 0) smallRows += ',';
+    if (typeof encoded === 'string') {
+      smallRows += encoded;
+    } else {
+      parts.push(smallRows, encoded);
+      smallRows = '';
+    }
+  }
+  parts.push(smallRows, ']');
+  const table = new Blob(parts);
+  encodedTables.set(rows, table);
+  return table;
+}
+
 export async function writeFileData(handle: FileSystemFileHandle, data: AppData): Promise<void> {
+  const parts: BlobPart[] = ['{\n'];
+  let first = true;
+  for (const [key, value] of Object.entries(data)) {
+    const encoded = Array.isArray(value) ? encodeTable(value) : JSON.stringify(value);
+    if (encoded === undefined) continue;
+    if (!first) parts.push(',\n');
+    parts.push(JSON.stringify(key), ': ', encoded);
+    first = false;
+  }
+  parts.push('\n}\n');
+  const snapshot = new Blob(parts, { type: 'application/json' });
+
   const writable = await handle.createWritable();
-  await writable.write(JSON.stringify(data, null, 2));
-  await writable.close();
+  try {
+    await writable.write(snapshot);
+    await writable.close();
+  } catch (error) {
+    await writable.abort().catch(() => {});
+    throw error;
+  }
 }
 
 export async function pickNewFile(): Promise<FileSystemFileHandle> {

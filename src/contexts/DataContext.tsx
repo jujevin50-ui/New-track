@@ -36,8 +36,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const handleRef = useRef<FileSystemFileHandle | null>(null);
   // Local fallback mode (cross-origin iframe e.g. Notion): persist to localStorage
   const fallbackRef = useRef(false);
-  // Always-current data ref so sequential mutations don't clobber each other
+  // Apply queued file changes to the last successfully written snapshot.
   const dataRef = useRef<AppData>(DEFAULT_DATA);
+  const fileQueue = useRef(Promise.resolve());
 
   useEffect(() => {
     (async () => {
@@ -69,18 +70,31 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
-  const persist = useCallback(async (newData: AppData) => {
-    const previous = dataRef.current;
-    dataRef.current = newData;
-    setData(newData);
-    try {
-      if (handleRef.current) await writeFileData(handleRef.current, newData);
-      else if (fallbackRef.current) writeLocalData(newData);
-    } catch (error) {
-      if (dataRef.current === newData) { dataRef.current = previous; setData(previous); }
-      throw error;
+  const persist = useCallback(async (change: (current: AppData) => AppData) => {
+    const handle = handleRef.current;
+    const commit = (next: AppData) => {
+      dataRef.current = next;
+      setData(next);
+    };
+
+    if (!handle) {
+      const next = change(dataRef.current);
+      if (fallbackRef.current) writeLocalData(next);
+      commit(next);
+      return;
     }
+
+    const write = fileQueue.current.then(async () => {
+      if (handleRef.current !== handle) throw new Error('Le fichier de données a changé.');
+      const next = change(dataRef.current);
+      await writeFileData(handle, next);
+      commit(next);
+    });
+    fileQueue.current = write.catch(() => {});
+    await write;
   }, []);
+
+  const saveData = useCallback((next: AppData) => persist(() => next), [persist]);
 
   const connectNew = useCallback(async () => {
     if (hasFsAccess()) {
@@ -155,45 +169,40 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const disconnect = useCallback(async () => {
-    await clearHandle();
-    clearLocalData();
-    handleRef.current = null;
-    fallbackRef.current = false;
-    dataRef.current = DEFAULT_DATA;
-    setData(DEFAULT_DATA);
-    setStatus('disconnected');
+    const close = fileQueue.current.then(async () => {
+      await clearHandle();
+      clearLocalData();
+      handleRef.current = null;
+      fallbackRef.current = false;
+      dataRef.current = DEFAULT_DATA;
+      setData(DEFAULT_DATA);
+      setStatus('disconnected');
+    });
+    fileQueue.current = close.catch(() => {});
+    await close;
   }, []);
 
-  // All mutations read from dataRef.current so sequential calls see each other's writes
-  const saveTable = useCallback(async (table: TableKey, rows: any[]) => {
-    await persist({ ...dataRef.current, [table]: rows });
-  }, [persist]);
+  const saveTable = useCallback((table: TableKey, rows: any[]) =>
+    persist(current => ({ ...current, [table]: rows })), [persist]);
 
-  const addRow = useCallback(async (table: TableKey, row: any) => {
-    const cur = dataRef.current;
-    await persist({ ...cur, [table]: [...(cur[table] as any[]), row] });
-  }, [persist]);
+  const addRow = useCallback((table: TableKey, row: any) =>
+    persist(current => ({ ...current, [table]: [...current[table], row] })), [persist]);
 
-  const updateRow = useCallback(async (table: TableKey, id: string, updates: any) => {
-    const cur = dataRef.current;
-    await persist({ ...cur, [table]: (cur[table] as any[]).map(r => r.id === id ? { ...r, ...updates } : r) });
-  }, [persist]);
+  const updateRow = useCallback((table: TableKey, id: string, updates: any) =>
+    persist(current => ({ ...current, [table]: current[table].map(row => row.id === id ? { ...row, ...updates } : row) })), [persist]);
 
-  const deleteRow = useCallback(async (table: TableKey, id: string) => {
-    const cur = dataRef.current;
-    await persist({ ...cur, [table]: (cur[table] as any[]).filter(r => r.id !== id) });
-  }, [persist]);
+  const deleteRow = useCallback((table: TableKey, id: string) =>
+    persist(current => ({ ...current, [table]: current[table].filter(row => row.id !== id) })), [persist]);
 
-  const upsertRow = useCallback(async (table: TableKey, row: any, keyField = 'date') => {
-    const cur = dataRef.current;
-    const rows = cur[table] as any[];
+  const upsertRow = useCallback((table: TableKey, row: any, keyField = 'date') => persist(current => {
+    const rows = current[table] as any[];
     const idx = rows.findIndex(r => r[keyField] === row[keyField]);
     const newRows = idx >= 0 ? rows.map((r, i) => i === idx ? row : r) : [...rows, row];
-    await persist({ ...cur, [table]: newRows });
-  }, [persist]);
+    return { ...current, [table]: newRows };
+  }), [persist]);
 
   return (
-    <DataContext.Provider value={{ data, status, connectNew, connectExisting, reconnect, disconnect, saveData: persist, saveTable, addRow, updateRow, deleteRow, upsertRow }}>
+    <DataContext.Provider value={{ data, status, connectNew, connectExisting, reconnect, disconnect, saveData, saveTable, addRow, updateRow, deleteRow, upsertRow }}>
       {children}
     </DataContext.Provider>
   );
