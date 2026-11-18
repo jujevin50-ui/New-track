@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import AddTradeDialog from './AddTradeDialog';
 import type { Account } from '@/types/account';
@@ -31,6 +31,28 @@ afterEach(cleanup);
 afterAll(() => vi.unstubAllGlobals());
 
 describe('Trade entry', () => {
+  it('opens captures in the viewer and returns to the trade draft on Escape', async () => {
+    const onOpenChange = vi.fn();
+    const screenshots = ['data:image/png;base64,first', 'data:image/png;base64,second'];
+    render(<AddTradeDialog open onOpenChange={onOpenChange} onSubmit={vi.fn()} editTrade={{ ...trade, screenshots }} accounts={[account]} activeAccountId={account.id} />);
+
+    fill('Notes', 'Contexte en cours');
+    const trigger = screen.getByRole('button', { name: 'Agrandir la capture 1' });
+    fireEvent.click(trigger);
+    const viewer = screen.getByRole('dialog', { name: 'Capture 1 sur 2' });
+    expect(within(viewer).getByRole('img')).toHaveAttribute('src', screenshots[0]);
+
+    fireEvent.keyDown(viewer, { key: 'ArrowRight' });
+    expect(viewer).toHaveAccessibleName('Capture 2 sur 2');
+    expect(within(viewer).getByRole('img')).toHaveAttribute('src', screenshots[1]);
+    fireEvent.keyDown(viewer, { key: 'Escape' });
+
+    await waitFor(() => expect(viewer).not.toBeInTheDocument());
+    await waitFor(() => expect(trigger).toHaveFocus());
+    expect(screen.getByLabelText('Notes')).toHaveValue('Contexte en cours');
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
+
   it('saves decimal amounts, costs and journal data from the all-accounts view', async () => {
     const onSubmit = vi.fn<(data: TradeFormData) => void>();
     render(<AddTradeDialog open onOpenChange={vi.fn()} onSubmit={onSubmit} accounts={[account]} activeAccountId="all" />);

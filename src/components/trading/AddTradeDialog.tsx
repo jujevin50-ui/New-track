@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Star, Clipboard, X, ImagePlus, Check, ChevronsUpDown, Sparkles, Loader2, ArrowUpRight, ArrowDownRight, ChevronDown, SlidersHorizontal, NotebookPen } from 'lucide-react';
+import { Star, Clipboard, X, ImagePlus, Check, ChevronsUpDown, Sparkles, Loader2, ArrowUpRight, ArrowDownRight, ChevronDown, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -20,7 +20,7 @@ const PairCombobox = ({ id, value, onChange }: { id: string; value: string; onCh
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button id={id} type="button" variant="outline" role="combobox" aria-expanded={open} className="h-11 w-full justify-between rounded-xl bg-secondary/50 border-border/60 font-mono text-sm font-medium">
+        <Button id={id} type="button" variant="outline" role="combobox" aria-expanded={open} className="h-11 w-full justify-between rounded-xl bg-secondary/50 border-transparent font-mono text-sm font-medium">
           {value || 'Choisir...'}<ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -149,6 +149,8 @@ const AddTradeDialog = ({ open, onOpenChange, onSubmit, editTrade, accounts, act
   const [formError, setFormError] = useState('');
   const [imageError, setImageError] = useState('');
   const [pastingImage, setPastingImage] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const previewTrigger = useRef<HTMLButtonElement>(null);
   const clipboardBusy = useRef(false);
   const clipboardSession = useRef(0);
   const [feesOpen, setFeesOpen] = useState(false);
@@ -170,6 +172,7 @@ const AddTradeDialog = ({ open, onOpenChange, onSubmit, editTrade, accounts, act
     clipboardSession.current++;
     clipboardBusy.current = false;
     setPastingImage(false);
+    setPreviewIndex(null);
     draftReady.current = false;
     if (!open) return;
     draftCompleted.current = false;
@@ -492,8 +495,12 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
 
   const invalidEnd = Boolean(form.endDate && form.endDate < form.date);
   const invalidRisk = (form.riskPercent || 0) > 100;
-  const inputClass = 'h-11 rounded-xl bg-secondary/50 border-border/60 font-mono text-sm';
+  const inputClass = 'h-11 rounded-xl border-transparent bg-secondary/50 font-mono text-sm';
   const screenshots = form.screenshots || [];
+  const previewImage = previewIndex === null ? undefined : screenshots[previewIndex];
+  const changePreview = (step: number) => {
+    setPreviewIndex(current => current === null ? null : (current + step + screenshots.length) % screenshots.length);
+  };
   const signedDecimal = '-?[0-9]+([.,][0-9]+)?';
   const decimal = '[0-9]+([.,][0-9]+)?';
 
@@ -507,10 +514,10 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
           </DialogHeader>
           <form onSubmit={handleSubmit} onPaste={handlePasteEvent} className="flex min-h-0 flex-1 flex-col">
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
-              <fieldset disabled={saving} className="grid min-w-0 items-start gap-5 p-4 sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-                <div className="min-w-0 space-y-5">
-                  <section aria-labelledby={`${fieldId}-technical`} className="rounded-2xl border border-border/70 bg-background/50 p-4 sm:p-5">
-                    <h3 id={`${fieldId}-technical`} className="mb-5 flex items-center gap-2 text-base font-semibold"><SlidersHorizontal aria-hidden="true" className="h-4 w-4 text-primary" />Données techniques</h3>
+              <fieldset disabled={saving} className="grid min-w-0 items-start gap-x-12 gap-y-10 p-5 sm:p-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                <div className="min-w-0 space-y-8">
+                  <section aria-labelledby={`${fieldId}-technical`}>
+                    <h3 id={`${fieldId}-technical`} className="mb-5 text-lg font-semibold tracking-tight">Données techniques</h3>
                     <div className="grid gap-5 min-[1440px]:grid-cols-2">
                       <section aria-labelledby={`${fieldId}-position`} className="space-y-4">
                         <h4 id={`${fieldId}-position`} className="text-sm font-semibold">Position</h4>
@@ -540,13 +547,13 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
                         </div>
                       </section>
 
-                      <section aria-labelledby={`${fieldId}-result-section`} className="min-w-0 space-y-4 border-t border-border/60 pt-5 min-[1440px]:border-t-0 min-[1440px]:pt-0">
+                      <section aria-labelledby={`${fieldId}-result-section`} className="min-w-0 space-y-4">
                         <h4 id={`${fieldId}-result-section`} className="text-sm font-semibold">Résultat</h4>
                         <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,0.7fr)] gap-4">
                           <div className="space-y-2"><Label htmlFor={`${fieldId}-result`}>P&amp;L brut ({currency})</Label><Input id={`${fieldId}-result`} type="text" inputMode="decimal" pattern={signedDecimal} required placeholder="0,00" value={resultText} onChange={decimalHandler('result', setResultText, true)} className={`${inputClass} h-12 text-lg font-semibold`} /></div>
                           <div className="space-y-2"><Label htmlFor={`${fieldId}-risk`}>Risque (%)</Label><Input aria-invalid={invalidRisk || undefined} aria-describedby={invalidRisk ? `${fieldId}-risk-error` : undefined} id={`${fieldId}-risk`} type="text" inputMode="decimal" pattern={decimal} placeholder="0" value={riskText} onChange={decimalHandler('riskPercent', setRiskText, false)} className={`${inputClass} h-12`} />{invalidRisk && <p id={`${fieldId}-risk-error`} className="ui-field-error">Le risque ne peut pas dépasser 100 %.</p>}</div>
                         </div>
-                        <details open={feesOpen} onToggle={e => setFeesOpen(e.currentTarget.open)} className="group rounded-xl border border-border/60 px-3.5">
+                        <details open={feesOpen} onToggle={e => setFeesOpen(e.currentTarget.open)} className="group">
                           <summary className="flex cursor-pointer list-none items-center justify-between py-3 text-sm text-muted-foreground [&::-webkit-details-marker]:hidden"><span>Commission &amp; swap</span><ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" /></summary>
                           <div className="grid grid-cols-2 gap-3 pb-4">
                             <div className="space-y-2"><Label htmlFor={`${fieldId}-commission`}>Commission ({currency})</Label><Input id={`${fieldId}-commission`} type="text" inputMode="decimal" pattern={decimal} value={commissionText} placeholder="0,00" onChange={decimalHandler('commission', setCommissionText, false)} className={inputClass} /></div>
@@ -563,9 +570,9 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
                     </div>
                   </section>
 
-                  <section aria-labelledby={`${fieldId}-journal`} className="space-y-4 rounded-2xl border border-border/70 bg-background/50 p-4 sm:p-5">
-                    <h3 id={`${fieldId}-journal`} className="flex items-center gap-2 text-base font-semibold"><NotebookPen aria-hidden="true" className="h-4 w-4 text-primary" />Contexte du trade</h3>
-                    <div className="space-y-2"><Label htmlFor={`${fieldId}-notes`}>Notes</Label><Textarea id={`${fieldId}-notes`} value={form.notes || ''} onChange={e => set('notes', e.target.value)} placeholder="Contexte, raison de l’entrée, gestion du trade…" className="min-h-[clamp(12rem,28dvh,22rem)] resize-y rounded-xl border-border/60 bg-secondary/40 text-sm leading-relaxed" /></div>
+                  <section aria-labelledby={`${fieldId}-journal`} className="space-y-4">
+                    <h3 id={`${fieldId}-journal`} className="text-lg font-semibold tracking-tight">Contexte du trade</h3>
+                    <div className="space-y-2"><Label htmlFor={`${fieldId}-notes`}>Notes</Label><Textarea id={`${fieldId}-notes`} value={form.notes || ''} onChange={e => set('notes', e.target.value)} placeholder="Contexte, raison de l’entrée, gestion du trade…" className="min-h-[clamp(12rem,28dvh,22rem)] resize-y rounded-xl border-transparent bg-secondary/35 text-sm leading-relaxed" /></div>
                     <div className="flex flex-wrap items-center justify-between gap-4">
                       <div className="space-y-2">
                         <Label id={`${fieldId}-quality`}>Qualité du setup</Label>
@@ -576,37 +583,58 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
                       <div className="flex items-center gap-3"><Label htmlFor={`${fieldId}-strategy`}>Plan respecté</Label><Switch id={`${fieldId}-strategy`} checked={form.strategyRespected} onCheckedChange={v => set('strategyRespected', v)} /></div>
                     </div>
                   </section>
-                  <aside aria-label="Récapitulatif du trade" className="rounded-xl border border-border/60 bg-secondary/30 p-4">
-                    <div className="flex items-center justify-between gap-2"><span className="font-mono text-lg font-semibold">{form.pair}</span><span className={`rounded-full px-2 py-1 text-xs font-medium ${form.type === 'Buy' ? 'bg-profit/10 text-profit' : 'bg-loss/10 text-loss'}`}>{form.type === 'Buy' ? 'Long' : 'Short'}</span></div>
-                    <p className="mt-1 truncate text-xs text-muted-foreground">{selectedAccount?.name || 'Choisir un compte'}</p>
-                    <div className="my-5 border-t border-border/60" />
-                    <div role="status" aria-live="polite" aria-atomic="true">
-                      <p className="text-xs font-medium text-muted-foreground">Résultat net</p>
-                      <p className={`mt-2 break-words font-mono text-2xl font-semibold tracking-tight ${net === 0 ? 'text-foreground' : net > 0 ? 'text-profit' : 'text-loss'}`}>{net > 0 ? '+' : ''}{money(net)}</p>
-                      <dl className="mt-3 grid gap-x-5 gap-y-2 text-xs sm:grid-cols-2">
-                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground">P&amp;L brut</dt><dd className="font-mono">{money(form.result)}</dd></div>
-                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground">Commission</dt><dd className="font-mono">{money(-Math.abs(form.commission))}</dd></div>
-                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground">Swap</dt><dd className="font-mono">{money(form.swap)}</dd></div>
-                        <div className="flex justify-between gap-2"><dt className="text-muted-foreground">R-multiple</dt><dd className="font-mono font-semibold">{rValue === null ? '—' : `${rValue > 0 ? '+' : ''}${rValue.toFixed(2)}R`}</dd></div>
-                      </dl>
-                    </div>
-                  </aside>
                 </div>
 
                 <div className="min-w-0 space-y-5">
-                  <section aria-labelledby={`${fieldId}-captures`} className="space-y-4 rounded-2xl border border-border/70 bg-background/50 p-4 sm:p-5">
+                  <section aria-labelledby={`${fieldId}-captures`} className="space-y-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div className="flex items-center gap-2">
-                        <h3 id={`${fieldId}-captures`} className="text-base font-semibold">Captures{screenshots.length > 0 ? ` · ${screenshots.length}` : ''}</h3>
+                        <h3 id={`${fieldId}-captures`} className="text-lg font-semibold tracking-tight">Captures{screenshots.length > 0 ? ` · ${screenshots.length}` : ''}</h3>
                         <kbd className="rounded-md border border-border/60 px-1.5 py-0.5 text-[11px] text-muted-foreground">Ctrl + V</kbd>
                       </div>
-                      <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" size="sm" className="h-8 gap-1.5 rounded-lg" disabled={pastingImage} onClick={() => { void pasteImage(); }}>{pastingImage ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Clipboard className="h-3.5 w-3.5" />}Coller une image</Button><Button type="button" variant="outline" size="sm" className="h-8 gap-1.5 rounded-lg" onClick={() => imageInput.current?.click()}><ImagePlus className="h-3.5 w-3.5" />Ajouter</Button></div>
+                      <div className="flex flex-wrap gap-2"><Button type="button" variant="ghost" size="sm" className="h-8 gap-1.5 rounded-lg" disabled={pastingImage} onClick={() => { void pasteImage(); }}>{pastingImage ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Clipboard className="h-3.5 w-3.5" />}Coller une image</Button><Button type="button" variant="ghost" size="sm" className="h-8 gap-1.5 rounded-lg" onClick={() => imageInput.current?.click()}><ImagePlus className="h-3.5 w-3.5" />Ajouter</Button></div>
                     </div>
                     <input ref={imageInput} type="file" accept="image/*" multiple aria-label="Ajouter des captures" className="sr-only" tabIndex={-1} onChange={e => { void addFiles(e.target.files); e.target.value = ''; }} />
-                    {screenshots.length > 0 ? <div className="grid gap-3">{screenshots.map((img, i) => <div key={i} className="relative grid aspect-video place-items-center overflow-hidden rounded-xl border border-border/60 bg-secondary/40"><img src={img} alt={`Capture ${i + 1}`} className="absolute inset-0 h-full w-full object-contain" /><Button type="button" variant="secondary" size="icon" aria-label={`Supprimer la capture ${i + 1}`} className="absolute right-1 top-1 h-7 w-7 rounded-full" onClick={() => removeImage(i)}><X className="h-3.5 w-3.5" /></Button></div>)}</div> : <button type="button" onClick={() => imageInput.current?.click()} className="flex aspect-video w-full flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-secondary/25 p-4 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:bg-secondary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"><span className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary"><ImagePlus aria-hidden="true" className="h-5 w-5" /></span>Importer une capture</button>}
+                    {screenshots.length > 0 ? (
+                      <div className="grid gap-4">
+                        {screenshots.map((image, index) => (
+                          <div key={index} className="relative">
+                            <button type="button" aria-label={`Agrandir la capture ${index + 1}`} aria-haspopup="dialog" onClick={event => {
+                              previewTrigger.current = event.currentTarget;
+                              setPreviewIndex(index);
+                            }} className="group relative block aspect-video w-full cursor-zoom-in overflow-hidden rounded-xl bg-secondary/35 focus-visible:ring-2 focus-visible:ring-primary">
+                              <img src={image} alt={`Capture ${index + 1}`} className="absolute inset-0 h-full w-full object-contain" />
+                              <span className="absolute bottom-2 right-2 grid size-9 place-items-center rounded-lg bg-background/90 text-foreground group-hover:bg-background">
+                                <Maximize2 aria-hidden="true" className="size-4" />
+                              </span>
+                            </button>
+                            <Button type="button" variant="secondary" size="icon" aria-label={`Supprimer la capture ${index + 1}`} className="absolute right-2 top-2 size-9 rounded-lg" onClick={() => removeImage(index)}><X aria-hidden="true" className="size-4" /></Button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <button type="button" onClick={() => imageInput.current?.click()} className="flex aspect-video w-full flex-col items-center justify-center gap-3 rounded-xl bg-secondary/35 p-4 text-sm text-muted-foreground transition-colors hover:bg-secondary/60">
+                        <ImagePlus aria-hidden="true" className="size-6" />
+                        Importer une capture
+                      </button>
+                    )}
                     {imageError && <p role="alert" className="text-sm text-loss">{imageError}</p>}
                   </section>
                 </div>
+                <aside aria-label="Récapitulatif du trade" className="mx-auto w-full max-w-xl border-t border-border/60 pt-7 text-center lg:col-span-2">
+                  <div className="flex items-center justify-center gap-2"><span className="font-mono text-lg font-semibold">{form.pair}</span><span className={`rounded-full px-2 py-1 text-xs font-medium ${form.type === 'Buy' ? 'bg-profit/10 text-profit' : 'bg-loss/10 text-loss'}`}>{form.type === 'Buy' ? 'Long' : 'Short'}</span></div>
+                  <p className="mt-1 truncate text-xs text-muted-foreground">{selectedAccount?.name || 'Choisir un compte'}</p>
+                  <div role="status" aria-live="polite" aria-atomic="true" className="mt-4">
+                    <p className="text-xs font-medium text-muted-foreground">Résultat net</p>
+                    <p className={`mt-2 break-words font-mono text-2xl font-semibold tracking-tight ${net === 0 ? 'text-foreground' : net > 0 ? 'text-profit' : 'text-loss'}`}>{net > 0 ? '+' : ''}{money(net)}</p>
+                    <dl className="mt-5 grid grid-cols-2 gap-4 text-xs sm:grid-cols-4">
+                      <div className="space-y-1"><dt className="text-muted-foreground">P&amp;L brut</dt><dd className="font-mono">{money(form.result)}</dd></div>
+                      <div className="space-y-1"><dt className="text-muted-foreground">Commission</dt><dd className="font-mono">{money(-Math.abs(form.commission))}</dd></div>
+                      <div className="space-y-1"><dt className="text-muted-foreground">Swap</dt><dd className="font-mono">{money(form.swap)}</dd></div>
+                      <div className="space-y-1"><dt className="text-muted-foreground">R-multiple</dt><dd className="font-mono font-semibold">{rValue === null ? '—' : `${rValue > 0 ? '+' : ''}${rValue.toFixed(2)}R`}</dd></div>
+                    </dl>
+                  </div>
+                </aside>
               </fieldset>
             </div>
             <footer className="ui-form-footer flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-border/60 bg-background/80 px-5 py-4 sm:px-7">
@@ -616,6 +644,33 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
               <Button type="submit" disabled={saving || pastingImage || !accounts.length} className="gap-2 rounded-xl px-5">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}{editTrade ? 'Enregistrer' : 'Ajouter le trade'}</Button>
             </footer>
           </form>
+          <Dialog open={Boolean(previewImage)} onOpenChange={isOpen => { if (!isOpen) setPreviewIndex(null); }}>
+            <DialogContent
+              aria-describedby={undefined}
+              className="flex h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] max-w-none flex-col gap-2 border-0 bg-background p-3 sm:p-5"
+              onCloseAutoFocus={event => {
+                if (!previewTrigger.current?.isConnected) return;
+                event.preventDefault();
+                previewTrigger.current.focus();
+              }}
+              onKeyDown={event => {
+                if (screenshots.length < 2 || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+                event.preventDefault();
+                changePreview(event.key === 'ArrowLeft' ? -1 : 1);
+              }}
+            >
+              <DialogTitle className="flex min-h-10 items-center pl-2 text-sm">
+                Capture {previewIndex === null ? '' : previewIndex + 1} sur {screenshots.length}
+              </DialogTitle>
+              {previewImage && <img src={previewImage} alt={`Capture ${(previewIndex ?? 0) + 1} agrandie`} className="min-h-0 w-full flex-1 object-contain" />}
+              {screenshots.length > 1 && (
+                <div className="flex shrink-0 justify-center gap-2">
+                  <Button type="button" variant="ghost" size="icon" aria-label="Capture précédente" onClick={() => changePreview(-1)}><ChevronLeft aria-hidden="true" className="size-5" /></Button>
+                  <Button type="button" variant="ghost" size="icon" aria-label="Capture suivante" onClick={() => changePreview(1)}><ChevronRight aria-hidden="true" className="size-5" /></Button>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
         </DialogContent>
       </Dialog>
       {aiDialog}
