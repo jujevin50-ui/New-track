@@ -240,7 +240,29 @@ export default function Finance() {
   return (
     <div className="workspace-shell finance-workspace min-h-screen text-foreground relative z-10">
       <a href="#main-content" className="ui-skip-link">Aller au contenu</a>
-      <WorkspaceRail><nav className="rail-nav" aria-label="Navigation My Finance"><SlidingRailLinks>{TABS.map(([value, label, Icon]) => <button type="button" key={value} data-rail-link aria-current={tab === value ? 'page' : undefined} onClick={() => { setTab(value); if (value === 'invest') setInvestmentStart(undefined); }} className={`rail-link${tab === value ? ' is-current' : ''}`}><Icon className="header-nav-icon" aria-hidden="true" strokeWidth={1.8} /><span>{label}</span></button>)}</SlidingRailLinks></nav><TopNav sidebar utilitiesOnly /></WorkspaceRail>
+      <WorkspaceRail>
+        <nav className="rail-nav" aria-label="Navigation My Finance">
+          <SlidingRailLinks>
+            {TABS.map(([value, label, Icon]) => (
+              <button
+                type="button"
+                key={value}
+                data-rail-link
+                aria-current={tab === value ? 'page' : undefined}
+                onClick={() => {
+                  setTab(value);
+                  if (value === 'invest') setInvestmentStart(undefined);
+                }}
+                className={`rail-link${tab === value ? ' is-current' : ''}${value === 'invest' ? ' rail-link-motion' : ''}`}
+              >
+                <Icon className="header-nav-icon" aria-hidden="true" strokeWidth={1.8} />
+                <span>{label}</span>
+              </button>
+            ))}
+          </SlidingRailLinks>
+        </nav>
+        <TopNav sidebar utilitiesOnly />
+      </WorkspaceRail>
 
       <main id="main-content" tabIndex={-1} className="finance-main">
         {tab === 'overview' && <div className="finance-toolbar">

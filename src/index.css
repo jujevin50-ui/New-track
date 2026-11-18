@@ -921,6 +921,27 @@ html .app-panel { background-color: var(--glass-bg-strong); background-image: no
 .rail-mobile-header { position: sticky; top: 0; z-index: 45; display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid hsl(var(--border) / 0.6); background: hsl(var(--background) / 0.94); backdrop-filter: blur(16px); }
 .workspace-rail-mobile { width: min(300px, 90vw); height: 100dvh; }
 .rail-link:focus-visible, .rail-utility:focus-visible, .rail-workspaces button:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: -2px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .rail-link-motion > span {
+    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .rail-link-motion:focus-visible > span {
+    transform: translateY(-2px) scale(1.08);
+  }
+
+  @media (hover: hover) {
+    .rail-link-motion:hover > span {
+      transform: translateY(-2px) scale(1.08);
+    }
+  }
+
+  .rail-link-motion:active > span {
+    transform: translateY(1px) scale(0.94);
+    transition-duration: 90ms;
+  }
+}
 @media (min-width: 1024px) { .workspace-shell { padding-left: 272px; padding-top: 12px; } }
 @media (prefers-reduced-motion: reduce) { .rail-link, .rail-utility, .rail-workspaces button { transition: none; } .workspace-rail-mobile { animation: none !important; transition: none !important; } }
 @media (prefers-reduced-transparency: reduce) { .workspace-rail, .rail-mobile-header { background: hsl(var(--background)); backdrop-filter: none; } }
