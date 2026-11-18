@@ -34,21 +34,25 @@ export function TopNav({ sidebar = false, utilitiesOnly = false }: { sidebar?: b
   const [notionOpen, setNotionOpen] = useState(false);
   const { accounts } = useAccounts();
 
-  const navEntries = navItems
-    .filter(cfg => cfg.type !== 'separator' && cfg.visible)
-    .map(cfg => NAV_ITEMS.find(n => n.id === cfg.id))
-    .filter((x): x is NonNullable<typeof x> => x !== undefined);
+  const links = navItems.filter(item => item.visible).map(item => {
+    if (item.type === 'separator') {
+      return sidebar ? <hr key={item.id} className="rail-nav-separator" /> : null;
+    }
 
-  const links = (navEntries.map(entry => (
-            <NavLink
-              key={entry.id}
-              to={entry.url}
-              end={entry.url === '/'}
-              className={({ isActive }) => sidebar ? `rail-link${isActive ? ' is-current' : ''}` : navItemClass(isActive)}
-            >
-              <entry.Icon className="header-nav-icon" aria-hidden="true" strokeWidth={1.8} /><span>{entry.title}</span>
-            </NavLink>
-          )));
+    const entry = NAV_ITEMS.find(link => link.id === item.id);
+    if (!entry) return null;
+
+    return (
+      <NavLink
+        key={entry.id}
+        to={entry.url}
+        end={entry.url === '/'}
+        className={({ isActive }) => sidebar ? `rail-link${isActive ? ' is-current' : ''}` : navItemClass(isActive)}
+      >
+        <entry.Icon className="header-nav-icon" aria-hidden="true" strokeWidth={1.8} /><span>{entry.title}</span>
+      </NavLink>
+    );
+  });
   return (
     <>
       <nav className={sidebar ? `rail-nav${utilitiesOnly ? ' rail-nav-utilities' : ''}` : NAV_PILL} aria-label={utilitiesOnly ? 'Actions de l’espace' : 'Navigation principale'}>
