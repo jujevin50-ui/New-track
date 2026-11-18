@@ -38,9 +38,7 @@ import jsPDF from 'jspdf';
 const ReportPdfPreview = lazy(() => import('@/components/trading/ReportPdfPreview'));
 
 interface ReportsProps {
-  activeAccount: Account | null;
   accounts: Account[];
-  onSelectAccount: (id: string) => void;
 }
 
 interface PeriodEntry {
@@ -201,12 +199,12 @@ const Question = ({
   </div>
 );
 
-const Reports = ({ activeAccount, accounts, onSelectAccount }: ReportsProps) => {
-  const { allTrades: rawTrades } = useTrades(activeAccount?.id || null, activeAccount?.initialBalance || 0);
+const Reports = ({ accounts }: ReportsProps) => {
+  const { allTrades: rawTrades } = useTrades(null, 0, { includeHidden: true });
   const { reports, getReport, saveReport } = usePeriodReports();
 
   const [preferredCurrency, setPreferredCurrency] = usePagePreference('reports.currency','');
-  const scope = useMemo(() => accountScope(accounts, activeAccount?.id ?? 'all', preferredCurrency || (activeAccount?.id === 'all' ? accounts[0]?.currency : activeAccount?.currency)), [accounts,activeAccount?.id,activeAccount?.currency,preferredCurrency]);
+  const scope = useMemo(() => accountScope(accounts, 'all', preferredCurrency), [accounts, preferredCurrency]);
   const allTrades = useMemo(() => rawTrades.filter(trade => scope.accounts.some(account => account.id === trade.accountId) && Boolean(trade.endDate) && trade.endDate!.slice(0,10) <= localDay()), [rawTrades, scope.accounts]);
   const [query, setQuery] = usePagePreference('reports.search','');
   const [visibility, setVisibility] = usePagePreference('reports.visibility','all',oneOf('all','saved','draft'));
@@ -229,7 +227,7 @@ const Reports = ({ activeAccount, accounts, onSelectAccount }: ReportsProps) => 
   });
   const [previewImgs, setPreviewImgs] = useState<string[] | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const reportContext = `${selected?.type}/${selected?.key}/${activeAccount?.id}/${scope.currency}`;
+  const reportContext = `${selected?.type}/${selected?.key}/${scope.currency}`;
   const loadedContext = useRef('');
 
   const buildEntries = useCallback((type: PeriodType): PeriodEntry[] => {
@@ -446,15 +444,24 @@ const Reports = ({ activeAccount, accounts, onSelectAccount }: ReportsProps) => 
     for (let i = 0; i < selectedTrades.length; i++) {
       const trade = selectedTrades[i];
       const net = getNetResult(trade);
-      checkPage(18);
+      const account = accounts.find(account => account.id === trade.accountId);
+      checkPage(23);
       pdf.setFontSize(11);
       pdf.setFont('helvetica', 'bold');
       pdf.text(`Trade ${i + 1}`, margin + 4, y);
       y += 6;
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
-      pdf.text(`Paire: ${trade.pair}  ${pdfMoney(net,accounts.find(account=>account.id===trade.accountId)?.currency)}`, margin + 8, y);
+      pdf.text(`Paire: ${trade.pair}  ${pdfMoney(net, account?.currency)}`, margin + 8, y);
       y += 5;
+      if (account) {
+        for (const line of pdf.splitTextToSize(`Compte: ${account.name}`, contentW - 8)) {
+          checkPage(5);
+          pdf.text(line, margin + 8, y);
+          y += 5;
+        }
+      }
+      checkPage(5);
       pdf.text(`Strategie respectee: ${trade.strategyRespected ? 'oui' : 'non'}`, margin + 8, y);
       y += 5;
 
@@ -531,14 +538,6 @@ const Reports = ({ activeAccount, accounts, onSelectAccount }: ReportsProps) => 
 
   const generatePreview = useCallback(() => handleDownloadPDF('preview'), [handleDownloadPDF]);
 
-  if (!activeAccount) {
-    return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <p className="text-muted-foreground">Aucun compte sélectionné.</p>
-      </div>
-    );
-  }
-
   const currentMeta = selected ? SECTION_META[selected.type] : SECTION_META.weekly;
   const selectedSaved = selected ? !!reports[selected.type][selected.key] : false;
   const selectedEntry = selected
@@ -550,8 +549,14 @@ const Reports = ({ activeAccount, accounts, onSelectAccount }: ReportsProps) => 
   return (
     <div className="reports-page w-full space-y-8 pb-10">
       <h1 className="sr-only page-title-hidden">Rapports</h1>
-      <div className="dashboard-filter-controls"><DashboardFilter label="Compte" ariaLabel="Compte des rapports" value={activeAccount?.id ?? 'all'} onChange={id => {if (!dirty || window.confirm('Changer de compte sans enregistrer les modifications ?')) {setDirty(false); setIsEditing(false); onSelectAccount(id);}}} options={[{value:'all',label:'Tous les comptes'},...accounts.map(account => ({value:account.id,label:account.name}))]}/>{scope.groups.length>1 && <DashboardFilter label="Devise" ariaLabel="Devise des rapports" value={scope.currency || 'UNKNOWN'} onChange={value => {if (!dirty || window.confirm('Changer de devise sans enregistrer les modifications ?')) {setDirty(false); setIsEditing(false); setPreferredCurrency(value);}}} options={scope.groups.map(group=>({value:group.currency,label:group.currency}))}/>}</div>
       <div className="flex flex-wrap items-end gap-4">
+        {scope.groups.length > 1 && <DashboardFilter label="Devise" ariaLabel="Devise des rapports" value={scope.currency || 'UNKNOWN'} onChange={value => {
+          if (!dirty || window.confirm('Changer de devise sans enregistrer les modifications ?')) {
+            setDirty(false);
+            setIsEditing(false);
+            setPreferredCurrency(value);
+          }
+        }} options={scope.groups.map(group => ({ value: group.currency, label: group.currency }))} />}
         <div role="group" aria-label="Périodicité des rapports" className="dashboard-switch">
           {(['weekly', 'monthly', 'yearly'] as const).map(type => (
             <button key={type} type="button" aria-pressed={browseType === type} onClick={() => {
@@ -589,7 +594,7 @@ const Reports = ({ activeAccount, accounts, onSelectAccount }: ReportsProps) => 
                     {(!selectedSaved || dirty) && <span className="text-[9px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">{dirty ? 'Modifications non enregistrées' : 'Brouillon'}</span>}
                   </div>
                   <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">{selectedEntry?.label || reportLabel(selected.type, selected.key)}</h2>
-                  <p className="mt-3 text-sm text-muted-foreground">{activeAccount.id === 'all' ? `Tous les comptes${scope.currency ? ` · ${scope.currency}` : ''}` : activeAccount.name}</p>
+                  <p className="mt-3 text-sm text-muted-foreground">Tous les comptes{scope.currency ? ` · ${scope.currency}` : ''}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5 max-w-full">
                   {!isEditing ? (
@@ -689,19 +694,21 @@ const Reports = ({ activeAccount, accounts, onSelectAccount }: ReportsProps) => 
                     <div className="divide-y divide-border/40">
                       {selectedTrades.map((trade, index) => {
                         const net = getNetResult(trade);
+                        const account = accounts.find(account => account.id === trade.accountId);
                         const imgs = getTradeScreenshots(trade);
                         const note = formData.tradeNotes[trade.id] ?? trade.notes ?? '';
                         return (
                           <div key={trade.id} className="px-4 py-3 hover:bg-accent/20 transition-colors">
-                            <div className="flex items-center gap-2 mb-1">
+                            <div className="mb-1 flex flex-wrap items-center gap-2">
                               <span className={`text-sm font-bold font-mono tabular-nums ${net >= 0 ? 'text-profit' : 'text-loss'}`}>
-                                {formatMoney(net,accounts.find(account=>account.id===trade.accountId)?.currency)}
+                                {formatMoney(net, account?.currency)}
                               </span>
                               <span className="text-[9px] font-mono text-muted-foreground/50">#{index + 1}</span>
                               <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${trade.type === 'Buy' ? 'bg-profit/12 text-profit' : 'bg-loss/12 text-loss'}`}>
                                 {trade.type === 'Buy' ? 'L' : 'S'}
                               </span>
                               <span className="text-xs font-semibold">{trade.pair}</span>
+                              {account && <span className="text-xs text-muted-foreground">{account.name}</span>}
                               <span className="text-[10px] text-muted-foreground ml-auto">{trade.endDate && trade.endDate.slice(0, 10) !== trade.date.slice(0, 10) ? `${trade.date.slice(0, 10)} → ${trade.endDate.slice(0, 10)}` : trade.date.slice(0, 10)}</span>
                             </div>
 

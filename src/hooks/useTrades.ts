@@ -3,12 +3,12 @@ import { Trade, TradeFormData, getNetResult } from '@/types/trade';
 import { Account } from '@/types/account';
 import { useData } from '@/contexts/DataContext';
 
-export const useTrades = (accountId: string | null, initialBalance: number) => {
+export const useTrades = (accountId: string | null, initialBalance: number, { includeHidden = false } = {}) => {
   const { data, addRow, updateRow, deleteRow } = useData();
 
   const validAccountIds = useMemo(
-    () => new Set((data.accounts as Account[]).filter(account => !account.hidden).map(account => account.id)),
-    [data.accounts]
+    () => new Set((data.accounts as Account[]).filter(account => includeHidden || !account.hidden).map(account => account.id)),
+    [data.accounts, includeHidden]
   );
 
   const accountPayouts = useMemo(() => {
