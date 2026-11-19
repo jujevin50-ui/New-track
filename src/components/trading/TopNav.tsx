@@ -1,4 +1,3 @@
-import SlidingRailLinks from './SlidingRailLinks';
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Settings, LayoutDashboard, CalendarDays, ArrowRightLeft, BarChart3, Sparkles, BookOpen, Wallet, Banknote, Target } from 'lucide-react';
@@ -69,7 +68,7 @@ export function TopNav({ sidebar = false, utilitiesOnly = false }: { sidebar?: b
   return (
     <>
       <nav className={sidebar ? `rail-nav${utilitiesOnly ? ' rail-nav-utilities' : ''}` : NAV_PILL} aria-label={utilitiesOnly ? 'Actions de l’espace' : 'Navigation principale'}>
-        {!utilitiesOnly && (sidebar ? <SlidingRailLinks>{links}</SlidingRailLinks> : <HeaderNavLinks activeKey={location.pathname}>{links}</HeaderNavLinks>)}
+        {!utilitiesOnly && (sidebar ? <div className="rail-links">{links}</div> : <HeaderNavLinks activeKey={location.pathname}>{links}</HeaderNavLinks>)}
         <div className={sidebar ? 'rail-actions' : 'header-nav-actions'}>
           <button onClick={() => setSettingsOpen(true)} className={sidebar ? 'rail-settings-pill' : 'header-action'} aria-label="Settings" title="Paramètres">
             <Settings className="h-4 w-4" />{sidebar && <span className="rail-label">{userName.trim() || 'Mon profil'}</span>}

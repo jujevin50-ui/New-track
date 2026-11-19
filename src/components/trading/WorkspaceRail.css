@@ -99,6 +99,7 @@
 }
 
 .rail-inner .rail-navigation {
+  overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: var(--rail-edge) transparent;
 }
@@ -127,7 +128,11 @@
 
 .rail-inner .rail-links .rail-link.is-current {
   color: var(--rail-ink);
-  background: transparent;
+  background: var(--rail-highlight);
+}
+
+.rail-inner .rail-link.is-current::before {
+  display: none;
 }
 
 .rail-inner .rail-links .header-nav-icon {
@@ -135,19 +140,6 @@
   flex: none;
   color: inherit;
   opacity: 1;
-}
-
-.rail-inner .rail-gooey-pill,
-.rail-inner .rail-gooey-drop {
-  background: var(--rail-highlight);
-}
-
-.rail-inner .rail-gooey-pill {
-  border-radius: 999px;
-}
-
-.rail-inner .rail-selection-slider {
-  display: none;
 }
 
 .rail-inner .rail-nav-separator {
@@ -245,38 +237,27 @@
   margin-right: var(--rail-content-inset);
 }
 
-.workspace-rail[data-collapsed="false"] .rail-selection-slider {
-  display: block;
-  left: auto;
-  width: 16px;
-  border-radius: 0;
-  background: var(--rail-highlight);
-  transition-duration: 280ms;
+.workspace-rail[data-collapsed="false"] .rail-link.is-current {
+  border-color: transparent;
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
 }
 
-.workspace-rail[data-collapsed="false"] .rail-selection-slider i {
-  display: none;
-}
-
-.workspace-rail[data-collapsed="false"] .rail-selection-slider::before,
-.workspace-rail[data-collapsed="false"] .rail-selection-slider::after {
+.workspace-rail[data-collapsed="false"] .rail-link.is-current::before,
+.workspace-rail[data-collapsed="false"] .rail-link.is-current::after {
   content: '';
+  display: block;
   position: absolute;
-  right: 0;
-  width: 12px;
-  height: 12px;
+  inset: auto -1px 100% auto;
+  width: var(--rail-content-inset);
+  height: var(--rail-content-inset);
+  border-radius: 0;
+  background: radial-gradient(circle at top left,
+    transparent calc(var(--rail-content-inset) - 0.5px), var(--rail-highlight) var(--rail-content-inset));
+  pointer-events: none;
 }
 
-.workspace-rail[data-collapsed="false"] .rail-selection-slider::before {
-  bottom: 100%;
-  border-bottom-right-radius: 12px;
-  box-shadow: 4px 4px 0 4px var(--rail-highlight);
-  clip-path: inset(0 0 0 0);
-}
-
-.workspace-rail[data-collapsed="false"] .rail-selection-slider::after {
-  top: 100%;
-  border-top-right-radius: 12px;
-  box-shadow: 4px -4px 0 4px var(--rail-highlight);
-  clip-path: inset(0 0 0 0);
+.workspace-rail[data-collapsed="false"] .rail-link.is-current::after {
+  inset: 100% -1px auto auto;
+  transform: scaleY(-1);
 }

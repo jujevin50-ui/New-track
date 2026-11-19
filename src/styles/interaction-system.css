@@ -74,7 +74,6 @@
 .ui-page-loader { min-height: 480px; padding-block: 24px; }
 .ui-skeleton { animation: ui-skeleton 1.4s ease-in-out infinite; }
 .ui-loading-icon { animation: ui-spin 800ms linear infinite; }
-.rail-links-gooey .rail-selection-slider { transition-duration: var(--ui-duration-navigation); }
 .rail-link { min-height: 44px; }
 .dashboard-filter-trigger { min-height: 44px; }
 .dashboard-switch > button, .page-segments > button { min-height: 44px; }
@@ -135,7 +134,6 @@
 .ui-input, .ui-textarea, .ui-select-trigger {
   transition: border-color var(--ui-duration-fast) ease, box-shadow var(--ui-duration-fast) ease;
 }
-.rail-links-gooey .rail-selection-slider { transition-property: transform; }
 .rail-link:focus-visible, .rail-workspaces button:focus-visible, .rail-settings-pill:focus-visible { outline: 2px solid hsl(var(--foreground)); outline-offset: -3px; }
 .app-update-prompt { position: fixed; right: 24px; bottom: max(24px,env(safe-area-inset-bottom)); z-index: 80; width: min(390px,calc(100vw - 32px)); padding: 20px; border: 1px solid hsl(var(--border)); border-radius: 16px; background: hsl(var(--popover)); color: hsl(var(--popover-foreground)); box-shadow: var(--shadow-pop); animation: ui-page-in var(--ui-duration-normal) var(--ui-ease-enter); }
 @media (max-width: 639px) { .app-update-prompt { right: 16px; bottom: max(16px,env(safe-area-inset-bottom)); } }

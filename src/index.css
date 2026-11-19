@@ -1129,15 +1129,6 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 @media (max-width: 639px) { .dashboard-filter-controls { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; } .dashboard-filter-field { width: 100%; } }
 @media (prefers-reduced-motion: reduce) { .dashboard-filter-trigger > svg, .dashboard-filter-option { transition: none; } }
 
-.rail-links-sliding { position: relative; isolation: isolate; }
-.rail-links-sliding .rail-link { justify-content: center; text-align: center; border-color: transparent; }
-.rail-links-sliding .rail-link.is-current { background: transparent; }
-.rail-links-sliding .rail-link.is-current::before { display: none; }
-.rail-selection-slider { position: absolute; top: 0; left: 0; right: 0; z-index: -1; border-radius: 12px; background: hsl(var(--primary) / 0.08); pointer-events: none; transition: transform 380ms cubic-bezier(0.22,1,0.36,1), height 380ms cubic-bezier(0.22,1,0.36,1); }
-.rail-selection-slider i { position: absolute; top: 50%; width: 3px; height: 14px; margin-top: -7px; border-radius: 3px; background: hsl(var(--primary)); }
-.rail-selection-slider i:first-child { left: 0; }
-.rail-selection-slider i:last-child { right: 0; }
-@media (prefers-reduced-motion: reduce) { .rail-selection-slider { transition: none; } }
 
 .dashboard-metric-body { position: relative; display: flex; align-items: flex-end; justify-content: center; height: 108px; padding: 0 0 13px; margin-top: 12px; }
 .dashboard-metric-value { position: relative; z-index: 1; font-size: clamp(16px, 1.6vw, 26px); line-height: 1.2; font-weight: 600; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
@@ -1382,15 +1373,6 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 @media (max-width: 639px) { .finance-invest-metrics { grid-template-columns: 1fr; gap: 16px; } .finance-editor { padding: 24px 20px; } .finance-stat .dashboard-metric-body { height: 82px; } .finance-stat .dashboard-metric-gauge { height: 82px; width: 145px; } }
 .finance-asset-evolution { width: calc(100% + 32px); height: clamp(440px, 54vh, 600px); margin-inline: -16px; }
 @media (max-width: 639px) { .finance-asset-evolution { width: 100%; height: 360px; margin-inline: 0; } }
-/* Liquid selection is shared by the Trading and Finance sidebars. */
-.rail-gooey-defs { position: absolute; width: 0; height: 0; pointer-events: none; }
-.rail-gooey-layer { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
-.rail-gooey-pill { position: absolute; inset: 0 0 auto; border-radius: 12px; background: hsl(var(--secondary)); transform-origin: center; }
-.rail-gooey-drop { position: absolute; border-radius: 50%; background: hsl(var(--secondary)); pointer-events: none; }
-.rail-links-gooey .rail-selection-slider { background: transparent; transition-duration: 650ms; }
-.rail-links-gooey .rail-link:hover { background: hsl(var(--secondary) / .35); }
-.rail-links-gooey .rail-link.is-current { color: hsl(var(--foreground)); }
-@media (prefers-reduced-motion: reduce) { .rail-links-gooey .rail-selection-slider { transition: none; } .rail-gooey-layer { filter: none !important; } }
 /* An elastic shared pill accompanies changes between the two workspaces. */
 
 /* Opening counter: tabular reels roll vertically, then the surface slides away. */

@@ -4,7 +4,6 @@ import { useDialogDraft } from '@/hooks/useDialogDraft';
 import { FormField } from '@/components/ui/form-field';
 import DashboardFilter from '@/components/trading/DashboardFilter';
 import { useFinanceAccount } from '@/hooks/useFinanceAccount';
-import SlidingRailLinks from '@/components/trading/SlidingRailLinks';
 import type { LucideIcon } from 'lucide-react';
 import { useMemo, useState, useEffect, type ReactNode, type FormEvent } from 'react';
 import WorkspaceRail from '@/components/trading/WorkspaceRail';
@@ -255,7 +254,7 @@ export default function Finance() {
   return (
     <div className="workspace-shell finance-workspace min-h-screen text-foreground relative z-10">
       <a href="#main-content" className="ui-skip-link">Aller au contenu</a>
-      <WorkspaceRail><nav className="rail-nav" aria-label="Navigation My Finance"><SlidingRailLinks>{TABS.map(([value, label, Icon]) => <button type="button" key={value} data-rail-link title={label} aria-current={tab === value ? 'page' : undefined} onClick={() => { setTab(value); if (value === 'invest') setInvestmentStart(undefined); }} className={`rail-link${tab === value ? ' is-current' : ''}`}><Icon className="header-nav-icon" aria-hidden="true" strokeWidth={1.8} /><span className="rail-label">{label}</span></button>)}</SlidingRailLinks></nav><TopNav sidebar utilitiesOnly /></WorkspaceRail>
+      <WorkspaceRail><nav className="rail-nav" aria-label="Navigation My Finance"><div className="rail-links">{TABS.map(([value, label, Icon]) => <button type="button" key={value} data-rail-link title={label} aria-current={tab === value ? 'page' : undefined} onClick={() => { setTab(value); if (value === 'invest') setInvestmentStart(undefined); }} className={`rail-link${tab === value ? ' is-current' : ''}`}><Icon className="header-nav-icon" aria-hidden="true" strokeWidth={1.8} /><span className="rail-label">{label}</span></button>)}</div></nav><TopNav sidebar utilitiesOnly /></WorkspaceRail>
 
       <main id="main-content" tabIndex={-1} className="finance-main">
         {tab === 'overview' && <div className="finance-toolbar">
