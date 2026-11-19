@@ -1,13 +1,24 @@
 .workspace-shell > .workspace-rail,
 .ui-sheet.workspace-rail-mobile {
-  --rail-text: #edfff8;
-  --rail-highlight: #f6fffa;
-  --rail-ink: #073b2d;
-  --rail-glass: rgb(194 255 230 / 11%);
-  --rail-edge: rgb(205 255 234 / 18%);
+  --rail-accent: hsl(var(--primary));
+  --rail-tint: color-mix(in srgb, var(--rail-accent) 25%, white);
+  --rail-text: white;
+  --rail-highlight: white;
+  --rail-ink: #141414;
+  --rail-glass: color-mix(in srgb, var(--rail-tint) 11%, transparent);
+  --rail-edge: color-mix(in srgb, var(--rail-tint) 18%, transparent);
+  --rail-hover: color-mix(in srgb, var(--rail-tint) 18%, transparent);
+  --rail-pressed: color-mix(in srgb, var(--rail-tint) 21%, transparent);
   color: var(--rail-text);
-  background: radial-gradient(ellipse at 15% 0%, #188c6e 0%, transparent 52%),
-    linear-gradient(165deg, #086951, #093f33 48%, #071713 88%);
+  background: radial-gradient(ellipse at 15% 0%, color-mix(in srgb, var(--rail-accent) 42%, black), transparent 57%),
+    linear-gradient(165deg, color-mix(in srgb, var(--rail-accent) 36%, black),
+      color-mix(in srgb, var(--rail-accent) 23%, black) 48%,
+      color-mix(in srgb, var(--rail-accent) 8%, black) 88%);
+}
+
+.dark :is(.workspace-shell > .workspace-rail, .ui-sheet.workspace-rail-mobile) {
+  --rail-highlight: black;
+  --rail-ink: white;
 }
 
 .workspace-shell > .workspace-rail {
@@ -15,7 +26,8 @@
   width: calc(var(--workspace-rail-width) - 10px);
   border: 1px solid var(--rail-edge);
   border-radius: 26px;
-  box-shadow: inset 0 0 0 4px rgb(210 255 236 / 7%), 0 12px 32px rgb(2 30 21 / 20%);
+  box-shadow: inset 0 0 0 4px color-mix(in srgb, var(--rail-tint) 7%, transparent),
+    0 12px 32px rgb(0 0 0 / 20%);
 }
 
 .workspace-shell > .workspace-rail::before {
@@ -51,7 +63,7 @@
   height: 42px;
   padding: 3px;
   object-fit: contain;
-  background: linear-gradient(150deg, #a6ead0, #249d7d);
+  background: linear-gradient(150deg, var(--rail-tint), var(--rail-accent));
 }
 
 .rail-toggle {
@@ -60,7 +72,7 @@
 }
 
 .rail-toggle:hover {
-  background: rgb(194 255 230 / 25%);
+  background: var(--rail-hover);
 }
 
 .rail-toggle svg {
@@ -72,13 +84,13 @@
   margin: 0;
   border-color: var(--rail-edge);
   border-radius: 999px;
-  background: rgb(1 39 27 / 30%);
+  background: rgb(0 0 0 / 30%);
 }
 
 .rail-workspaces > .rail-workspace-pill {
   border-color: var(--rail-edge);
   border-radius: 999px;
-  background: rgb(194 255 230 / 21%);
+  background: var(--rail-pressed);
 }
 
 .rail-inner .rail-workspaces button,
@@ -111,7 +123,7 @@
 }
 
 .rail-inner .rail-links .rail-link:hover {
-  background: rgb(194 255 230 / 23%);
+  background: var(--rail-hover);
 }
 
 .rail-inner .rail-links .rail-link.is-current {
@@ -157,13 +169,18 @@
   color: var(--rail-text);
 }
 
-.workspace-rail-mobile .ui-dialog-close:hover {
-  background: rgb(194 255 230 / 23%);
+.workspace-rail-mobile .ui-dialog-close:hover,
+.rail-inner .rail-settings-pill:hover {
+  background: var(--rail-hover);
 }
 
 .rail-inner :is(button, a):focus-visible {
-  outline: 2px solid #adf7d8;
+  outline: 2px solid var(--rail-tint);
   outline-offset: -2px;
+}
+
+.rail-inner .rail-link.is-current:focus-visible {
+  outline-color: var(--rail-ink);
 }
 
 .workspace-rail[data-collapsed="true"] .rail-inner {
@@ -185,7 +202,7 @@
 }
 
 .workspace-rail[data-collapsed="true"] .rail-workspaces button[aria-current="page"] {
-  background: rgb(194 255 230 / 21%);
+  background: var(--rail-pressed);
 }
 
 .workspace-rail[data-collapsed="true"] :is(.rail-link, .rail-settings-pill) {
