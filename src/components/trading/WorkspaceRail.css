@@ -117,14 +117,14 @@
   min-height: 38px;
   padding: 7px 12px;
   border-radius: 999px;
-  background: var(--rail-glass);
+  background: transparent;
   color: var(--rail-text);
   text-align: left;
   transition: none;
 }
 
-.rail-inner .rail-links .rail-link:hover {
-  background: var(--rail-hover);
+.rail-inner .rail-links .rail-link:not(.is-current):hover {
+  color: var(--rail-tint);
 }
 
 .rail-inner .rail-links .rail-link.is-current {
