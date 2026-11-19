@@ -9,7 +9,7 @@
         encre charcoal, accent slate, vert/rouge pour les variations. ── */
   :root {
     /* Premium light: fond légèrement teinté, cartes pure white, accent intentionnel */
-    --background: 220 16% 97%;
+    --background: 0 0% 100%;
     --foreground: 222 22% 10%;
 
     --card: 0 0% 100%;
@@ -81,7 +81,7 @@
 
   .dark {
     /* Noir profond — plus de gris */
-    --background: 0 0% 6%;
+    --background: 0 0% 0%;
     --foreground: 0 0% 96%;
 
     --card: 0 0% 10%;
@@ -1040,8 +1040,6 @@ html .app-panel { background-color: var(--glass-bg-strong); background-image: no
 @media (prefers-reduced-motion: reduce) { .settings-panel { animation: none; } .settings-menu button, .settings-import { transition: none; } }
 
 /* A single continuous workspace replaces floating cards and decorative glass. */
-:root { --background: 0 0% 100%; }
-.dark { --background: 0 0% 7%; }
 .workspace-rail { top: 0; bottom: 0; left: 0; width: var(--workspace-rail-width); border-radius: 0; border: 0; border-right: 1px solid hsl(var(--border)); box-shadow: none; backdrop-filter: none; }
 .workspace-rail .rail-inner { background-image: none; }
 html .workspace-shell main :is(.surface, .app-panel, .metric-card, .report-paper, .bg-background\/40, .bg-background\/30, .bg-background\/20, .bg-card, .bg-card\/95, .bg-card\/90, .bg-card\/80, .bg-card\/40) {

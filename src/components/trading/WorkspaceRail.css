@@ -3,7 +3,7 @@
   --rail-accent: hsl(var(--primary));
   --rail-tint: color-mix(in srgb, var(--rail-accent) 25%, white);
   --rail-text: white;
-  --rail-highlight: white;
+  --rail-highlight: hsl(var(--background));
   --rail-ink: #141414;
   --rail-glass: color-mix(in srgb, var(--rail-tint) 11%, transparent);
   --rail-edge: color-mix(in srgb, var(--rail-tint) 18%, transparent);
@@ -17,7 +17,6 @@
 }
 
 .dark :is(.workspace-shell > .workspace-rail, .ui-sheet.workspace-rail-mobile) {
-  --rail-highlight: black;
   --rail-ink: white;
 }
 
@@ -225,6 +224,25 @@
   position: absolute;
   top: 5px;
   right: 5px;
+}
+
+.workspace-shell > .workspace-rail[data-collapsed="false"] {
+  --rail-content-inset: 12px;
+  border-right: 0;
+  box-shadow: inset 4px 0 color-mix(in srgb, var(--rail-tint) 7%, transparent);
+}
+
+.workspace-rail[data-collapsed="false"] .rail-navigation {
+  margin-right: calc(-1 * var(--rail-content-inset));
+  scrollbar-width: none;
+}
+
+.workspace-rail[data-collapsed="false"] .rail-link:not(.is-current) {
+  width: calc(100% - var(--rail-content-inset));
+}
+
+.workspace-rail[data-collapsed="false"] .rail-actions {
+  margin-right: var(--rail-content-inset);
 }
 
 .workspace-rail[data-collapsed="false"] .rail-selection-slider {
