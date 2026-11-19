@@ -1,9 +1,11 @@
 import { APP_LOGO } from '@/lib/branding';
-import { useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ChartNoAxesCombined, Landmark, Menu } from 'lucide-react';
+import { ChartNoAxesCombined, ChevronLeft, ChevronRight, Landmark, Menu } from 'lucide-react';
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
+import { usePagePreference } from '@/hooks/usePagePreference';
+import './WorkspaceRail.css';
 
 let pendingWorkspace: { from: boolean; to: boolean } | null = null;
 const workspaces = [
@@ -18,6 +20,8 @@ const snapshot = () => window.matchMedia(query).matches;
 export default function WorkspaceRail({ children }: { children: ReactNode }) {
   const desktop = useSyncExternalStore(subscribe, snapshot, () => false);
   const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = usePagePreference('workspace-rail-collapsed', false);
+  const navigationId = useId();
   const trigger = useRef<HTMLButtonElement>(null);
   const { pathname } = useLocation();
   const navigate = useNavigate();
@@ -41,24 +45,39 @@ export default function WorkspaceRail({ children }: { children: ReactNode }) {
     return () => { animation.cancel(); media.removeEventListener('change', stop); };
   }, [finance, desktop, open]);
   const content = <div className="rail-inner">
-    <div className="rail-brand rail-brand-logo"><img src={APP_LOGO} alt="Track Record" className="h-16 w-16 object-contain" /></div>
+    <div className="rail-brand rail-brand-logo">
+      <img src={APP_LOGO} alt="Track Record" />
+      {desktop && (
+        <button
+          type="button"
+          className="rail-toggle"
+          aria-controls={navigationId}
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? 'Développer la barre latérale' : 'Réduire la barre latérale'}
+          title={collapsed ? 'Développer la barre latérale' : 'Réduire la barre latérale'}
+          onClick={() => setCollapsed(value => !value)}
+        >
+          {collapsed ? <ChevronRight aria-hidden="true" /> : <ChevronLeft aria-hidden="true" />}
+        </button>
+      )}
+    </div>
     <div className="rail-workspaces" role="navigation" aria-label="Modules de l’application">
       <span ref={workspacePill} className="rail-workspace-pill" aria-hidden="true" style={{transform:`translateX(${finance ? 100 : 0}%)`}} />
       {workspaces.map(({ finance: destination, label, Icon }) => (
-        <button type="button" key={label} aria-current={finance === destination ? 'page' : undefined} onClick={() => {
+        <button type="button" key={label} title={label} aria-current={finance === destination ? 'page' : undefined} onClick={() => {
           if (desktop && destination !== finance) pendingWorkspace = { from: finance, to: destination };
           navigate(destination ? '/finance' : '/');
           setOpen(false);
         }}>
           <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-          {label}
+          <span className="rail-label">{label}</span>
         </button>
       ))}
     </div>
-    <div className="rail-navigation" onClick={event => { if (!desktop && event.target instanceof Element && event.target.closest('a, [data-rail-link]')) setOpen(false); }}>{children}</div>
+    <div id={navigationId} className="rail-navigation" onClick={event => { if (!desktop && event.target instanceof Element && event.target.closest('a, [data-rail-link]')) setOpen(false); }}>{children}</div>
   </div>;
 
-  return <>{desktop ? <aside className="workspace-rail" aria-label="Bandeau latéral">{content}</aside> : <>
+  return <>{desktop ? <aside className="workspace-rail" data-collapsed={collapsed} aria-label="Bandeau latéral">{content}</aside> : <>
     <header className="rail-mobile-header"><Button ref={trigger} variant="ghost" size="icon" aria-label="Ouvrir la navigation" onClick={() => setOpen(true)}><Menu className="h-5 w-5" /></Button><img src={APP_LOGO} alt="Track Record" className="absolute left-1/2 h-9 w-9 -translate-x-1/2 object-contain" /></header>
     <Sheet open={open} onOpenChange={setOpen}><SheetContent onCloseAutoFocus={event => { event.preventDefault(); trigger.current?.focus(); }} side="left" className="workspace-rail-mobile p-0"><SheetTitle className="sr-only">Navigation de l’application</SheetTitle><SheetDescription className="sr-only">Choisir un espace et une rubrique.</SheetDescription>{content}</SheetContent></Sheet>
   </>}</>;

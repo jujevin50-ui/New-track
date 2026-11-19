@@ -58,10 +58,10 @@ export function TopNav({ sidebar = false, utilitiesOnly = false }: { sidebar?: b
         key={entry.id}
         to={entry.url}
         end={entry.url === '/'}
-        title={reminder || undefined}
+        title={reminder || (sidebar ? entry.title : undefined)}
         className={({ isActive }) => sidebar ? `rail-link${isActive ? ' is-current' : ''}` : navItemClass(isActive)}
       >
-        <entry.Icon className="header-nav-icon" aria-hidden="true" strokeWidth={1.8} /><span>{entry.title}</span>
+        <entry.Icon className="header-nav-icon" aria-hidden="true" strokeWidth={1.8} /><span className={sidebar ? 'rail-label' : undefined}>{entry.title}</span>
         {reminder && <><span className="rail-report-reminder" aria-hidden="true" /><span className="sr-only"> — {reminder}</span></>}
       </NavLink>
     );
@@ -71,8 +71,8 @@ export function TopNav({ sidebar = false, utilitiesOnly = false }: { sidebar?: b
       <nav className={sidebar ? `rail-nav${utilitiesOnly ? ' rail-nav-utilities' : ''}` : NAV_PILL} aria-label={utilitiesOnly ? 'Actions de l’espace' : 'Navigation principale'}>
         {!utilitiesOnly && (sidebar ? <SlidingRailLinks>{links}</SlidingRailLinks> : <HeaderNavLinks activeKey={location.pathname}>{links}</HeaderNavLinks>)}
         <div className={sidebar ? 'rail-actions' : 'header-nav-actions'}>
-          <button onClick={() => setSettingsOpen(true)} className={sidebar ? 'rail-settings-pill' : 'header-action'} aria-label="Settings">
-            <Settings className="h-4 w-4" />{sidebar && <span>{userName.trim() || 'Mon profil'}</span>}
+          <button onClick={() => setSettingsOpen(true)} className={sidebar ? 'rail-settings-pill' : 'header-action'} aria-label="Settings" title="Paramètres">
+            <Settings className="h-4 w-4" />{sidebar && <span className="rail-label">{userName.trim() || 'Mon profil'}</span>}
           </button>
 
         </div>
