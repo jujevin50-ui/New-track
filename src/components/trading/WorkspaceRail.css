@@ -176,7 +176,8 @@
 }
 
 .workspace-rail[data-collapsed="true"] .rail-inner {
-  padding-inline: 10px;
+  --rail-compact-control: var(--ui-control);
+  padding-inline: 9px;
 }
 
 .workspace-rail[data-collapsed="true"] .rail-brand-logo {
@@ -186,7 +187,8 @@
 
 .workspace-rail[data-collapsed="true"] .rail-workspaces {
   grid-template-columns: minmax(0, 1fr);
-  padding: 2px;
+  justify-items: center;
+  padding: 1px;
 }
 
 .workspace-rail[data-collapsed="true"] .rail-workspace-pill {
@@ -197,11 +199,17 @@
   background: var(--rail-pressed);
 }
 
-.workspace-rail[data-collapsed="true"] :is(.rail-link, .rail-settings-pill) {
+.workspace-rail[data-collapsed="true"] .rail-navigation {
+  scrollbar-width: none;
+}
+
+.workspace-rail[data-collapsed="true"] :is(.rail-link, .rail-settings-pill, .rail-toggle, .rail-workspaces button) {
   justify-content: center;
-  width: 100%;
-  min-height: 44px;
+  align-self: center;
+  width: var(--rail-compact-control);
+  min-height: var(--rail-compact-control);
   padding: 0;
+  border-radius: 50%;
 }
 
 .workspace-rail[data-collapsed="true"] .rail-label {
