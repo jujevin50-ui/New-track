@@ -257,7 +257,7 @@ export default function Finance() {
       <WorkspaceRail><nav className="rail-nav" aria-label="Navigation My Finance"><div className="rail-links">{TABS.map(([value, label, Icon]) => <button type="button" key={value} data-rail-link title={label} aria-current={tab === value ? 'page' : undefined} onClick={() => { setTab(value); if (value === 'invest') setInvestmentStart(undefined); }} className={`rail-link${tab === value ? ' is-current' : ''}`}><Icon className="header-nav-icon" aria-hidden="true" strokeWidth={1.8} /><span className="rail-label">{label}</span></button>)}</div></nav><TopNav sidebar utilitiesOnly /></WorkspaceRail>
 
       <main id="main-content" tabIndex={-1} className="finance-main">
-        {tab === 'overview' && <div className="finance-toolbar">
+        {tab === 'overview' && <div className="finance-toolbar ui-page-enter">
           <div className="dashboard-filter-controls">
             {accountFilter}
             {tab === 'overview' && <div className="finance-period-field"><span className="dashboard-filter-caption">Période</span><div className="finance-period">
@@ -268,7 +268,7 @@ export default function Finance() {
           </div>
           {tab === 'overview' && <div className="finance-toolbar-actions"><Segmented<'month' | 'year'> value={overviewMode} onChange={setOverviewMode} options={[[ 'month','Mois'],['year','Année']]} /><Button className="gap-2" onClick={openNewTx}><Plus className="h-4 w-4" />Transaction</Button></div>}
         </div>}
-        <div key={tab} className="finance-content">
+        <div key={tab} className="finance-content ui-page-enter">
         {tab === 'overview' && overviewMode === 'year' && <>
           <div className="finance-metrics finance-metrics-four">
             <Stat label="Revenus annuels" value={eur(yearTotals.income)} icon={<ArrowDownLeft className="h-4 w-4" />} color="hsl(var(--profit))" />

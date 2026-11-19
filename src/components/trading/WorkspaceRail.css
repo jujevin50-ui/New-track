@@ -120,6 +120,7 @@
   background: var(--rail-glass);
   color: var(--rail-text);
   text-align: left;
+  transition: none;
 }
 
 .rail-inner .rail-links .rail-link:hover {
@@ -260,4 +261,16 @@
 .workspace-rail[data-collapsed="false"] .rail-link.is-current::after {
   inset: 100% -1px auto auto;
   transform: scaleY(-1);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rail-inner :is(.rail-link, .rail-workspaces button, .rail-toggle, .rail-settings-pill) > :is(svg, .rail-label) {
+    transition: transform var(--ui-duration-fast) var(--ui-ease-enter),
+      opacity var(--ui-duration-fast) var(--ui-ease-enter);
+  }
+
+  .rail-inner :is(.rail-link, .rail-workspaces button, .rail-toggle, .rail-settings-pill):active > :is(svg, .rail-label) {
+    transform: scale(.9);
+    opacity: .75;
+  }
 }

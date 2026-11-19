@@ -128,23 +128,25 @@ const AppContent = () => {
         <AppLayout accounts={accounts} activeAccountId={activeAccountId} onSelectAccount={setActiveAccountId}>
           <ErrorBoundary resetKey={location.pathname}>
             <Suspense fallback={<PageLoader />}>
-              <Routes>
-                <Route path="/discipline" element={<Navigate to="/calendar" replace />} />
-                <Route path="/notes" element={<Notes />} />
-                <Route path="/objectifs" element={<Objectives />} />
-                <Route path="/strategy" element={<Strategy accounts={accounts} activeAccountId={activeAccountId} onSelectAccount={setActiveAccountId} />} />
-                <Route path="/tasks" element={<Navigate to="/" replace />} />
-                <Route path="/" element={<Dashboard activeAccount={displayAccount} accounts={accounts} onSelectAccount={setActiveAccountId} />} />
-                <Route path="/calendar" element={<CalendarView activeAccount={displayAccount} accounts={accounts} onSelectAccount={setActiveAccountId} />} />
-                <Route path="/trades" element={<Trades activeAccount={displayAccount} accounts={accounts} onSelectAccount={setActiveAccountId} />} />
-                <Route path="/reports" element={<Reports accounts={allAccounts} />} />
-                <Route path="/weekly-report" element={<Navigate to="/reports" replace />} />
-                <Route path="/daily-report" element={<Navigate to="/calendar#daily-review" replace />} />
-                <Route path="/ai-assistant" element={<AiAssistant activeAccount={displayAccount} accounts={accounts} onSelectAccount={setActiveAccountId} />} />
-                <Route path="/payout" element={<Payouts accounts={accounts} activeAccountId={activeAccountId} onSelectAccount={setActiveAccountId} />} />
-                <Route path="/accounts" element={<Accounts accounts={allAccounts} onAdd={addAccount} onUpdate={updateAccount} onSetHidden={setAccountHidden} onDelete={deleteAccount} allTrades={allTrades} />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+              <div className="ui-page-enter">
+                <Routes>
+                  <Route path="/discipline" element={<Navigate to="/calendar" replace />} />
+                  <Route path="/notes" element={<Notes />} />
+                  <Route path="/objectifs" element={<Objectives />} />
+                  <Route path="/strategy" element={<Strategy accounts={accounts} activeAccountId={activeAccountId} onSelectAccount={setActiveAccountId} />} />
+                  <Route path="/tasks" element={<Navigate to="/" replace />} />
+                  <Route path="/" element={<Dashboard activeAccount={displayAccount} accounts={accounts} onSelectAccount={setActiveAccountId} />} />
+                  <Route path="/calendar" element={<CalendarView activeAccount={displayAccount} accounts={accounts} onSelectAccount={setActiveAccountId} />} />
+                  <Route path="/trades" element={<Trades activeAccount={displayAccount} accounts={accounts} onSelectAccount={setActiveAccountId} />} />
+                  <Route path="/reports" element={<Reports accounts={allAccounts} />} />
+                  <Route path="/weekly-report" element={<Navigate to="/reports" replace />} />
+                  <Route path="/daily-report" element={<Navigate to="/calendar#daily-review" replace />} />
+                  <Route path="/ai-assistant" element={<AiAssistant activeAccount={displayAccount} accounts={accounts} onSelectAccount={setActiveAccountId} />} />
+                  <Route path="/payout" element={<Payouts accounts={accounts} activeAccountId={activeAccountId} onSelectAccount={setActiveAccountId} />} />
+                  <Route path="/accounts" element={<Accounts accounts={allAccounts} onAdd={addAccount} onUpdate={updateAccount} onSetHidden={setAccountHidden} onDelete={deleteAccount} allTrades={allTrades} />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </div>
             </Suspense>
           </ErrorBoundary>
         </AppLayout>

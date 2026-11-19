@@ -70,7 +70,13 @@
 .ui-dialog-close { min-height: 44px; min-width: 44px; }
 .ui-floating { animation-duration: var(--ui-duration-normal); animation-timing-function: var(--ui-ease-enter); }
 .ui-floating[data-state=closed] { animation-duration: var(--ui-duration-fast); animation-timing-function: var(--ui-ease-exit); }
-.ui-page-enter, .finance-content { animation: ui-page-in var(--ui-duration-normal) var(--ui-ease-enter) both; }
+.ui-page-enter {
+  animation: ui-route-in var(--ui-duration-navigation) var(--ui-ease-enter);
+}
+@keyframes ui-route-in {
+  from { opacity: .3; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 .ui-page-loader { min-height: 480px; padding-block: 24px; }
 .ui-skeleton { animation: ui-skeleton 1.4s ease-in-out infinite; }
 .ui-loading-icon { animation: ui-spin 800ms linear infinite; }
@@ -113,7 +119,7 @@
   .ui-tab-trigger:active:not(:disabled), .page-segments > button:active:not(:disabled) { transform: none; }
   .ui-button[data-feedback=success], .ui-save-check, .ui-checkbox[data-state=checked] svg,
   .objective-card, .objective-card .ui-progress-indicator, .toaster [data-type=success] [data-icon], .ui-tab-panel[data-state=active] { animation: none; }
-  .ui-page-enter, .finance-content, .ui-skeleton, .ui-loading-icon { animation: none !important; }
+  .ui-page-enter, .ui-skeleton, .ui-loading-icon { animation: none !important; }
 }
 /* Keep user-selected accents on graphics, but provide a readable ink for small text. */
 :root { --ui-primary-ink: color-mix(in srgb, hsl(var(--primary)) 25%, hsl(var(--foreground)) 75%); }

@@ -82,7 +82,7 @@ export function AppLayout({ children, accounts, activeAccountId, onSelectAccount
       )}
 
       <div className="flex-1 flex flex-col min-w-0">
-        <main id="main-content" tabIndex={-1} key={location.pathname} className="flex-1 overflow-auto px-4 md:px-6 pb-4 md:pb-6 pt-3 md:pt-4 ui-page-enter">{children}</main>
+        <main id="main-content" tabIndex={-1} key={location.pathname} className="flex-1 overflow-auto px-4 md:px-6 pb-4 md:pb-6 pt-3 md:pt-4">{children}</main>
       </div>
     </div>
   );

@@ -1326,7 +1326,7 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 .finance-toolbar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .finance-workspace button { -webkit-tap-highlight-color: transparent; }
 .finance-toolbar-actions > button, .finance-invest-header > button { height: 42px; border-radius: 10px; }
-.finance-content { display: flex; flex-direction: column; gap: 36px; min-width: 0; animation: finance-enter 260ms ease both; }
+.finance-content { display: flex; flex-direction: column; gap: 36px; min-width: 0; }
 .finance-content > * { min-width: 0; }
 .finance-metrics { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 24px; padding: 12px 0 8px; }
 .finance-metrics-four { grid-template-columns: repeat(4,minmax(0,1fr)); }
@@ -1356,11 +1356,10 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 .finance-workspace main .surface { background: transparent; border: 0; border-radius: 0; box-shadow: none; }
 .finance-workspace main .app-panel { padding-left: 0; padding-right: 0; }
 .finance-workspace main .font-mono { font-family: inherit; font-variant-numeric: tabular-nums; }
-@keyframes finance-enter { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 1100px) { .finance-main { padding: 24px 20px 40px; } .finance-account-row { grid-template-columns: minmax(150px,1fr) minmax(100px,.7fr) auto; gap: 16px; } .finance-account-row > :nth-child(2) { display: none; } .finance-metrics { gap: 12px; } }
 @media (max-width: 767px) { .finance-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 28px 16px; } .finance-metrics > :last-child:nth-child(odd) { grid-column: 1 / -1; } .finance-account-row { grid-template-columns: minmax(0,1fr) auto; } .finance-account-row > :last-child { grid-column: 1 / -1; } .finance-list-heading { display: none; } .finance-subscription-row { grid-template-columns: minmax(0,1fr) auto; gap: 16px; } .finance-subscription-row > :last-child { grid-column: 1 / -1; } }
 @media (max-width: 639px) { .finance-main { padding: 20px 16px 32px; } .finance-toolbar { gap: 18px; margin-bottom: 28px; } .finance-toolbar-actions { width: 100%; justify-content: space-between; } .finance-period-field, .finance-search { width: 100%; } .finance-list-filters { width: 100%; } .finance-list-filters > .relative { width: 100%; flex-basis: 100%; } .finance-invest-header { align-items: center; } .finance-segments.dashboard-switch > button { padding-inline: 12px; } .finance-transfer-row { gap: 12px; } .finance-content { gap: 28px; } }
-@media (prefers-reduced-motion: reduce) { .finance-content { animation: none; } .finance-segments-indicator, .finance-period > button, .finance-account-row, .finance-subscription-row, .finance-transfer-row { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .finance-segments-indicator, .finance-period > button, .finance-account-row, .finance-subscription-row, .finance-transfer-row { transition: none; } }
 .finance-list-filters.dashboard-filter-controls > .dashboard-filter-field { width: 180px; }
 .finance-list-filters.dashboard-filter-controls > .dashboard-filter-account { width: 250px; }
 .finance-list-filters.dashboard-filter-controls > .finance-search { flex: 1; min-width: 190px; }
