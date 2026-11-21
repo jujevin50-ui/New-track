@@ -118,13 +118,13 @@ const TradeTable = ({
           <table className="w-full min-w-[1080px] border-collapse">
             <thead>
               <tr className="bg-secondary/35">
-                <th scope="col" aria-sort="descending" className="px-4 py-3 text-left">#</th>
-                <th className="px-4 py-3 text-left">Paire</th>
-                <th className="px-4 py-3 text-left">Date</th>
-                <th className="px-4 py-3 text-left">Direction</th>
-                <th className="px-4 py-3 text-right">Résultat net</th>
-                <th className="px-4 py-3 text-right">%</th>
-                <th className="px-4 py-3 text-right">R</th>
+                <th scope="col" aria-sort="descending" className="px-4 py-3 text-center">#</th>
+                <th className="px-4 py-3 text-center">Paire</th>
+                <th className="px-4 py-3 text-center">Date</th>
+                <th className="px-4 py-3 text-center">Direction</th>
+                <th className="px-4 py-3 text-center">Résultat net</th>
+                <th className="px-4 py-3 text-center">%</th>
+                <th className="px-4 py-3 text-center">R</th>
                 <th className="px-4 py-3 text-center">Sortie</th>
                 <th className="px-4 py-3 text-center">Qualité</th>
                 <th className="px-4 py-3 text-center">Stratégie</th>
