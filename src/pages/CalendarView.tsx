@@ -61,7 +61,10 @@ export default function CalendarView({ activeAccount, accounts, onSelectAccount 
     if (pendingReviews.current.get(value.date) === value) pendingReviews.current.delete(value.date);
   };
   const saveDay = async (value: typeof draft) => {
-    await saveJournal(value);
+    await saveJournal({
+      ...value,
+      disciplineTracking: value.disciplineTracking ?? { missions: [], stress: 3, triggers: [] },
+    });
     clearPending(value);
   };
   const filteredAccounts = status === 'all' ? accounts : accounts.filter(account => account.status === status);

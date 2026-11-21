@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { MemoryRouter } from 'react-router-dom';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import CalendarView from './CalendarView';
-import { DISCIPLINE_MISSIONS, localDay, newDailyJournal, previousTradingDay, shiftTradingDay } from '@/lib/discipline';
+import { DISCIPLINE_MISSIONS, disciplineYear, localDay, newDailyJournal, previousTradingDay, shiftTradingDay } from '@/lib/discipline';
 import type { DailyJournal } from '@/hooks/useDailyJournal';
 
 beforeAll(() => vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} }));
@@ -25,6 +25,18 @@ const renderCalendar = () => render(
 );
 
 describe('Calendar daily review', () => {
+  it('records zero discipline when saving a day without checking any missions', async () => {
+    mock.save.mockResolvedValue(undefined);
+    renderCalendar();
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer la journée' }));
+
+    await waitFor(() => expect(mock.save).toHaveBeenCalledOnce());
+    const saved: DailyJournal = mock.save.mock.calls[0][0];
+    expect(saved.disciplineTracking?.missions).toEqual([]);
+    const chart = disciplineYear([saved], Number(date.slice(0, 4)), date);
+    expect(chart.find(point => point.date === date)?.percent).toBe(0);
+  });
+
   it('saves missions and daily review together without losing existing fields', async () => {
     mock.journals = [{ ...newDailyJournal(date), mistakes: ['Ancienne erreur'], event: 'challenge_realise', notes: 'Note existante', mood: 'bad', disciplineTracking: { missions: [], stress: 4, triggers: ['FOMO'] } }];
     mock.save.mockResolvedValue(undefined);
