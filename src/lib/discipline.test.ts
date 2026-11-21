@@ -19,12 +19,13 @@ describe('Discipline on weekdays', () => {
     expect(shiftTradingDay('2026-11-09',-1)).toBe('2026-11-06');
     expect(shiftDay('2026-01-01',-1)).toBe('2025-12-31');
   });
-  it('charts weekdays only and distinguishes zeros, missing and future entries', () => {
-    const days=disciplineYear([journal('2024-02-28',[]),journal('2024-02-29',['risk','prepare']),newDailyJournal('2024-03-01'),journal('2024-03-02',['risk'])],2024,'2024-03-01');
+  it('charts saved journals at zero when no missions are recorded and leaves gaps for missing or future days', () => {
+    const days=disciplineYear([journal('2024-02-28',[]),journal('2024-02-29',['risk','prepare']),newDailyJournal('2024-03-01'),journal('2024-03-02',['risk']),journal('2024-03-04',['risk'])],2024,'2024-03-01');
     expect(days).toHaveLength(262);
     expect(days.find(day=>day.date==='2024-02-28')?.percent).toBe(0);
     expect(days.find(day=>day.date==='2024-02-29')?.percent).toBe(40);
-    expect(days.find(day=>day.date==='2024-03-01')?.percent).toBeNull();
+    expect(days.find(day=>day.date==='2024-03-01')?.percent).toBe(0);
+    expect(days.find(day=>day.date==='2024-02-27')?.percent).toBeNull();
     expect(days.some(day=>day.date==='2024-03-02')).toBe(false);
     expect(days.find(day=>day.date==='2024-03-04')?.percent).toBeNull();
     expect(disciplineYear([],2026,'2026-11-09')).toHaveLength(261);

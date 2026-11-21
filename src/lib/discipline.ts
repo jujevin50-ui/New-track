@@ -45,14 +45,14 @@ export function disciplineStats(journals: DailyJournal[], today: string) {
   return { xp, streak, days: recorded.size };
 }
 
-/** Missing tracking and future days remain gaps rather than failures. */
+/** Only saved journals contribute a score, including older journals without mission selections. */
 export function disciplineYear(journals: DailyJournal[], year: number, today: string) {
   const recorded = new Map(journals.map(journal => [journal.date, journal]));
   const days: { date: string; percent: number | null }[] = [];
   for (let date = `${year}-01-01`; date.startsWith(`${year}-`); date = shiftDay(date, 1)) {
     if (!isTradingDay(date)) continue;
     const journal = recorded.get(date);
-    const percent = date <= today && journal?.disciplineTracking ? completedMissions(journal).length / DISCIPLINE_MISSIONS.length * 100 : null;
+    const percent = date <= today && journal ? completedMissions(journal).length / DISCIPLINE_MISSIONS.length * 100 : null;
     days.push({ date, percent });
   }
   return days;
