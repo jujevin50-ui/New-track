@@ -233,7 +233,7 @@ const TradeTable = ({
                     }`}
                   >
                     <td className="px-4 py-3.5">
-                      <span className="font-mono text-[11px] text-muted-foreground/65">#{pad(trade.tradeNumber)}</span>
+                      <span className="font-mono text-muted-foreground/65">#{pad(trade.tradeNumber)}</span>
                     </td>
 
                     <td className="px-4 py-3.5">
@@ -249,9 +249,9 @@ const TradeTable = ({
                     </td>
 
                     <td className="px-4 py-3.5">
-                      <div className="font-mono text-[11px]">{trade.date}</div>
+                      <div className="font-mono">{trade.date}</div>
                       {trade.endDate && trade.endDate !== trade.date && (
-                        <div className="mt-0.5 text-[9px] text-muted-foreground">→ {trade.endDate}</div>
+                        <div className="mt-0.5 font-mono text-muted-foreground">→ {trade.endDate}</div>
                       )}
                     </td>
 
@@ -266,13 +266,13 @@ const TradeTable = ({
                     </td>
 
                     <td className="px-4 py-3.5 text-right">
-                      <div className={`font-mono text-sm font-bold tabular-nums ${isProfit ? 'text-profit' : net < 0 ? 'text-loss' : 'text-foreground'}`}>
+                      <div className={`font-mono font-bold tabular-nums ${isProfit ? 'text-profit' : net < 0 ? 'text-loss' : 'text-foreground'}`}>
                         {trade.endDate ? money(net,account?.currency) : '—'}
                       </div>
                     </td>
 
                     <td className="px-4 py-3.5 text-right">
-                      <span className={`font-mono text-xs font-semibold tabular-nums ${
+                      <span className={`font-mono font-semibold tabular-nums ${
                         pct > 0 ? 'text-profit' : pct < 0 ? 'text-loss' : 'text-muted-foreground'
                       }`}>
                         {trade.endDate && balance > 0 ? `${pct > 0 ? '+' : ''}${pct.toLocaleString('fr-FR',{maximumFractionDigits:2})} %` : '—'}
@@ -280,7 +280,7 @@ const TradeTable = ({
                     </td>
 
                     <td className="px-4 py-3.5 text-right">
-                      <span className={`font-mono text-xs font-bold tabular-nums ${
+                      <span className={`font-mono font-bold tabular-nums ${
                         r === null ? 'text-muted-foreground' : r > 0 ? 'text-profit' : r < 0 ? 'text-loss' : 'text-foreground'
                       }`}>
                         {r === null || !trade.endDate ? '—' : `${r > 0 ? '+' : ''}${r.toFixed(2)}R`}
@@ -338,7 +338,7 @@ const TradeTable = ({
                             const firstIndex = allImages.findIndex(image => image.src === screenshots[0]);
                             setLightboxIndex(firstIndex >= 0 ? firstIndex : 0);
                           }}
-                          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary/60 px-2 py-1 text-[9px] font-medium text-muted-foreground hover:text-foreground"
+                          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary/60 px-2 py-1 font-medium tabular-nums text-muted-foreground hover:text-foreground"
                         >
                           <Eye className="h-3.5 w-3.5" />
                           {screenshots.length}
