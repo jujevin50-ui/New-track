@@ -35,6 +35,7 @@ const Reports = lazyWithReload(() => import("./pages/Reports"));
 const Notes = lazyWithReload(() => import("./pages/Notes"));
 const Objectives = lazyWithReload(() => import("./pages/Objectives"));
 const Strategy = lazyWithReload(() => import("./pages/Strategy"));
+const FundamentalContext = lazyWithReload(() => import("./pages/FundamentalContext"));
 const Finance = lazyWithReload(() => import("./pages/Finance"));
 const AiAssistant = lazyWithReload(() => import("./pages/AiAssistant"));
 import NotFound from "./pages/NotFound";
@@ -90,8 +91,8 @@ const AppContent = () => {
       const savedRoute = localStorage.getItem("app-last-route");
       const last = savedRoute === "/discipline" ? "/calendar" : savedRoute;
       // Ne restaure que les routes encore disponibles.
-      const allowed = ["/", "/calendar", "/trades", "/reports", "/ai-assistant", "/accounts", "/finance", "/strategy", "/notes", "/objectifs", "/payout"];
-      if (location.pathname !== "/discipline" && last && last !== location.pathname && allowed.includes(last)) {
+      const allowed = ["/", "/calendar", "/trades", "/reports", "/ai-assistant", "/accounts", "/finance", "/strategy", "/notes", "/objectifs", "/contexte-fondamental", "/payout"];
+      if (!["/discipline", "/contexte-fondamental"].includes(location.pathname) && last && last !== location.pathname && allowed.includes(last)) {
         navigate(last, { replace: true });
       }
       setRouteRestored(true);
@@ -133,6 +134,7 @@ const AppContent = () => {
                   <Route path="/discipline" element={<Navigate to="/calendar" replace />} />
                   <Route path="/notes" element={<Notes />} />
                   <Route path="/objectifs" element={<Objectives />} />
+                  <Route path="/contexte-fondamental" element={<FundamentalContext />} />
                   <Route path="/strategy" element={<Strategy accounts={accounts} activeAccountId={activeAccountId} onSelectAccount={setActiveAccountId} />} />
                   <Route path="/tasks" element={<Navigate to="/" replace />} />
                   <Route path="/" element={<Dashboard activeAccount={displayAccount} accounts={accounts} onSelectAccount={setActiveAccountId} />} />

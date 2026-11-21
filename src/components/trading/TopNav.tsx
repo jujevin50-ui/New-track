@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Settings, LayoutDashboard, CalendarDays, ArrowRightLeft, BarChart3, Sparkles, BookOpen, Wallet, Banknote, Target } from 'lucide-react';
+import { Settings, Globe, LayoutDashboard, CalendarDays, ArrowRightLeft, BarChart3, Sparkles, BookOpen, Wallet, Banknote, Target } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { useNavConfig } from '@/hooks/useNavConfig';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -14,6 +14,7 @@ import { HeaderNavLinks } from './HeaderNavLinks';
 
 const NAV_ITEMS = [
   { id: 'dashboard', title: 'Dashboard', url: '/', Icon: LayoutDashboard },
+  { id: 'fundamental-context', title: 'Contexte fondamental', url: '/contexte-fondamental', Icon: Globe },
   { id: 'calendar', title: 'Calendar', url: '/calendar', Icon: CalendarDays },
   { id: 'trades', title: 'Trades', url: '/trades', Icon: ArrowRightLeft },
   { id: 'reports', title: 'Reports', url: '/reports', Icon: BarChart3 },
