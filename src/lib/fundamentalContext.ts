@@ -2,11 +2,10 @@ import type { Screenshot } from '@/types/note';
 import { shiftDay } from '@/lib/discipline';
 
 export const PAIRS = ['EURUSD', 'GBPUSD', 'AUDUSD'] as const;
-export const CURRENCIES = ['USD', 'EUR', 'GBP', 'AUD'] as const;
 export const BANKS = ['Fed', 'BCE', 'BoE', 'RBA'] as const;
 
 export type Pair = typeof PAIRS[number];
-export type Currency = typeof CURRENCIES[number];
+type Currency = 'USD' | 'EUR' | 'GBP' | 'AUD';
 export type Bank = typeof BANKS[number];
 
 export interface EconomicEvent {
@@ -48,6 +47,7 @@ export type FundamentalBlocks = Record<Pair, PairContext> & {
 };
 
 export type BlockKey = keyof FundamentalBlocks;
+export type EditableBlockKey = Exclude<BlockKey, 'calendar'>;
 export type WeekContext = Partial<FundamentalBlocks>;
 
 export interface FundamentalWeek {
@@ -80,12 +80,6 @@ export function weekNumber(monday: string) {
   const thursday = new Date(`${shiftDay(monday, 3)}T12:00:00Z`);
   const yearStart = Date.UTC(thursday.getUTCFullYear(), 0, 1);
   return Math.ceil((thursday.getTime() - yearStart) / (7 * 86_400_000));
-}
-
-export function calendarForWeek(events: EconomicEvent[], monday: string) {
-  const sunday = shiftDay(monday, 6);
-  return events.filter(event => CURRENCIES.includes(event.currency) && event.date >= monday && event.date <= sunday)
-    .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
 }
 
 export function readCalendar(value: WeekContext['calendar']): EconomicCalendar {

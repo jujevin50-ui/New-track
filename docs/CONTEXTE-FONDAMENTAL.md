@@ -6,7 +6,7 @@ Connecte ton fichier Track Record comme d’habitude, puis ouvre **Contexte fond
 
 Les enregistrements sont regroupés par semaine dans la section `fundamentalWeeks` du fichier Track Record. Un ancien fichier démarre avec un contexte vide. Si l’application utilise son mode local de repli, le contexte est enregistré dans le navigateur avec les autres données du journal.
 
-Le calendrier est réservé aux événements à impact fort en USD, EUR, GBP et AUD. Les heures saisies sont celles de Paris. Dans le bloc **Calendrier éco**, clique sur le crayon puis colle une image dans **Capture du calendrier complet**. Elle est enregistrée avec la semaine, même quand aucune annonce n’est saisie. Chaque annonce peut aussi garder sa propre capture.
+Dans **Calendrier éco**, copie une image du calendrier puis clique sur **Coller l’image**. La capture est enregistrée directement pour la semaine affichée. Si le navigateur bloque l’accès au presse-papiers, sélectionne le bouton et utilise Ctrl+V ou ⌘V. Un clic sur la capture permet de l’agrandir.
 
 ## Fichiers
 
@@ -19,8 +19,8 @@ Le calendrier est réservé aux événements à impact fort en USD, EUR, GBP et 
 
 ## Étapes de test
 
-1. Ouvre un fichier Track Record existant, puis accède à **Contexte fondamental**. Vérifie que les neuf blocs sont accessibles et peuvent être modifiés.
+1. Ouvre un fichier Track Record existant, puis accède à **Contexte fondamental**. Vérifie que les blocs texte sont modifiables et que le calendrier propose le bouton **Coller l’image**.
 2. Enregistre un régime, un biais de paire, une réunion de banque centrale et une note. Recharge l’app ou reconnecte le même fichier et vérifie que les valeurs sont présentes.
-3. Ajoute des événements dans deux devises différentes. Vérifie l’ordre par date et heure, puis modifie un résultat, joins une capture et vérifie qu’elle s’agrandit au clic après rechargement.
+3. Colle une capture du calendrier et vérifie qu’elle s’agrandit au clic après rechargement. Colle une seconde capture pour vérifier qu’elle remplace la première.
 4. Change de semaine et reviens à la semaine initiale. Chaque semaine garde ses propres données. Connecte un autre fichier pour vérifier qu’il affiche son propre contexte.
-5. Sur mobile, vérifie que les blocs s’empilent en une colonne et que le tableau du calendrier défile dans son bloc.
+5. Sur mobile, vérifie que les blocs s’empilent en une colonne et que la capture reste dans la largeur du calendrier.

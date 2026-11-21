@@ -1,29 +1,30 @@
 import { useState, type ReactNode } from 'react';
-import { ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clipboard, Pencil } from 'lucide-react';
 import { ContextEditor } from '@/components/fundamental/ContextEditor';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useData } from '@/contexts/DataContext';
 import type { Screenshot } from '@/types/note';
+import { readScreenshot } from '@/lib/screenshots';
 import { shiftDay } from '@/lib/discipline';
 import {
-  BANKS, BLOCK_TITLES, PAIRS, calendarForWeek, contextDate, currentWeek,
-  readCalendar, weekNumber, type BlockKey, type FundamentalBlocks,
+  BANKS, BLOCK_TITLES, PAIRS, contextDate, currentWeek,
+  readCalendar, weekNumber, type BlockKey, type EditableBlockKey, type FundamentalBlocks,
 } from '@/lib/fundamentalContext';
 
 const dateLabel = (day: string) => day ? contextDate.format(new Date(`${day}T00:00:00Z`)) : '—';
 const addUnit = (value: string | undefined, unit: string) => value ? `${value} ${unit}` : undefined;
 
-function Block({ block, children, onEdit, editing, editor, accent = false }: {
-  block: BlockKey; children: ReactNode; onEdit: (block: BlockKey) => void;
-  editing: BlockKey | null; editor: ReactNode; accent?: boolean;
+function Block({ block, children, onEdit, editing, editor, action, accent = false }: {
+  block: BlockKey; children: ReactNode; onEdit: (block: EditableBlockKey) => void;
+  editing: EditableBlockKey | null; editor: ReactNode; action?: ReactNode; accent?: boolean;
 }) {
   const isEditing = editing === block;
   return (
     <section aria-labelledby={`fundamental-${block}`} className={`min-w-0 rounded-xl border p-4 ${accent ? 'border-blue-500/30 bg-blue-500/5' : 'border-border bg-card/30'}`}>
       <header className="mb-4 flex min-w-0 items-center justify-between gap-2">
         <h2 id={`fundamental-${block}`} className={`min-w-0 break-words text-sm font-semibold ${accent ? 'text-blue-700 dark:text-blue-300' : ''}`}>{BLOCK_TITLES[block]}</h2>
-        {!isEditing && <Button
+        {action ?? (!isEditing && block !== 'calendar' && <Button
           type="button"
           variant="ghost"
           size="icon"
@@ -34,7 +35,7 @@ function Block({ block, children, onEdit, editing, editor, accent = false }: {
           onClick={() => onEdit(block)}
         >
           <Pencil aria-hidden="true" />
-        </Button>}
+        </Button>)}
       </header>
       {isEditing ? editor : children}
     </section>
@@ -59,22 +60,20 @@ function TextBlock({ value, empty }: { value?: string; empty: string }) {
   return <p className={`whitespace-pre-wrap break-words text-sm ${value ? '' : 'text-muted-foreground'}`}>{value || empty}</p>;
 }
 
-function CapturePreview({ screenshot, title, fullWidth = false }: {
-  screenshot: Screenshot; title: string; fullWidth?: boolean;
-}) {
+function CapturePreview({ screenshot }: { screenshot: Screenshot }) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <button type="button" aria-label={`Agrandir la capture · ${title}`} className={`rounded border border-border ${fullWidth ? 'w-full bg-muted/20' : ''}`}>
-          <img src={screenshot.content} alt="" loading="lazy" className={fullWidth ? 'block h-auto w-full rounded' : 'h-9 w-14 object-contain'} />
+        <button type="button" aria-label="Agrandir la capture du calendrier" className="w-full rounded border border-border bg-muted/20">
+          <img src={screenshot.content} alt="" loading="lazy" className="mx-auto block max-h-80 max-w-full rounded object-contain" />
         </button>
       </DialogTrigger>
-      <DialogContent className={fullWidth ? 'sm:max-w-7xl' : 'sm:max-w-5xl'}>
+      <DialogContent className="sm:max-w-7xl">
         <DialogHeader className="pr-8">
-          <DialogTitle className="break-words">{title}</DialogTitle>
+          <DialogTitle>Calendrier économique de la semaine</DialogTitle>
           <DialogDescription className="sr-only">Capture du calendrier économique</DialogDescription>
         </DialogHeader>
-        <img src={screenshot.content} alt={screenshot.name} className={`mx-auto max-w-full object-contain ${fullWidth ? 'max-h-[76dvh]' : 'max-h-[70vh]'}`} />
+        <img src={screenshot.content} alt={screenshot.name} className="mx-auto max-h-[76dvh] max-w-full object-contain" />
       </DialogContent>
     </Dialog>
   );
@@ -83,7 +82,9 @@ function CapturePreview({ screenshot, title, fullWidth = false }: {
 export default function FundamentalContext() {
   const { data: appData, mutateData } = useData();
   const [monday, setMonday] = useState(currentWeek);
-  const [editing, setEditing] = useState<BlockKey | null>(null);
+  const [editing, setEditing] = useState<EditableBlockKey | null>(null);
+  const [pasting, setPasting] = useState(false);
+  const [pasteError, setPasteError] = useState('');
   const data = appData.fundamentalWeeks.find(week => week.weekStart === monday)?.blocks ?? {};
 
   const save = (block: BlockKey, content: FundamentalBlocks[BlockKey]) => mutateData(current => {
@@ -98,23 +99,55 @@ export default function FundamentalContext() {
   });
 
   const calendar = readCalendar(data.calendar);
-  const events = calendarForWeek(calendar.events, monday);
+
+  const pasteCalendar = async (getFile: () => Promise<File>) => {
+    if (pasting || editing !== null) return;
+    setPasting(true);
+    setPasteError('');
+    try {
+      const screenshot = await readScreenshot(await getFile());
+      await save('calendar', { ...calendar, screenshot }).catch(() => {
+        throw new Error('Impossible d’enregistrer l’image. Réessaie.');
+      });
+    } catch (cause) {
+      setPasteError(cause instanceof Error ? cause.message : 'Impossible de coller l’image.');
+    } finally {
+      setPasting(false);
+    }
+  };
+
+  const pasteFromClipboard = () => pasteCalendar(async () => {
+    let items: ClipboardItems;
+    try {
+      items = await navigator.clipboard.read();
+    } catch {
+      throw new Error('Sélectionne ce bouton, puis colle ton image avec Ctrl+V ou ⌘V.');
+    }
+    for (const item of items) {
+      const type = item.types.find(value => value.startsWith('image/'));
+      if (type) {
+        const blob = await item.getType(type);
+        return new File([blob], `calendrier.${type.split('/')[1]}`, { type });
+      }
+    }
+    throw new Error('Copie une image du calendrier avant de la coller.');
+  });
+
   const banks = data.banks ?? {};
   const blockProps = {
-    onEdit: setEditing,
+    onEdit: (block: EditableBlockKey) => { if (!pasting) setEditing(block); },
     editing,
-    editor: editing && <ContextEditor block={editing} existing={data} monday={monday} onSave={save} onClose={() => setEditing(null)} />,
+    editor: editing && <ContextEditor block={editing} existing={data} onSave={save} onClose={() => setEditing(null)} />,
   };
-  const stackCalendarAndBanks = Boolean(calendar.screenshot) || editing === 'calendar' || editing === 'banks';
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-[1440px] space-y-5 pb-10">
       <h1 className="sr-only page-title-hidden">Contexte fondamental</h1>
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" size="icon" disabled={editing !== null} aria-label="Semaine précédente" onClick={() => setMonday(day => shiftDay(day, -7))}><ChevronLeft aria-hidden="true" /></Button>
+        <Button variant="outline" size="icon" disabled={editing !== null || pasting} aria-label="Semaine précédente" onClick={() => { setPasteError(''); setMonday(day => shiftDay(day, -7)); }}><ChevronLeft aria-hidden="true" /></Button>
         <p className="px-1 text-sm font-medium" aria-live="polite">{dateLabel(monday)} – {dateLabel(shiftDay(monday, 6))}</p>
-        <Button variant="outline" size="icon" disabled={editing !== null} aria-label="Semaine suivante" onClick={() => setMonday(day => shiftDay(day, 7))}><ChevronRight aria-hidden="true" /></Button>
-        <Button variant="ghost" size="sm" onClick={() => setMonday(currentWeek())} disabled={editing !== null || monday === currentWeek()}>Cette semaine</Button>
+        <Button variant="outline" size="icon" disabled={editing !== null || pasting} aria-label="Semaine suivante" onClick={() => { setPasteError(''); setMonday(day => shiftDay(day, 7)); }}><ChevronRight aria-hidden="true" /></Button>
+        <Button variant="ghost" size="sm" onClick={() => { setPasteError(''); setMonday(currentWeek()); }} disabled={editing !== null || pasting || monday === currentWeek()}>Cette semaine</Button>
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Block block="regime" {...blockProps}><Details fields={[[ 'Régime', data.regime?.regime ], [ 'VIX', data.regime?.vix ]]} /></Block>
@@ -133,40 +166,22 @@ export default function FundamentalContext() {
           ]} />
         </Block>)}
       </div>
-      <div className={`grid grid-cols-1 gap-4 ${stackCalendarAndBanks ? '' : 'lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]'}`}>
-        <Block block="calendar" {...blockProps}>
-          {calendar.screenshot && (
-            <div className={events.length > 0 ? 'mb-4' : undefined}>
-              <CapturePreview screenshot={calendar.screenshot} title="Calendrier économique de la semaine" fullWidth />
-            </div>
-          )}
-          {events.length === 0 && !calendar.screenshot && <p className="text-sm text-muted-foreground">Aucun calendrier ni événement renseigné pour cette semaine.</p>}
-          {events.length > 0 && (
-            <div className="max-w-full overflow-x-auto" tabIndex={0} role="region" aria-label="Tableau du calendrier économique">
-              <table className="w-full border-collapse text-left text-xs">
-                <caption className="pb-3 text-left text-muted-foreground">Impact fort · heures de Paris</caption>
-                <thead>
-                  <tr className="border-b border-border">
-                    {['Date', 'Heure', 'Devise', 'Événement', 'Prévision', 'Précédent', 'Réel', 'Capture'].map(label => <th scope="col" key={label} className="whitespace-nowrap px-2 py-2 font-medium">{label}</th>)}
-                  </tr>
-                </thead>
-                <tbody>
-                  {events.map(event => <tr key={event.id} className="border-b border-border">
-                    <td className="whitespace-nowrap px-2 py-3">{dateLabel(event.date)}</td>
-                    <td className="px-2 py-3">{event.time}</td>
-                    <td className="px-2 py-3 font-medium">{event.currency}</td>
-                    <td className="min-w-28 break-words px-2 py-3">{event.event}</td>
-                    <td className="px-2 py-3">{event.forecast || '—'}</td>
-                    <td className="px-2 py-3">{event.previous || '—'}</td>
-                    <td className="px-2 py-3">{event.actual || '—'}</td>
-                    <td className="px-2 py-3">
-                      {event.screenshot ? <CapturePreview screenshot={event.screenshot} title={event.event} /> : '—'}
-                    </td>
-                  </tr>)}
-                </tbody>
-              </table>
-            </div>
-          )}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <Block block="calendar" {...blockProps} action={
+          <Button type="button" variant="outline" size="sm" loading={pasting} disabled={editing !== null}
+            onClick={() => void pasteFromClipboard()}
+            onPaste={event => {
+              const file = Array.from(event.clipboardData.files).find(item => item.type.startsWith('image/'))
+                ?? Array.from(event.clipboardData.items).find(item => item.type.startsWith('image/'))?.getAsFile();
+              if (!file) return;
+              event.preventDefault();
+              void pasteCalendar(async () => file);
+            }}>
+            <Clipboard aria-hidden="true" />Coller l’image
+          </Button>
+        }>
+          {pasteError && <p role="alert" className="mb-3 text-sm text-destructive">{pasteError}</p>}
+          {calendar.screenshot && <CapturePreview screenshot={calendar.screenshot} />}
         </Block>
         <Block block="banks" {...blockProps}>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
