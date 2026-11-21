@@ -43,15 +43,11 @@
   to { opacity: 1; transform: scale(1); }
 }
 .objective-card, .ui-tab-panel[data-state=active] { animation: ui-page-in var(--ui-duration-normal) var(--ui-ease-enter); }
-.objective-card .ui-progress-indicator { animation: ui-progress-enter 500ms var(--ui-ease-enter); }
-.objective-card[data-status=achieved] .ui-progress-indicator { background: hsl(var(--profit)); }
-.objective-card[data-status=achieved] h3 { animation: ui-fade-in 220ms ease-out; }
 .calendar-day[aria-pressed=true] .calendar-day-number,
 .reports-timeline-entry[aria-pressed=true] .reports-timeline-marker {
   animation: ui-confirm-check 280ms var(--ui-ease-enter);
 }
 .toaster [data-type=success] [data-icon] { color: hsl(var(--profit)); animation: ui-confirm-check 320ms var(--ui-ease-enter); }
-@keyframes ui-progress-enter { from { transform: translateX(-100%); } }
 .ui-input, .ui-select-trigger { min-height: var(--ui-control); }
 .ui-input, .ui-textarea, .ui-select-trigger { border-radius: var(--ui-radius-control); }
 .ui-input[aria-invalid=true], .ui-textarea[aria-invalid=true], .ui-select-trigger[aria-invalid=true] { border-color: hsl(var(--loss)); }
@@ -118,7 +114,7 @@
   .dashboard-switch button:active:not(:disabled),
   .ui-tab-trigger:active:not(:disabled), .page-segments > button:active:not(:disabled) { transform: none; }
   .ui-button[data-feedback=success], .ui-save-check, .ui-checkbox[data-state=checked] svg,
-  .objective-card, .objective-card .ui-progress-indicator, .toaster [data-type=success] [data-icon], .ui-tab-panel[data-state=active] { animation: none; }
+  .objective-card, .toaster [data-type=success] [data-icon], .ui-tab-panel[data-state=active] { animation: none; }
   .ui-page-enter, .ui-skeleton, .ui-loading-icon { animation: none !important; }
 }
 /* Keep user-selected accents on graphics, but provide a readable ink for small text. */

@@ -7,7 +7,6 @@ import {
 } from '@/types/trade';
 import { Account } from '@/types/account';
 import {
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Eye,
@@ -119,7 +118,7 @@ const TradeTable = ({
           <table className="w-full min-w-[1080px] border-collapse">
             <thead>
               <tr className="bg-secondary/35">
-                <th scope="col" aria-sort="descending" className="px-4 py-3 text-left"><span className="inline-flex items-center gap-1.5"># <ChevronDown aria-hidden="true" className="h-3 w-3 text-primary" /></span></th>
+                <th scope="col" aria-sort="descending" className="px-4 py-3 text-left">#</th>
                 <th className="px-4 py-3 text-left">Paire</th>
                 <th className="px-4 py-3 text-left">Date</th>
                 <th className="px-4 py-3 text-left">Direction</th>

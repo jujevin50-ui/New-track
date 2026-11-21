@@ -2,20 +2,14 @@ import type { DailyJournal } from '@/hooks/useDailyJournal';
 import type { Trade } from '@/types/trade';
 import { completedMissions } from './discipline';
 
-export const OBJECTIVE_METRICS = {
-  reviews: { label: 'Bilans journaliers', description: 'Bilans enregistrés dans le Calendrier.', unit: 'bilans' },
-  missions: { label: 'Missions de discipline', description: 'Missions cochées dans les bilans enregistrés.', unit: 'missions' },
-  plan: { label: 'Trades conformes au plan', description: 'Trades clôturés avec le plan respecté, sur les comptes visibles.', unit: 'trades' },
-  manual: { label: 'Suivi manuel', description: 'Ajoute ou retire une étape à mesure que tu avances.', unit: 'étapes' },
-};
-
-export type ObjectiveMetric = keyof typeof OBJECTIVE_METRICS;
+type ObjectiveMetric = 'reviews' | 'missions' | 'plan' | 'manual';
 export type ObjectiveStatus = 'active' | 'upcoming' | 'achieved' | 'expired';
 
 export interface Objective {
   id: string;
   title: string;
   note: string;
+  completed?: boolean;
   metric: ObjectiveMetric;
   start: string;
   end: string;
