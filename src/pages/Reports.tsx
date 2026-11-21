@@ -666,34 +666,35 @@ const Reports = ({ accounts }: ReportsProps) => {
                   ))}
                 </div>
 
-                <div className="space-y-7 max-w-3xl">
+                <div className="space-y-7">
                   <Question n={1} q="Bilan de la période">
                     <Textarea
                       aria-label="Bilan de la période" placeholder="Ton bilan…"
-                      className="h-28 text-sm resize-none bg-secondary border-border"
+                      className="min-h-[320px] resize-y border-border bg-secondary text-sm leading-relaxed sm:min-h-[440px]"
                       value={formData.conclusion}
                       onChange={e => updateField('conclusion', e.target.value)}
                     />
                   </Question>
 
-                  <Question n={2} q="Objectif principal">
-                    <Textarea
-                      aria-label="Objectif principal" placeholder="Ton objectif…"
-                      className="h-20 text-sm resize-none bg-secondary border-border"
-                      value={formData.objectifPrincipal}
-                      onChange={e => updateField('objectifPrincipal', e.target.value)}
-                    />
-                  </Question>
+                  <div className="max-w-3xl space-y-7">
+                    <Question n={2} q="Objectif principal">
+                      <Textarea
+                        aria-label="Objectif principal" placeholder="Ton objectif…"
+                        className="h-20 text-sm resize-none bg-secondary border-border"
+                        value={formData.objectifPrincipal}
+                        onChange={e => updateField('objectifPrincipal', e.target.value)}
+                      />
+                    </Question>
 
-                  <Question n={3} q="Objectifs secondaires">
-                    <Textarea
-                      aria-label="Objectifs secondaires" placeholder="Tes objectifs secondaires…"
-                      className="h-20 text-sm resize-none bg-secondary border-border"
-                      value={formData.objectifsSecondaires}
-                      onChange={e => updateField('objectifsSecondaires', e.target.value)}
-                    />
-                  </Question>
-
+                    <Question n={3} q="Objectifs secondaires">
+                      <Textarea
+                        aria-label="Objectifs secondaires" placeholder="Tes objectifs secondaires…"
+                        className="h-20 text-sm resize-none bg-secondary border-border"
+                        value={formData.objectifsSecondaires}
+                        onChange={e => updateField('objectifsSecondaires', e.target.value)}
+                      />
+                    </Question>
+                  </div>
                 </div>
 
                 <div className="rounded-2xl border border-border/60 bg-background/20 overflow-hidden">
