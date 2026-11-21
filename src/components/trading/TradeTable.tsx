@@ -1,4 +1,3 @@
-import { usePagePreference, oneOf } from '@/hooks/usePagePreference';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Trade,
@@ -11,8 +10,6 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ChevronUp,
-  ChevronsUpDown,
   Eye,
   FileText,
   Trash2,
@@ -28,9 +25,6 @@ interface TradeTableProps {
   onDelete: (id: string) => void;
   accounts?: Account[];
 }
-
-type SortDir = 'asc' | 'desc';
-type SortField = 'tradeNumber' | 'pair' | 'date' | 'endDate' | 'result' | 'riskPercent';
 
 const money = (value: number, currency = '') => {
   try { return new Intl.NumberFormat('fr-FR', {style:'currency', currency, signDisplay:'exceptZero', maximumFractionDigits:2}).format(value); }
@@ -53,41 +47,8 @@ const TradeTable = ({
   onDelete,
   accounts = [],
 }: TradeTableProps) => {
-  const [sortField, setSortField] = usePagePreference<SortField>('trades.sort.field','date',oneOf('tradeNumber','pair','date','endDate','result','riskPercent'));
-  const [sortDir, setSortDir] = usePagePreference<SortDir>('trades.sort.direction','desc',oneOf('asc','desc'));
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-
-  const rows = useMemo(() => {
-    const unified = [
-      ...trades.map(trade => ({
-        kind: 'trade' as const,
-        data: trade,
-        sortDate: trade.endDate || trade.date,
-      })),
-    ];
-
-    unified.sort((a, b) => {
-      if (a.kind === 'trade' && b.kind === 'trade') {
-        const av = sortField === 'result' ? getNetResult(a.data) : a.data[sortField];
-        const bv = sortField === 'result' ? getNetResult(b.data) : b.data[sortField];
-
-        let comparison = 0;
-
-        if (sortField === 'result' || sortField === 'riskPercent' || sortField === 'tradeNumber') {
-          comparison = Number(av || 0) - Number(bv || 0);
-        } else {
-          comparison = String(av ?? '').localeCompare(String(bv ?? ''));
-        }
-
-        return sortDir === 'asc' ? comparison : -comparison;
-      }
-
-      const comparison = a.sortDate.localeCompare(b.sortDate);
-      return sortDir === 'asc' ? comparison : -comparison;
-    });
-
-    return unified;
-  }, [trades, sortField, sortDir]);
+  const rows = useMemo(() => [...trades].sort((a, b) => b.tradeNumber - a.tradeNumber), [trades]);
 
   const totals = useMemo(() => {
     const byCurrency = new Map<string, { net: number; percent: number | null; r: number | null }>();
@@ -107,28 +68,15 @@ const TradeTable = ({
   }, [trades, accounts]);
 
   const allImages = useMemo(
-    () =>
-      rows
-        .filter((row): row is Extract<(typeof rows)[number], { kind: 'trade' }> => row.kind === 'trade')
-        .flatMap(row =>
-          getTradeScreenshots(row.data).map(src => ({
-            src,
-            pair: row.data.pair,
-            tradeNumber: row.data.tradeNumber,
-          }))
-        ),
+    () => rows.flatMap(trade =>
+      getTradeScreenshots(trade).map(src => ({
+        src,
+        pair: trade.pair,
+        tradeNumber: trade.tradeNumber,
+      }))
+    ),
     [rows]
   );
-
-  const toggleSort = (field: SortField) => {
-    if (field === sortField) {
-      setSortDir(current => (current === 'asc' ? 'desc' : 'asc'));
-      return;
-    }
-
-    setSortField(field);
-    setSortDir('desc');
-  };
 
   const showPrevious = () => {
     setLightboxIndex(index =>
@@ -163,31 +111,6 @@ const TradeTable = ({
     );
   }
 
-  const SortButton = ({
-    field,
-    children,
-  }: {
-    field: SortField;
-    children: React.ReactNode;
-  }) => (
-    <button
-      type="button"
-      onClick={() => toggleSort(field)}
-      className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
-    >
-      {children}
-      {sortField === field ? (
-        sortDir === 'asc' ? (
-          <ChevronUp className="h-3 w-3 text-primary" />
-        ) : (
-          <ChevronDown className="h-3 w-3 text-primary" />
-        )
-      ) : (
-        <ChevronsUpDown className="h-3 w-3 opacity-25" />
-      )}
-    </button>
-  );
-
   return (
     <>
       <div className="trade-history min-w-0">
@@ -196,11 +119,11 @@ const TradeTable = ({
           <table className="w-full min-w-[1080px] border-collapse">
             <thead>
               <tr className="bg-secondary/35">
-                <th className="px-4 py-3 text-left"><SortButton field="tradeNumber">#</SortButton></th>
-                <th className="px-4 py-3 text-left"><SortButton field="pair">Paire</SortButton></th>
-                <th className="px-4 py-3 text-left"><SortButton field="date">Date</SortButton></th>
+                <th scope="col" aria-sort="descending" className="px-4 py-3 text-left"><span className="inline-flex items-center gap-1.5"># <ChevronDown aria-hidden="true" className="h-3 w-3 text-primary" /></span></th>
+                <th className="px-4 py-3 text-left">Paire</th>
+                <th className="px-4 py-3 text-left">Date</th>
                 <th className="px-4 py-3 text-left">Direction</th>
-                <th className="px-4 py-3 text-right"><SortButton field="result">Résultat net</SortButton></th>
+                <th className="px-4 py-3 text-right">Résultat net</th>
                 <th className="px-4 py-3 text-right">%</th>
                 <th className="px-4 py-3 text-right">R</th>
                 <th className="px-4 py-3 text-center">Sortie</th>
@@ -213,8 +136,7 @@ const TradeTable = ({
             </thead>
 
             <tbody>
-              {rows.map((row, index) => {
-                const trade = row.data;
+              {rows.map((trade, index) => {
                 const net = getNetResult(trade);
                 const account = accounts.find(a => a.id === trade.accountId);
                 const balance = account?.initialBalance || 0;

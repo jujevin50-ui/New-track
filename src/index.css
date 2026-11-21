@@ -1183,7 +1183,6 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 .trades-page .trades-filter-controls .dashboard-filter-field { width: 180px; }
 .trades-page .trades-filter-controls .dashboard-filter-account { width: 260px; }
 .trade-history th { font-size: 10px; font-weight: 500; color: hsl(var(--muted-foreground)); white-space: nowrap; }
-.trade-history th button { text-transform: none; letter-spacing: normal; font-weight: 500; }
 .trade-history td { font-size: 12px; }
 .trade-history td .font-mono { font-family: inherit; font-variant-numeric: tabular-nums; }
 .trade-history table :is(th, td) { border: 1px solid hsl(var(--border)); }
