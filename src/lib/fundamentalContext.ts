@@ -1,10 +1,9 @@
 import type { Screenshot } from '@/types/note';
 import { shiftDay } from '@/lib/discipline';
 
-export const PAIRS = ['EURUSD', 'GBPUSD', 'AUDUSD'] as const;
 export const BANKS = ['Fed', 'BCE', 'BoE', 'RBA'] as const;
 
-export type Pair = typeof PAIRS[number];
+type Pair = 'EURUSD' | 'GBPUSD' | 'AUDUSD';
 type Currency = 'USD' | 'EUR' | 'GBP' | 'AUD';
 export type Bank = typeof BANKS[number];
 
@@ -31,13 +30,13 @@ export interface BankContext {
   tone: string;
 }
 
-export interface PairContext {
+interface PairContext {
   bias: '' | 'Haussier' | 'Baissier' | 'Neutre';
   differential: string;
   driver: string;
 }
 
-export type FundamentalBlocks = Record<Pair, PairContext> & {
+export type FundamentalBlocks = {
   regime: { regime: '' | 'Risk-on' | 'Risk-off'; vix: string };
   dollar: { dxy: string; us10y: string; fedBias: string };
   week: { events: string };
@@ -48,7 +47,7 @@ export type FundamentalBlocks = Record<Pair, PairContext> & {
 
 export type BlockKey = keyof FundamentalBlocks;
 export type EditableBlockKey = Exclude<BlockKey, 'calendar'>;
-export type WeekContext = Partial<FundamentalBlocks>;
+export type WeekContext = Partial<FundamentalBlocks & Record<Pair, PairContext>>;
 
 export interface FundamentalWeek {
   weekStart: string;
@@ -59,9 +58,6 @@ export const BLOCK_TITLES: Record<BlockKey, string> = {
   regime: 'Régime de marché',
   dollar: 'Dollar',
   week: 'Semaine',
-  EURUSD: 'EURUSD',
-  GBPUSD: 'GBPUSD',
-  AUDUSD: 'AUDUSD',
   calendar: 'Calendrier éco',
   banks: 'Banques centrales',
   notes: 'Notes et news clés',

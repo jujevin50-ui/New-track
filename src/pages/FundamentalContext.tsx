@@ -4,26 +4,28 @@ import { ContextEditor } from '@/components/fundamental/ContextEditor';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useData } from '@/contexts/DataContext';
+import { useSaveConfirmation } from '@/hooks/useSaveConfirmation';
+import { queueBackgroundSave } from '@/lib/backgroundSaves';
 import type { Screenshot } from '@/types/note';
 import { readScreenshot } from '@/lib/screenshots';
 import { shiftDay } from '@/lib/discipline';
 import {
-  BANKS, BLOCK_TITLES, PAIRS, contextDate, currentWeek,
-  readCalendar, weekNumber, type BlockKey, type EditableBlockKey, type FundamentalBlocks,
+  BANKS, BLOCK_TITLES, contextDate, currentWeek,
+  readCalendar, weekNumber, type BlockKey, type EditableBlockKey, type FundamentalBlocks, type WeekContext,
 } from '@/lib/fundamentalContext';
 
 const dateLabel = (day: string) => day ? contextDate.format(new Date(`${day}T00:00:00Z`)) : '—';
 const addUnit = (value: string | undefined, unit: string) => value ? `${value} ${unit}` : undefined;
 
-function Block({ block, children, onEdit, editing, editor, action, accent = false }: {
+function Block({ block, children, onEdit, editing, editor, action }: {
   block: BlockKey; children: ReactNode; onEdit: (block: EditableBlockKey) => void;
-  editing: EditableBlockKey | null; editor: ReactNode; action?: ReactNode; accent?: boolean;
+  editing: EditableBlockKey | null; editor: ReactNode; action?: ReactNode;
 }) {
   const isEditing = editing === block;
   return (
-    <section aria-labelledby={`fundamental-${block}`} className={`min-w-0 rounded-xl border p-4 ${accent ? 'border-blue-500/30 bg-blue-500/5' : 'border-border bg-card/30'}`}>
+    <section aria-labelledby={`fundamental-${block}`} className="min-w-0 rounded-xl border border-border bg-card/30 p-4">
       <header className="mb-4 flex min-w-0 items-center justify-between gap-2">
-        <h2 id={`fundamental-${block}`} className={`min-w-0 break-words text-sm font-semibold ${accent ? 'text-blue-700 dark:text-blue-300' : ''}`}>{BLOCK_TITLES[block]}</h2>
+        <h2 id={`fundamental-${block}`} className="min-w-0 break-words text-sm font-semibold">{BLOCK_TITLES[block]}</h2>
         {action ?? (!isEditing && block !== 'calendar' && <Button
           type="button"
           variant="ghost"
@@ -85,30 +87,51 @@ export default function FundamentalContext() {
   const [editing, setEditing] = useState<EditableBlockKey | null>(null);
   const [pasting, setPasting] = useState(false);
   const [pasteError, setPasteError] = useState('');
-  const data = appData.fundamentalWeeks.find(week => week.weekStart === monday)?.blocks ?? {};
+  const { saved: pasteAccepted, confirm: confirmPaste } = useSaveConfirmation();
+  const [pending, setPending] = useState(() => new Map<string, { block: BlockKey; content: FundamentalBlocks[BlockKey] }>());
+  let data: WeekContext = appData.fundamentalWeeks.find(week => week.weekStart === monday)?.blocks ?? {};
+  for (const [key, edit] of pending) {
+    if (key.startsWith(`${monday}:`)) data = { ...data, [edit.block]: edit.content };
+  }
 
-  const save = (block: BlockKey, content: FundamentalBlocks[BlockKey]) => mutateData(current => {
-    const existing = current.fundamentalWeeks.find(week => week.weekStart === monday);
-    const week = { weekStart: monday, blocks: { ...existing?.blocks, [block]: content } };
-    return {
-      ...current,
-      fundamentalWeeks: existing
-        ? current.fundamentalWeeks.map(entry => entry.weekStart === monday ? week : entry)
-        : [...current.fundamentalWeeks, week],
+  const save = (block: BlockKey, content: FundamentalBlocks[BlockKey]) => {
+    const key = `${monday}:${block}`;
+    const edit = { block, content };
+    setPending(current => new Map(current).set(key, edit));
+    const clear = () => {
+      setPending(current => {
+        if (current.get(key) !== edit) return current;
+        const next = new Map(current);
+        next.delete(key);
+        return next;
+      });
     };
-  });
+
+    queueBackgroundSave(async () => {
+      await mutateData(current => {
+        const existing = current.fundamentalWeeks.find(week => week.weekStart === monday);
+        const week = { weekStart: monday, blocks: { ...existing?.blocks, [block]: content } };
+        return {
+          ...current,
+          fundamentalWeeks: existing
+            ? current.fundamentalWeeks.map(entry => entry.weekStart === monday ? week : entry)
+            : [...current.fundamentalWeeks, week],
+        };
+      });
+      clear();
+    }, `Impossible d’enregistrer le bloc « ${BLOCK_TITLES[block]} ».`, clear);
+  };
 
   const calendar = readCalendar(data.calendar);
 
   const pasteCalendar = async (getFile: () => Promise<File>) => {
-    if (pasting || editing !== null) return;
+    if (pasting || pasteAccepted || editing !== null) return;
     setPasting(true);
     setPasteError('');
     try {
       const screenshot = await readScreenshot(await getFile());
-      await save('calendar', { ...calendar, screenshot }).catch(() => {
-        throw new Error('Impossible d’enregistrer l’image. Réessaie.');
-      });
+      confirmPaste();
+      save('calendar', { ...calendar, screenshot });
     } catch (cause) {
       setPasteError(cause instanceof Error ? cause.message : 'Impossible de coller l’image.');
     } finally {
@@ -157,18 +180,9 @@ export default function FundamentalContext() {
           <TextBlock value={data.week?.events} empty="Aucun événement majeur renseigné." />
         </Block>
       </div>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {PAIRS.map(pair => <Block key={pair} block={pair} accent {...blockProps}>
-          <Details fields={[
-            ['Biais', data[pair]?.bias],
-            ['Différentiel de taux', addUnit(data[pair]?.differential, 'pt')],
-            ['Driver clé', data[pair]?.driver],
-          ]} />
-        </Block>)}
-      </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <Block block="calendar" {...blockProps} action={
-          <Button type="button" variant="outline" size="sm" loading={pasting} disabled={editing !== null}
+          <Button type="button" variant="outline" size="sm" loading={pasting} saved={pasteAccepted} disabled={editing !== null || pasteAccepted}
             onClick={() => void pasteFromClipboard()}
             onPaste={event => {
               const file = Array.from(event.clipboardData.files).find(item => item.type.startsWith('image/'))
@@ -177,7 +191,7 @@ export default function FundamentalContext() {
               event.preventDefault();
               void pasteCalendar(async () => file);
             }}>
-            <Clipboard aria-hidden="true" />Coller l’image
+            {!pasteAccepted && <Clipboard aria-hidden="true" />}{pasteAccepted ? 'Pris en compte' : 'Coller l’image'}
           </Button>
         }>
           {pasteError && <p role="alert" className="mb-3 text-sm text-destructive">{pasteError}</p>}

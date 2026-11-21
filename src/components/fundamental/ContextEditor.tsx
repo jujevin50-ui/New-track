@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from 'react';
+import { Save } from 'lucide-react';
+import { useSaveConfirmation } from '@/hooks/useSaveConfirmation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,15 +19,14 @@ interface Field {
   multiline?: boolean;
 }
 
-const fields: Partial<Record<EditableBlockKey | 'pair', Field[]>> = {
+const fields: Record<Exclude<EditableBlockKey, 'banks'>, Field[]> = {
   regime: [{ key: 'regime', label: 'Régime', options: ['Risk-on', 'Risk-off'] }, { key: 'vix', label: 'VIX', decimal: true }],
   dollar: [{ key: 'dxy', label: 'DXY', decimal: true }, { key: 'us10y', label: 'US10Y (%)', decimal: true }, { key: 'fedBias', label: 'Biais Fed' }],
   week: [{ key: 'events', label: 'Événements majeurs', multiline: true }],
-  pair: [{ key: 'bias', label: 'Biais', options: ['Haussier', 'Baissier', 'Neutre'] }, { key: 'differential', label: 'Différentiel de taux (points de %)', decimal: true }, { key: 'driver', label: 'Driver clé', multiline: true }],
   notes: [{ key: 'text', label: 'Notes et news clés', multiline: true }],
 };
 
-type SaveBlock = (block: EditableBlockKey, content: FundamentalBlocks[EditableBlockKey]) => Promise<void>;
+type SaveBlock = (block: EditableBlockKey, content: FundamentalBlocks[EditableBlockKey]) => void;
 
 interface EditorProps {
   block: EditableBlockKey;
@@ -39,30 +40,20 @@ export function ContextEditor({ block, existing, onSave, onClose }: EditorProps)
     () => block === 'banks' ? {} : { ...(existing[block] as Record<string, string> | undefined) },
   );
   const [banks, setBanks] = useState(() => existing.banks ?? {});
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const simpleFields = fields[block] ?? fields.pair;
+  const { saved, confirm } = useSaveConfirmation();
 
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
+  const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (saving) return;
-    setSaving(true);
-    setError('');
-    try {
-      const clean = Object.fromEntries(Object.entries(values).map(([key, value]) => [key, value.trim()]));
-      const content = block === 'banks' ? banks : clean as FundamentalBlocks[EditableBlockKey];
-      await onSave(block, content);
-      onClose();
-    } catch {
-      setError('La sauvegarde a échoué. Tu peux réessayer.');
-    } finally {
-      setSaving(false);
-    }
+    if (saved) return;
+    const clean = Object.fromEntries(Object.entries(values).map(([key, value]) => [key, value.trim()]));
+    const content = block === 'banks' ? banks : clean as FundamentalBlocks[EditableBlockKey];
+    confirm(onClose);
+    onSave(block, content);
   };
 
   return (
     <form aria-label={`Modifier ${BLOCK_TITLES[block]}`} onSubmit={submit} className="min-w-0 space-y-4">
-      <fieldset disabled={saving} className="min-w-0 space-y-4">
+      <fieldset disabled={saved} className="min-w-0 space-y-4">
         {block === 'banks' ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
             {BANKS.map(bank => {
@@ -75,7 +66,7 @@ export function ContextEditor({ block, existing, onSave, onClose }: EditorProps)
               </fieldset>;
             })}
           </div>
-        ) : simpleFields.map(({ key, label, options, decimal, multiline }) => (
+        ) : fields[block].map(({ key, label, options, decimal, multiline }) => (
           <label key={key} className="grid gap-1 text-sm">
             {label}
             {options ? <select className={selectClass} value={values[key] ?? ''} onChange={e => setValues(current => ({ ...current, [key]: e.target.value }))}>
@@ -86,10 +77,11 @@ export function ContextEditor({ block, existing, onSave, onClose }: EditorProps)
           </label>
         ))}
       </fieldset>
-      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-      <div className="flex flex-wrap justify-end gap-2">
-        <Button type="button" variant="outline" disabled={saving} onClick={onClose}>Annuler</Button>
-        <Button type="submit" loading={saving}>Enregistrer</Button>
+      <div className="ui-form-footer flex flex-wrap justify-end gap-2">
+        <Button type="button" variant="outline" disabled={saved} onClick={onClose}>Annuler</Button>
+        <Button type="submit" saved={saved} disabled={saved}>
+          {!saved && <Save aria-hidden="true" />}{saved ? 'Pris en compte' : 'Enregistrer'}
+        </Button>
       </div>
     </form>
   );
