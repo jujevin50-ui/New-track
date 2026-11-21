@@ -21,6 +21,11 @@ export interface EconomicEvent {
   screenshot?: Screenshot;
 }
 
+export interface EconomicCalendar {
+  events: EconomicEvent[];
+  screenshot?: Screenshot;
+}
+
 export interface BankContext {
   rate: string;
   meeting: string;
@@ -37,7 +42,7 @@ export type FundamentalBlocks = Record<Pair, PairContext> & {
   regime: { regime: '' | 'Risk-on' | 'Risk-off'; vix: string };
   dollar: { dxy: string; us10y: string; fedBias: string };
   week: { events: string };
-  calendar: EconomicEvent[];
+  calendar: EconomicCalendar | EconomicEvent[];
   banks: Partial<Record<Bank, BankContext>>;
   notes: { text: string };
 };
@@ -81,4 +86,8 @@ export function calendarForWeek(events: EconomicEvent[], monday: string) {
   const sunday = shiftDay(monday, 6);
   return events.filter(event => CURRENCIES.includes(event.currency) && event.date >= monday && event.date <= sunday)
     .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+}
+
+export function readCalendar(value: WeekContext['calendar']): EconomicCalendar {
+  return Array.isArray(value) ? { events: value } : value ?? { events: [] };
 }

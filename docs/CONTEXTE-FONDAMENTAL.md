@@ -6,7 +6,7 @@ Connecte ton fichier Track Record comme d’habitude, puis ouvre **Contexte fond
 
 Les enregistrements sont regroupés par semaine dans la section `fundamentalWeeks` du fichier Track Record. Un ancien fichier démarre avec un contexte vide. Si l’application utilise son mode local de repli, le contexte est enregistré dans le navigateur avec les autres données du journal.
 
-Le calendrier est réservé aux événements à impact fort en USD, EUR, GBP et AUD. Les heures saisies sont celles de Paris. Chaque annonce peut contenir une capture enregistrée avec le reste du fichier Track Record.
+Le calendrier est réservé aux événements à impact fort en USD, EUR, GBP et AUD. Les heures saisies sont celles de Paris. Dans le bloc **Calendrier éco**, clique sur le crayon puis colle une image dans **Capture du calendrier complet**. Elle est enregistrée avec la semaine, même quand aucune annonce n’est saisie. Chaque annonce peut aussi garder sa propre capture.
 
 ## Fichiers
 

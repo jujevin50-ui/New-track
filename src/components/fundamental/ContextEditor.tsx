@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { readScreenshot, SCREENSHOT_ACCEPT } from '@/lib/screenshots';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import type { Screenshot } from '@/types/note';
 import { shiftDay } from '@/lib/discipline';
 import {
-  BANKS, BLOCK_TITLES, CURRENCIES, type BlockKey, type EconomicEvent, type FundamentalBlocks, type WeekContext,
+  BANKS, BLOCK_TITLES, CURRENCIES, readCalendar, type BlockKey, type EconomicEvent, type FundamentalBlocks, type WeekContext,
 } from '@/lib/fundamentalContext';
 
 const selectClass = 'ui-select-trigger w-full rounded-[10px] border border-input bg-background px-3 text-sm';
@@ -38,11 +39,42 @@ interface EditorProps {
   onClose: () => void;
 }
 
+function CaptureField({ label, screenshot, onSelect, onRemove }: {
+  label: string; screenshot?: Screenshot; onSelect: (file: File) => void; onRemove: () => void;
+}) {
+  return (
+    <div className="space-y-2 rounded-md focus-visible:outline focus-visible:outline-2" tabIndex={0} role="group" aria-label={`Zone · ${label}`} onPaste={event => {
+      const image = Array.from(event.clipboardData.files).find(file => file.type.startsWith('image/'))
+        ?? Array.from(event.clipboardData.items).find(item => item.type.startsWith('image/'))?.getAsFile();
+      if (!image) return;
+      event.preventDefault();
+      onSelect(image);
+    }}>
+      <label className="grid min-w-0 gap-1 text-sm">
+        {label}
+        <Input type="file" accept={SCREENSHOT_ACCEPT} className="h-auto min-w-0 py-2" onChange={event => {
+          const file = event.currentTarget.files?.[0];
+          event.currentTarget.value = '';
+          if (file) onSelect(file);
+        }} />
+      </label>
+      <p className="text-xs text-muted-foreground">Clique dans cette zone, puis colle ton image avec Ctrl+V ou ⌘V. Fichier de 5 Mo maximum.</p>
+      {screenshot && (
+        <div className="flex flex-wrap items-center gap-2">
+          <img src={screenshot.content} alt={screenshot.name} className="max-h-28 max-w-full rounded-md border border-border object-contain" />
+          <Button type="button" variant="ghost" size="sm" onClick={onRemove}>Retirer la capture</Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ContextEditor({ block, monday, existing, onSave, onClose }: EditorProps) {
   const [values, setValues] = useState<Record<string, string>>(
     () => ['calendar', 'banks'].includes(block) ? {} : { ...(existing[block] as Record<string, string> | undefined) },
   );
-  const [events, setEvents] = useState(() => existing.calendar ?? []);
+  const [events, setEvents] = useState(() => readCalendar(existing.calendar).events);
+  const [calendarScreenshot, setCalendarScreenshot] = useState(() => readCalendar(existing.calendar).screenshot);
   const [banks, setBanks] = useState(() => existing.banks ?? {});
   const [saving, setSaving] = useState(false);
   const [readingCapture, setReadingCapture] = useState(false);
@@ -57,7 +89,10 @@ export function ContextEditor({ block, monday, existing, onSave, onClose }: Edit
     setError('');
     try {
       const clean = Object.fromEntries(Object.entries(values).map(([key, value]) => [key, value.trim()]));
-      const content = block === 'calendar' ? events.map(item => ({ ...item, event: item.event.trim() }))
+      const content = block === 'calendar' ? {
+        events: events.map(item => ({ ...item, event: item.event.trim() })),
+        screenshot: calendarScreenshot,
+      }
         : block === 'banks' ? banks : clean as FundamentalBlocks[BlockKey];
       if (block === 'calendar' && events.some(item => !item.event.trim())) {
         setError('Renseigne le nom de chaque événement ou supprime la ligne.');
@@ -76,12 +111,12 @@ export function ContextEditor({ block, monday, existing, onSave, onClose }: Edit
     setEvents(items => items.map(item => item.id === id ? { ...item, ...updates } : item));
   };
 
-  const attachCapture = async (id: string, file: File) => {
+  const attachCapture = async (file: File, onRead: (screenshot: Screenshot) => void) => {
     if (saving || readingCapture) return;
     setReadingCapture(true);
     setError('');
     try {
-      updateEvent(id, { screenshot: await readScreenshot(file) });
+      onRead(await readScreenshot(file));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Impossible de lire la capture.');
     } finally {
@@ -95,6 +130,12 @@ export function ContextEditor({ block, monday, existing, onSave, onClose }: Edit
       <fieldset disabled={saving || readingCapture} className="min-w-0 space-y-4">
         {block === 'calendar' ? (
           <>
+            <CaptureField
+              label="Capture du calendrier complet"
+              screenshot={calendarScreenshot}
+              onSelect={file => void attachCapture(file, setCalendarScreenshot)}
+              onRemove={() => setCalendarScreenshot(undefined)}
+            />
             {events.map((item, index) => (
               <fieldset key={item.id} className="min-w-0 space-y-3 rounded-xl border border-border p-3">
                 <legend className="px-1 text-sm font-medium">Événement {index + 1}</legend>
@@ -109,29 +150,12 @@ export function ContextEditor({ block, monday, existing, onSave, onClose }: Edit
                     <label key={key} className="grid gap-1 text-sm">{label}<Input maxLength={32} value={item[key]} onChange={e => updateEvent(item.id, { [key]: e.target.value })} /></label>
                   ))}
                 </div>
-                <div className="space-y-2 rounded-md focus-visible:outline focus-visible:outline-2" tabIndex={0} role="group" aria-label="Zone de capture d’écran" onPaste={event => {
-                  const image = Array.from(event.clipboardData.items).find(item => item.type.startsWith('image/'))?.getAsFile();
-                  if (image) {
-                    event.preventDefault();
-                    void attachCapture(item.id, image);
-                  }
-                }}>
-                  <label className="grid min-w-0 gap-1 text-sm">
-                    Capture d’écran
-                    <Input type="file" accept={SCREENSHOT_ACCEPT} className="h-auto min-w-0 py-2" onChange={event => {
-                      const file = event.currentTarget.files?.[0];
-                      event.currentTarget.value = '';
-                      if (file) void attachCapture(item.id, file);
-                    }} />
-                  </label>
-                  <p className="text-xs text-muted-foreground">Colle une image ici ou choisis un fichier de 5 Mo maximum.</p>
-                  {item.screenshot && (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <img src={item.screenshot.content} alt={item.screenshot.name} className="max-h-28 max-w-full rounded-md border border-border object-contain" />
-                      <Button type="button" variant="ghost" size="sm" onClick={() => updateEvent(item.id, { screenshot: undefined })}>Retirer la capture</Button>
-                    </div>
-                  )}
-                </div>
+                <CaptureField
+                  label="Capture d’écran"
+                  screenshot={item.screenshot}
+                  onSelect={file => void attachCapture(file, screenshot => updateEvent(item.id, { screenshot }))}
+                  onRemove={() => updateEvent(item.id, { screenshot: undefined })}
+                />
                 <Button type="button" variant="ghost" size="sm" onClick={() => setEvents(items => items.filter(current => current.id !== item.id))}><Trash2 aria-hidden="true" />Retirer l’événement {index + 1}</Button>
               </fieldset>
             ))}

@@ -4,10 +4,11 @@ import { ContextEditor } from '@/components/fundamental/ContextEditor';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useData } from '@/contexts/DataContext';
+import type { Screenshot } from '@/types/note';
 import { shiftDay } from '@/lib/discipline';
 import {
   BANKS, BLOCK_TITLES, PAIRS, calendarForWeek, contextDate, currentWeek,
-  weekNumber, type BlockKey, type FundamentalBlocks,
+  readCalendar, weekNumber, type BlockKey, type FundamentalBlocks,
 } from '@/lib/fundamentalContext';
 
 const dateLabel = (day: string) => day ? contextDate.format(new Date(`${day}T00:00:00Z`)) : '—';
@@ -58,6 +59,27 @@ function TextBlock({ value, empty }: { value?: string; empty: string }) {
   return <p className={`whitespace-pre-wrap break-words text-sm ${value ? '' : 'text-muted-foreground'}`}>{value || empty}</p>;
 }
 
+function CapturePreview({ screenshot, title, fullWidth = false }: {
+  screenshot: Screenshot; title: string; fullWidth?: boolean;
+}) {
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <button type="button" aria-label={`Agrandir la capture · ${title}`} className={`rounded border border-border ${fullWidth ? 'w-full bg-muted/20' : ''}`}>
+          <img src={screenshot.content} alt="" loading="lazy" className={fullWidth ? 'mx-auto max-h-72 max-w-full object-contain' : 'h-9 w-14 object-contain'} />
+        </button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-5xl">
+        <DialogHeader className="pr-8">
+          <DialogTitle className="break-words">{title}</DialogTitle>
+          <DialogDescription className="sr-only">Capture du calendrier économique</DialogDescription>
+        </DialogHeader>
+        <img src={screenshot.content} alt={screenshot.name} className="mx-auto max-h-[70vh] max-w-full object-contain" />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function FundamentalContext() {
   const { data: appData, mutateData } = useData();
   const [monday, setMonday] = useState(currentWeek);
@@ -75,7 +97,8 @@ export default function FundamentalContext() {
     };
   });
 
-  const events = calendarForWeek(data.calendar ?? [], monday);
+  const calendar = readCalendar(data.calendar);
+  const events = calendarForWeek(calendar.events, monday);
   const banks = data.banks ?? {};
   const blockProps = {
     onEdit: setEditing,
@@ -112,7 +135,13 @@ export default function FundamentalContext() {
       </div>
       <div className={`grid grid-cols-1 gap-4 ${editingWideBlock ? '' : 'lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]'}`}>
         <Block block="calendar" {...blockProps}>
-          {events.length === 0 ? <p className="text-sm text-muted-foreground">Aucun événement à impact fort renseigné pour cette semaine.</p> : (
+          {calendar.screenshot && (
+            <div className={events.length > 0 ? 'mb-4' : undefined}>
+              <CapturePreview screenshot={calendar.screenshot} title="Calendrier économique de la semaine" fullWidth />
+            </div>
+          )}
+          {events.length === 0 && !calendar.screenshot && <p className="text-sm text-muted-foreground">Aucun calendrier ni événement renseigné pour cette semaine.</p>}
+          {events.length > 0 && (
             <div className="max-w-full overflow-x-auto" tabIndex={0} role="region" aria-label="Tableau du calendrier économique">
               <table className="w-full border-collapse text-left text-xs">
                 <caption className="pb-3 text-left text-muted-foreground">Impact fort · heures de Paris</caption>
@@ -131,22 +160,7 @@ export default function FundamentalContext() {
                     <td className="px-2 py-3">{event.previous || '—'}</td>
                     <td className="px-2 py-3">{event.actual || '—'}</td>
                     <td className="px-2 py-3">
-                      {event.screenshot ? (
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <button type="button" aria-label={`Agrandir la capture · ${event.event}`} className="rounded border border-border">
-                              <img src={event.screenshot.content} alt="" loading="lazy" className="h-9 w-14 object-contain" />
-                            </button>
-                          </DialogTrigger>
-                          <DialogContent className="sm:max-w-5xl">
-                            <DialogHeader className="pr-8">
-                              <DialogTitle className="break-words">{event.event}</DialogTitle>
-                              <DialogDescription className="sr-only">Capture de l’annonce économique</DialogDescription>
-                            </DialogHeader>
-                            <img src={event.screenshot.content} alt={event.screenshot.name} className="mx-auto max-h-[70vh] max-w-full object-contain" />
-                          </DialogContent>
-                        </Dialog>
-                      ) : '—'}
+                      {event.screenshot ? <CapturePreview screenshot={event.screenshot} title={event.event} /> : '—'}
                     </td>
                   </tr>)}
                 </tbody>
