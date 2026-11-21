@@ -1,4 +1,5 @@
 import { useSaveConfirmation } from '@/hooks/useSaveConfirmation';
+import { readScreenshot, SCREENSHOT_ACCEPT } from '@/lib/screenshots';
 import { format } from 'date-fns';
 import { useRef, useState, type FormEvent } from 'react';
 import { BookOpen, Plus, Pencil, Trash2, ChevronLeft, ChevronRight, Download, ZoomIn, ZoomOut, ImagePlus } from 'lucide-react';
@@ -9,17 +10,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel } from '@/components/ui/alert-dialog';
-
-function readScreenshot(file: File): Promise<Note['screenshots'][number]> {
-  if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type)) throw new Error('Choisissez des images PNG, JPEG, WebP ou GIF.');
-  if (file.size > 5 * 1024 * 1024) throw new Error('Chaque capture doit faire moins de 5 Mo.');
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Impossible de lire la capture.'));
-    reader.onload = () => resolve({ id: crypto.randomUUID(), name: file.name, content: String(reader.result) });
-    reader.readAsDataURL(file);
-  });
-}
 
 export default function Notes() {
   const { data, upsertRow, updateRow, deleteRow } = useData();
@@ -90,7 +80,7 @@ export default function Notes() {
             <p className="mt-1 text-xs text-muted-foreground">Ctrl+V / ⌘V dans la note · PNG, JPEG, WebP, GIF · 5 Mo par image</p>
             <Button type="button" variant="outline" className="mt-3" disabled={busy || saved} onClick={() => fileInput.current?.click()}>Choisir des images</Button>
             <label htmlFor="note-images" className="sr-only">Ajouter des captures (5 Mo maximum par image)</label>
-            <input ref={fileInput} id="note-images" className="sr-only" type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif" disabled={busy || saved} onChange={event => { const files = Array.from(event.target.files ?? []); event.target.value = ''; void addImages(files); }} />
+            <input ref={fileInput} id="note-images" className="sr-only" type="file" multiple accept={SCREENSHOT_ACCEPT} disabled={busy || saved} onChange={event => { const files = Array.from(event.target.files ?? []); event.target.value = ''; void addImages(files); }} />
           </div>
           {draft.screenshots.length > 0 && <p className="text-sm text-muted-foreground">{draft.screenshots.length} capture{draft.screenshots.length > 1 ? 's' : ''} · Cliquez pour agrandir</p>}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{draft.screenshots.map((image, index) => <div key={image.id} className="min-w-0 rounded-xl border border-border p-2"><button type="button" className="block w-full rounded-lg focus-visible:ring-2 ring-primary" aria-label={`Agrandir ${image.name}`} onClick={() => preview(draft.screenshots, index)}><img src={image.content} alt={image.name} className="aspect-video w-full rounded-lg bg-muted/30 object-contain" /></button><Button type="button" variant="ghost" size="sm" disabled={busy || saved} className="mt-1 h-auto w-full whitespace-normal break-all text-destructive" onClick={() => setDraft({ ...draft, screenshots: draft.screenshots.filter(item => item.id !== image.id) })}>Retirer {image.name}</Button></div>)}</div>

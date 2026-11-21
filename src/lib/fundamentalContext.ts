@@ -1,3 +1,4 @@
+import type { Screenshot } from '@/types/note';
 import { shiftDay } from '@/lib/discipline';
 
 export const PAIRS = ['EURUSD', 'GBPUSD', 'AUDUSD'] as const;
@@ -17,6 +18,7 @@ export interface EconomicEvent {
   forecast: string;
   previous: string;
   actual: string;
+  screenshot?: Screenshot;
 }
 
 export interface BankContext {
