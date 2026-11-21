@@ -62,7 +62,7 @@ export function ContextEditor({ block, existing, onSave, onClose }: EditorProps)
                 <legend className="px-1 text-sm font-medium">{bank}</legend>
                 <label className="grid gap-1 text-sm">Taux (%)<Input inputMode="decimal" maxLength={24} value={entry.rate} onChange={e => setBanks(current => ({ ...current, [bank]: { ...entry, rate: e.target.value } }))} /></label>
                 <label className="grid gap-1 text-sm">Prochaine réunion<Input type="date" value={entry.meeting} onChange={e => setBanks(current => ({ ...current, [bank]: { ...entry, meeting: e.target.value } }))} /></label>
-                <label className="grid gap-1 text-sm">Ton / biais<Input maxLength={120} value={entry.tone} onChange={e => setBanks(current => ({ ...current, [bank]: { ...entry, tone: e.target.value } }))} /></label>
+                <label className="grid gap-1 text-sm">Biais<Input maxLength={120} value={entry.tone} onChange={e => setBanks(current => ({ ...current, [bank]: { ...entry, tone: e.target.value } }))} /></label>
               </fieldset>;
             })}
           </div>

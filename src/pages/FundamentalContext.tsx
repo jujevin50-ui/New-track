@@ -44,14 +44,20 @@ function Block({ block, children, onEdit, editing, editor, action }: {
   );
 }
 
-function Details({ fields, empty = 'À renseigner' }: { fields: [string, string | undefined][]; empty?: string }) {
+type Detail = [label: string, value: string | undefined, numeric?: true];
+
+function Details({ fields, empty = 'À renseigner' }: { fields: Detail[]; empty?: string }) {
   if (!fields.some(([, value]) => value)) return <p className="text-sm text-muted-foreground">{empty}</p>;
   return (
     <dl className="space-y-2 text-sm">
-      {fields.map(([label, value]) => (
+      {fields.map(([label, value, numeric]) => (
         <div key={label} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] gap-3">
           <dt className="text-muted-foreground">{label}</dt>
-          <dd className="whitespace-pre-wrap break-words text-right">{value || '—'}</dd>
+          <dd className="whitespace-pre-wrap break-words text-right">
+            {numeric && value ? (
+              <span className="inline-block max-w-full rounded-md border border-primary/40 bg-primary/10 px-2 py-0.5 font-medium tabular-nums text-primary">{value}</span>
+            ) : value || '—'}
+          </dd>
         </div>
       ))}
     </dl>
@@ -173,8 +179,8 @@ export default function FundamentalContext() {
         <Button variant="ghost" size="sm" onClick={() => { setPasteError(''); setMonday(currentWeek()); }} disabled={editing !== null || pasting || monday === currentWeek()}>Cette semaine</Button>
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Block block="regime" {...blockProps}><Details fields={[[ 'Régime', data.regime?.regime ], [ 'VIX', data.regime?.vix ]]} /></Block>
-        <Block block="dollar" {...blockProps}><Details fields={[[ 'DXY', data.dollar?.dxy ], [ 'US10Y', addUnit(data.dollar?.us10y, '%') ], [ 'Biais Fed', data.dollar?.fedBias ]]} /></Block>
+        <Block block="regime" {...blockProps}><Details fields={[[ 'Régime', data.regime?.regime ], [ 'VIX', data.regime?.vix, true ]]} /></Block>
+        <Block block="dollar" {...blockProps}><Details fields={[[ 'DXY', data.dollar?.dxy, true ], [ 'US10Y', addUnit(data.dollar?.us10y, '%'), true ], [ 'Biais Fed', data.dollar?.fedBias ]]} /></Block>
         <Block block="week" {...blockProps}>
           <p className="mb-2 text-sm font-medium">Semaine {weekNumber(monday)}</p>
           <TextBlock value={data.week?.events} empty="Aucun événement majeur renseigné." />
@@ -202,9 +208,9 @@ export default function FundamentalContext() {
             {BANKS.map(bank => <div key={bank} className="min-w-0">
               <h3 className="mb-2 text-sm font-medium">{bank}</h3>
               <Details fields={[
-                ['Taux', addUnit(banks[bank]?.rate, '%')],
+                ['Taux', addUnit(banks[bank]?.rate, '%'), true],
                 ['Prochaine réunion', banks[bank]?.meeting ? dateLabel(banks[bank].meeting) : undefined],
-                ['Ton / biais', banks[bank]?.tone],
+                ['Biais', banks[bank]?.tone],
               ]} />
             </div>)}
           </div>
