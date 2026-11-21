@@ -66,15 +66,15 @@ function CapturePreview({ screenshot, title, fullWidth = false }: {
     <Dialog>
       <DialogTrigger asChild>
         <button type="button" aria-label={`Agrandir la capture · ${title}`} className={`rounded border border-border ${fullWidth ? 'w-full bg-muted/20' : ''}`}>
-          <img src={screenshot.content} alt="" loading="lazy" className={fullWidth ? 'mx-auto max-h-72 max-w-full object-contain' : 'h-9 w-14 object-contain'} />
+          <img src={screenshot.content} alt="" loading="lazy" className={fullWidth ? 'block h-auto w-full rounded' : 'h-9 w-14 object-contain'} />
         </button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-5xl">
+      <DialogContent className={fullWidth ? 'sm:max-w-7xl' : 'sm:max-w-5xl'}>
         <DialogHeader className="pr-8">
           <DialogTitle className="break-words">{title}</DialogTitle>
           <DialogDescription className="sr-only">Capture du calendrier économique</DialogDescription>
         </DialogHeader>
-        <img src={screenshot.content} alt={screenshot.name} className="mx-auto max-h-[70vh] max-w-full object-contain" />
+        <img src={screenshot.content} alt={screenshot.name} className={`mx-auto max-w-full object-contain ${fullWidth ? 'max-h-[76dvh]' : 'max-h-[70vh]'}`} />
       </DialogContent>
     </Dialog>
   );
@@ -105,7 +105,7 @@ export default function FundamentalContext() {
     editing,
     editor: editing && <ContextEditor block={editing} existing={data} monday={monday} onSave={save} onClose={() => setEditing(null)} />,
   };
-  const editingWideBlock = editing === 'calendar' || editing === 'banks';
+  const stackCalendarAndBanks = Boolean(calendar.screenshot) || editing === 'calendar' || editing === 'banks';
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-[1440px] space-y-5 pb-10">
@@ -133,7 +133,7 @@ export default function FundamentalContext() {
           ]} />
         </Block>)}
       </div>
-      <div className={`grid grid-cols-1 gap-4 ${editingWideBlock ? '' : 'lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]'}`}>
+      <div className={`grid grid-cols-1 gap-4 ${stackCalendarAndBanks ? '' : 'lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]'}`}>
         <Block block="calendar" {...blockProps}>
           {calendar.screenshot && (
             <div className={events.length > 0 ? 'mb-4' : undefined}>
