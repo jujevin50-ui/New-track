@@ -1186,7 +1186,8 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 .trade-history th button { text-transform: none; letter-spacing: normal; font-weight: 500; }
 .trade-history td { font-size: 12px; }
 .trade-history td .font-mono { font-family: inherit; font-variant-numeric: tabular-nums; }
-.trade-history tr { border: 0; }
+.trade-history table :is(th, td) { border: 1px solid hsl(var(--border)); }
+.workspace-shell main .trade-history table > thead > tr:last-child { background-image: none; }
 .trade-history td > span.border { border-color: transparent; }
 .trade-history .overflow-x-auto { max-width: 100%; }
 .trades-advanced summary { width: fit-content; padding: 5px 0; }

@@ -195,7 +195,7 @@ const TradeTable = ({
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1080px] border-collapse">
             <thead>
-              <tr className="border-b border-border bg-secondary/35">
+              <tr className="bg-secondary/35">
                 <th className="px-4 py-3 text-left"><SortButton field="tradeNumber">#</SortButton></th>
                 <th className="px-4 py-3 text-left"><SortButton field="pair">Paire</SortButton></th>
                 <th className="px-4 py-3 text-left"><SortButton field="date">Date</SortButton></th>
@@ -228,7 +228,7 @@ const TradeTable = ({
                   <tr
                     key={trade.id}
                     onClick={() => onEdit(trade)}
-                    className={`group cursor-pointer border-b border-border/35 transition-colors hover:bg-accent/25 ${
+                    className={`group cursor-pointer transition-colors hover:bg-accent/25 ${
                       index % 2 ? 'bg-secondary/[0.06]' : ''
                     }`}
                   >
@@ -363,7 +363,7 @@ const TradeTable = ({
               })}
             </tbody>
             <tfoot>
-              <tr className="border-t-2 border-border bg-secondary/35 font-semibold">
+              <tr className="bg-secondary/35 font-semibold">
                 <th scope="row" colSpan={4} className="px-4 py-4 text-left">
                   Total net <span className="text-xs font-normal text-muted-foreground">(trades clôturés de la sélection)</span>
                 </th>
