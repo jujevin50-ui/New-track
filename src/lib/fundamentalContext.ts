@@ -1,4 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
 import { shiftDay } from '@/lib/discipline';
 
 export const PAIRS = ['EURUSD', 'GBPUSD', 'AUDUSD'] as const;
@@ -44,6 +43,11 @@ export type FundamentalBlocks = Record<Pair, PairContext> & {
 export type BlockKey = keyof FundamentalBlocks;
 export type WeekContext = Partial<FundamentalBlocks>;
 
+export interface FundamentalWeek {
+  weekStart: string;
+  blocks: WeekContext;
+}
+
 export const BLOCK_TITLES: Record<BlockKey, string> = {
   regime: 'Régime de marché',
   dollar: 'Dollar',
@@ -76,16 +80,3 @@ export function calendarForWeek(events: EconomicEvent[], monday: string) {
   return events.filter(event => CURRENCIES.includes(event.currency) && event.date >= monday && event.date <= sunday)
     .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
 }
-
-function configureClient() {
-  const url = import.meta.env.VITE_SUPABASE_URL?.trim();
-  const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim();
-  if (!url || !key) return null;
-  try {
-    return createClient(url, key);
-  } catch {
-    return null;
-  }
-}
-
-export const fundamentalClient = configureClient();
