@@ -5,6 +5,7 @@ import { useData } from '@/contexts/DataContext';
 import { useDailyJournal } from '@/hooks/useDailyJournal';
 import { useTrades } from '@/hooks/useTrades';
 import { useSaveConfirmation } from '@/hooks/useSaveConfirmation';
+import { queueBackgroundSave } from '@/lib/backgroundSaves';
 import { localDay } from '@/lib/discipline';
 import { measureObjective, type Objective } from '@/lib/objectives';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,7 @@ export default function Objectives() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [removing, setRemoving] = useState<Objective | null>(null);
   const [pending, setPending] = useState('');
+  const [pendingCompletion, setPendingCompletion] = useState(() => new Map<string, boolean>());
   const [error, setError] = useState('');
   const lock = useRef(false);
   const { saved, saveInBackground } = useSaveConfirmation();
@@ -72,9 +74,20 @@ export default function Objectives() {
   };
 
   const toggleCompleted = (objective: Objective, completed: boolean) => {
-    void write(objective.id, () => updateRow('objectives', objective.id, { completed }), () => {
+    if (lock.current || saved || pendingCompletion.has(objective.id)) return;
+    setPendingCompletion(current => new Map(current).set(objective.id, completed));
+    const clearCompletion = () => {
+      setPendingCompletion(current => {
+        const next = new Map(current);
+        next.delete(objective.id);
+        return next;
+      });
+    };
+    queueBackgroundSave(async () => {
+      await updateRow('objectives', objective.id, { completed });
+      clearCompletion();
       if (completed) toast.success('Objectif atteint', { description: objective.title });
-    }, 'Impossible de modifier l’état de cet objectif.');
+    }, 'Impossible de modifier l’état de cet objectif.', clearCompletion);
   };
 
   return (
@@ -91,16 +104,18 @@ export default function Objectives() {
         ) : (
           <ul className="space-y-2">
             {data.objectives.map(objective => {
-              const completed = objective.completed ?? (measureObjective(objective, today, journals, allTrades).status === 'achieved');
+              const completionPending = pendingCompletion.has(objective.id);
+              const completed = pendingCompletion.get(objective.id) ?? objective.completed
+                ?? (measureObjective(objective, today, journals, allTrades).status === 'achieved');
               return (
                 <li key={objective.id} className="objective-card flex min-w-0 items-start gap-2 rounded-xl border border-border/70 p-3">
                   <label className="flex min-h-11 min-w-0 flex-1 cursor-pointer items-start gap-3 px-1 py-2.5">
                     <Checkbox
                       aria-label={`Objectif atteint : ${objective.title}`}
                       checked={completed}
-                      disabled={Boolean(pending)}
+                      disabled={Boolean(pending) || completionPending}
                       onCheckedChange={checked => toggleCompleted(objective, checked === true)}
-                      className="mt-0.5"
+                      className="mt-0.5 disabled:opacity-100"
                     />
                     <span className="min-w-0">
                       <span className={`block break-words font-medium ${completed ? 'text-muted-foreground line-through' : ''}`}>{objective.title}</span>
@@ -109,7 +124,7 @@ export default function Objectives() {
                   </label>
                   <div className="flex shrink-0 items-center gap-1">
                     <Button variant="ghost" size="icon" aria-label={`Modifier ${objective.title}`} disabled={Boolean(pending)} onClick={() => openEditor(objective)}><Pencil aria-hidden="true" /></Button>
-                    <Button variant="ghost" size="icon" aria-label={`Supprimer ${objective.title}`} disabled={Boolean(pending)} onClick={() => { setError(''); setRemoving(objective); }}><Trash2 aria-hidden="true" /></Button>
+                    <Button variant="ghost" size="icon" aria-label={`Supprimer ${objective.title}`} disabled={Boolean(pending) || completionPending} onClick={() => { setError(''); setRemoving(objective); }}><Trash2 aria-hidden="true" /></Button>
                   </div>
                 </li>
               );
