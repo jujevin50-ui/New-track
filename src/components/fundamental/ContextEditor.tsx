@@ -1,13 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { readScreenshot, SCREENSHOT_ACCEPT } from '@/lib/screenshots';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { shiftDay } from '@/lib/discipline';
 import {
-  BANKS, BLOCK_TITLES, CURRENCIES, calendarForWeek, type BlockKey, type EconomicEvent, type FundamentalBlocks, type WeekContext,
+  BANKS, BLOCK_TITLES, CURRENCIES, type BlockKey, type EconomicEvent, type FundamentalBlocks, type WeekContext,
 } from '@/lib/fundamentalContext';
 
 const selectClass = 'ui-select-trigger w-full rounded-[10px] border border-input bg-background px-3 text-sm';
@@ -36,15 +35,14 @@ interface EditorProps {
   monday: string;
   existing: WeekContext;
   onSave: SaveBlock;
-  dirty: boolean;
-  onDirtyChange: (dirty: boolean) => void;
+  onClose: () => void;
 }
 
-export function ContextEditor({ block, monday, existing, onSave, dirty, onDirtyChange }: EditorProps) {
-  const savedValues = () => block === 'calendar' || block === 'banks'
-    ? {} : { ...(existing[block] as Record<string, string> | undefined) };
-  const [values, setValues] = useState(savedValues);
-  const [events, setEvents] = useState(() => block === 'calendar' ? calendarForWeek(existing.calendar ?? [], monday) : []);
+export function ContextEditor({ block, monday, existing, onSave, onClose }: EditorProps) {
+  const [values, setValues] = useState<Record<string, string>>(
+    () => ['calendar', 'banks'].includes(block) ? {} : { ...(existing[block] as Record<string, string> | undefined) },
+  );
+  const [events, setEvents] = useState(() => existing.calendar ?? []);
   const [banks, setBanks] = useState(() => existing.banks ?? {});
   const [saving, setSaving] = useState(false);
   const [readingCapture, setReadingCapture] = useState(false);
@@ -54,7 +52,7 @@ export function ContextEditor({ block, monday, existing, onSave, dirty, onDirtyC
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!dirty || saving || readingCapture) return;
+    if (saving || readingCapture) return;
     setSaving(true);
     setError('');
     try {
@@ -66,9 +64,7 @@ export function ContextEditor({ block, monday, existing, onSave, dirty, onDirtyC
         return;
       }
       await onSave(block, content);
-      setValues(clean);
-      if (block === 'calendar') setEvents(calendarForWeek(content as EconomicEvent[], monday));
-      onDirtyChange(false);
+      onClose();
     } catch {
       setError('La sauvegarde a échoué. Tu peux réessayer.');
     } finally {
@@ -76,41 +72,29 @@ export function ContextEditor({ block, monday, existing, onSave, dirty, onDirtyC
     }
   };
 
-  const restore = () => {
-    setValues(savedValues());
-    if (block === 'calendar') setEvents(calendarForWeek(existing.calendar ?? [], monday));
-    if (block === 'banks') setBanks(existing.banks ?? {});
-    setError('');
-    onDirtyChange(false);
-  };
-
   const updateEvent = (id: string, updates: Partial<Omit<EconomicEvent, 'id'>>) => {
     setEvents(items => items.map(item => item.id === id ? { ...item, ...updates } : item));
-    onDirtyChange(true);
   };
 
   const attachCapture = async (id: string, file: File) => {
     if (saving || readingCapture) return;
-    onDirtyChange(true);
     setReadingCapture(true);
     setError('');
     try {
       updateEvent(id, { screenshot: await readScreenshot(file) });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Impossible de lire la capture.');
-      if (!dirty) onDirtyChange(false);
     } finally {
       setReadingCapture(false);
     }
   };
 
   return (
-    <form aria-label={BLOCK_TITLES[block]} onSubmit={submit} onChange={() => onDirtyChange(true)} className="min-w-0 space-y-4">
+    <form aria-label={`Modifier ${BLOCK_TITLES[block]}`} onSubmit={submit} className="min-w-0 space-y-4">
       {block === 'calendar' && <p className="text-xs text-muted-foreground">Impact fort · heures de Paris</p>}
       <fieldset disabled={saving || readingCapture} className="min-w-0 space-y-4">
         {block === 'calendar' ? (
           <>
-            {events.length === 0 && <p className="text-sm text-muted-foreground">Aucune annonce renseignée cette semaine.</p>}
             {events.map((item, index) => (
               <fieldset key={item.id} className="min-w-0 space-y-3 rounded-xl border border-border p-3">
                 <legend className="px-1 text-sm font-medium">Événement {index + 1}</legend>
@@ -135,7 +119,6 @@ export function ContextEditor({ block, monday, existing, onSave, dirty, onDirtyC
                   <label className="grid min-w-0 gap-1 text-sm">
                     Capture d’écran
                     <Input type="file" accept={SCREENSHOT_ACCEPT} className="h-auto min-w-0 py-2" onChange={event => {
-                      event.stopPropagation();
                       const file = event.currentTarget.files?.[0];
                       event.currentTarget.value = '';
                       if (file) void attachCapture(item.id, file);
@@ -144,31 +127,15 @@ export function ContextEditor({ block, monday, existing, onSave, dirty, onDirtyC
                   <p className="text-xs text-muted-foreground">Colle une image ici ou choisis un fichier de 5 Mo maximum.</p>
                   {item.screenshot && (
                     <div className="flex flex-wrap items-center gap-2">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <button type="button" aria-label={`Agrandir la capture · ${item.event || `Événement ${index + 1}`}`} className="max-w-full rounded-md border border-border">
-                            <img src={item.screenshot.content} alt={item.screenshot.name} className="max-h-28 max-w-full object-contain" />
-                          </button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-5xl">
-                          <DialogHeader className="pr-8">
-                            <DialogTitle className="break-words">{item.event || `Événement ${index + 1}`}</DialogTitle>
-                            <DialogDescription className="sr-only">Capture de l’annonce économique</DialogDescription>
-                          </DialogHeader>
-                          <img src={item.screenshot.content} alt={item.screenshot.name} className="mx-auto max-h-[70vh] max-w-full object-contain" />
-                        </DialogContent>
-                      </Dialog>
+                      <img src={item.screenshot.content} alt={item.screenshot.name} className="max-h-28 max-w-full rounded-md border border-border object-contain" />
                       <Button type="button" variant="ghost" size="sm" onClick={() => updateEvent(item.id, { screenshot: undefined })}>Retirer la capture</Button>
                     </div>
                   )}
                 </div>
-                <Button type="button" variant="ghost" size="sm" onClick={() => { setEvents(items => items.filter(current => current.id !== item.id)); onDirtyChange(true); }}><Trash2 aria-hidden="true" />Retirer l’événement {index + 1}</Button>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setEvents(items => items.filter(current => current.id !== item.id))}><Trash2 aria-hidden="true" />Retirer l’événement {index + 1}</Button>
               </fieldset>
             ))}
-            <Button type="button" variant="outline" onClick={() => {
-              setEvents(items => [...items, { id: crypto.randomUUID(), date: monday, time: '', currency: 'USD', event: '', forecast: '', previous: '', actual: '' }]);
-              onDirtyChange(true);
-            }}><Plus aria-hidden="true" />Ajouter un événement</Button>
+            <Button type="button" variant="outline" onClick={() => setEvents(items => [...items, { id: crypto.randomUUID(), date: monday, time: '', currency: 'USD', event: '', forecast: '', previous: '', actual: '' }])}><Plus aria-hidden="true" />Ajouter un événement</Button>
           </>
         ) : block === 'banks' ? (
           <div className="grid gap-4 sm:grid-cols-2">
@@ -194,10 +161,10 @@ export function ContextEditor({ block, monday, existing, onSave, dirty, onDirtyC
         ))}
       </fieldset>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-      {dirty && <div className="flex flex-wrap justify-end gap-2">
-        <Button type="button" variant="outline" disabled={saving || readingCapture} onClick={restore}>Annuler</Button>
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button type="button" variant="outline" disabled={saving || readingCapture} onClick={onClose}>Annuler</Button>
         <Button type="submit" loading={saving} disabled={readingCapture}>Enregistrer</Button>
-      </div>}
+      </div>
     </form>
   );
 }
