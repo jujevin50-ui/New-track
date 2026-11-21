@@ -32,6 +32,24 @@ afterEach(cleanup);
 afterAll(() => vi.unstubAllGlobals());
 
 describe('Trade entry', () => {
+  it('saves an open trade without a result and only requires the result after closure', async () => {
+    const onSubmit = vi.fn<(data: TradeFormData) => void>();
+    render(<AddTradeDialog open onOpenChange={vi.fn()} onSubmit={onSubmit} accounts={[account]} activeAccountId={account.id} />);
+    const result = screen.getByLabelText('P&L brut (EUR)');
+    expect(result).not.toBeRequired();
+    expect(screen.getByText('En cours')).toBeVisible();
+    expect(screen.queryByRole('group', { name: 'Sortie' })).not.toBeInTheDocument();
+
+    fill('Ouverture', '2026-01-02');
+    fill('Clôture', '2026-01-03');
+    expect(result).toBeRequired();
+    expect(screen.getByRole('group', { name: 'Sortie' })).toBeVisible();
+
+    fill('Clôture', '');
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ endDate: '', result: 0 })));
+  });
+
   it('opens captures in the viewer and returns to the trade draft on Escape', async () => {
     const onOpenChange = vi.fn();
     const screenshots = ['data:image/png;base64,first', 'data:image/png;base64,second'];

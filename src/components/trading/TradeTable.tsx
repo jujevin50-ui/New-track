@@ -143,7 +143,7 @@ const TradeTable = ({
                 const r = getTradeR(trade, balance);
                 const screenshots = getTradeScreenshots(trade);
                 const isProfit = net > 0;
-                const exitStyle = EXIT_STYLES[trade.exitType] || EXIT_STYLES.Manual;
+                const exitStyle = trade.endDate ? EXIT_STYLES[trade.exitType] || EXIT_STYLES.Manual : EXIT_STYLES.Manual;
 
                 return (
                   <tr
@@ -286,7 +286,7 @@ const TradeTable = ({
             <tfoot>
               <tr className="bg-secondary/35 font-semibold">
                 <th scope="row" colSpan={4} className="px-4 py-4 text-left">
-                  Total net <span className="text-xs font-normal text-muted-foreground">(trades clôturés de la sélection)</span>
+                  Total net
                 </th>
                 <td className="px-4 py-4 text-right font-mono tabular-nums">
                   {totals.length ? totals.map(([currency, total]) => (

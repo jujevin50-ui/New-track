@@ -485,6 +485,7 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
     saveInBackground(async () => { await onSubmit(form); }, 'Impossible d’enregistrer le trade.', () => onOpenChange(false));
   };
 
+  const isClosed = Boolean(form.endDate);
   const invalidEnd = Boolean(form.endDate && form.endDate < form.date);
   const invalidRisk = (form.riskPercent || 0) > 100;
   const inputClass = 'h-11 rounded-xl border-transparent bg-secondary/50 font-mono text-sm';
@@ -541,7 +542,7 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
                       <section aria-labelledby={`${fieldId}-result-section`} className="min-w-0 space-y-4">
                         <h4 id={`${fieldId}-result-section`} className="text-sm font-semibold">Résultat</h4>
                         <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,0.7fr)] gap-4">
-                          <div className="space-y-2"><Label htmlFor={`${fieldId}-result`}>P&amp;L brut ({currency})</Label><Input id={`${fieldId}-result`} type="text" inputMode="decimal" pattern={signedDecimal} required placeholder="0,00" value={resultText} onChange={decimalHandler('result', setResultText, true)} className={`${inputClass} h-12 text-lg font-semibold`} /></div>
+                          <div className="space-y-2"><Label htmlFor={`${fieldId}-result`}>P&amp;L brut ({currency})</Label><Input id={`${fieldId}-result`} type="text" inputMode="decimal" pattern={signedDecimal} required={isClosed} placeholder={isClosed ? '0,00' : 'Facultatif'} value={resultText} onChange={decimalHandler('result', setResultText, true)} className={`${inputClass} h-12 text-lg font-semibold`} /></div>
                           <div className="space-y-2"><Label htmlFor={`${fieldId}-risk`}>Risque (%)</Label><Input aria-invalid={invalidRisk || undefined} aria-describedby={invalidRisk ? `${fieldId}-risk-error` : undefined} id={`${fieldId}-risk`} type="text" inputMode="decimal" pattern={decimal} placeholder="0" value={riskText} onChange={decimalHandler('riskPercent', setRiskText, false)} className={`${inputClass} h-12`} />{invalidRisk && <p id={`${fieldId}-risk-error`} className="ui-field-error">Le risque ne peut pas dépasser 100 %.</p>}</div>
                         </div>
                         <details open={feesOpen} onToggle={e => setFeesOpen(e.currentTarget.open)} className="group">
@@ -553,9 +554,11 @@ Pour chaque trade, récupère aussi la note écrite directement sur le screensho
                         </details>
                         <div className="space-y-2">
                           <Label id={`${fieldId}-exit`}>Sortie</Label>
-                          <div role="group" aria-labelledby={`${fieldId}-exit`} className="flex flex-wrap gap-1.5">
-                            {EXIT_TYPES.map(exit => <button key={exit} type="button" aria-pressed={form.exitType === exit} onClick={() => set('exitType', exit)} className={`h-9 rounded-lg border px-3 text-xs font-medium transition-colors ${form.exitType === exit ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border/60 text-muted-foreground hover:bg-secondary'}`}>{exit === 'Manual' ? 'Manuelle' : exit === 'Trail' ? 'Trailing' : exit}</button>)}
-                          </div>
+                          {isClosed ? (
+                            <div role="group" aria-labelledby={`${fieldId}-exit`} className="flex flex-wrap gap-1.5">
+                              {EXIT_TYPES.map(exit => <button key={exit} type="button" aria-pressed={form.exitType === exit} onClick={() => set('exitType', exit)} className={`h-9 rounded-lg border px-3 text-xs font-medium transition-colors ${form.exitType === exit ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border/60 text-muted-foreground hover:bg-secondary'}`}>{exit === 'Manual' ? 'Manuelle' : exit === 'Trail' ? 'Trailing' : exit}</button>)}
+                            </div>
+                          ) : <p className="text-sm text-muted-foreground">En cours</p>}
                         </div>
                       </section>
                     </div>

@@ -1201,16 +1201,25 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 .trades-page .trades-filter-controls .dashboard-filter-account { grid-column: span 2; }
 .trades-page > div:first-child > div:last-child { align-items: center; }
 .trades-page > div:first-child > div:last-child > button { height: 40px; }
-.trades-page > div:first-child .dashboard-switch { height: 40px; }
-.trades-page > div:first-child .dashboard-switch button { height: 32px; min-height: 32px; padding-block: 5px; }
 @media (min-width: 1280px) { .trades-page .trades-filter-controls { grid-template-columns: repeat(6,minmax(0,1fr)); } .trades-page .trades-filter-controls .dashboard-filter-account { grid-column: auto; } }
 @media (max-width: 639px) { .trades-page .trades-filter-controls { grid-template-columns: repeat(2,minmax(0,1fr)); } .trades-page .trades-filter-controls .dashboard-filter-account { grid-column: 1 / -1; } }
 .dashboard-filter-menu-account [data-radix-select-viewport] { height: auto !important; max-height: 360px; }
 
-.trades-toolbar { display: flex; flex-direction: column; align-items: stretch; gap: 16px; }
+.trades-toolbar { --trades-control-height: 42px; display: flex; flex-direction: column; align-items: stretch; gap: 16px; }
 .trades-actions { flex-shrink: 0; align-items: center; }
-.trades-actions > button, .trades-actions .dashboard-switch { height: 42px; }
-.trades-actions .dashboard-switch button { height: 34px; min-height: 34px; padding-block: 5px; }
+.trades-page .trades-toolbar :is(.dashboard-filter-trigger, .trades-actions > button, .dashboard-switch) {
+  height: var(--trades-control-height);
+  min-height: var(--trades-control-height);
+  font-size: 12px;
+}
+.trades-toolbar .dashboard-switch > button {
+  height: calc(var(--trades-control-height) - 8px);
+  min-height: calc(var(--trades-control-height) - 8px);
+  padding-block: 5px;
+}
+@media (max-width: 639px), (pointer: coarse) {
+  .trades-toolbar { --trades-control-height: 56px; }
+}
 @media (min-width: 1280px) {
   .trades-toolbar { flex-direction: row; align-items: flex-end; }
   .trades-page .trades-toolbar .trades-filter-controls { flex: 1; min-width: 0; gap: 10px; grid-template-columns: minmax(0,1fr) minmax(0,1.6fr) repeat(4,minmax(0,1fr)); }
