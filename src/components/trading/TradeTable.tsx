@@ -31,6 +31,7 @@ const money = (value: number, currency = '') => {
 };
 
 const pad = (value: number) => String(value).padStart(4, '0');
+const tableDate = (date: string) => date.split('-').reverse().join('/');
 
 const EXIT_STYLES: Record<string, string> = {
   TP: 'bg-profit/10 text-profit border-profit/20',
@@ -49,9 +50,21 @@ const TradeTable = ({
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const rows = useMemo(() => [...trades].sort((a, b) => b.tradeNumber - a.tradeNumber), [trades]);
 
-  const totals = useMemo(() => {
+  const { totals, period, strategyRate } = useMemo(() => {
     const byCurrency = new Map<string, { net: number; percent: number | null; r: number | null }>();
-    trades.filter(trade => trade.endDate).forEach(trade => {
+    let firstDate = '';
+    let lastDate = '';
+    let closedCount = 0;
+    let respectedCount = 0;
+    for (const trade of trades) {
+      const opened = trade.date.slice(0, 10);
+      const lastTradeDate = (trade.endDate || trade.date).slice(0, 10);
+      if (opened && (!firstDate || opened < firstDate)) firstDate = opened;
+      if (lastTradeDate > lastDate) lastDate = lastTradeDate;
+      if (!trade.endDate) continue;
+
+      closedCount++;
+      if (trade.strategyRespected === true) respectedCount++;
       const account = accounts.find(account => account.id === trade.accountId);
       const currency = account?.currency || '';
       const balance = account?.initialBalance || 0;
@@ -62,8 +75,15 @@ const TradeTable = ({
       const r = getTradeR(trade, balance);
       if (r !== null) total.r = (total.r ?? 0) + r;
       byCurrency.set(currency, total);
-    });
-    return [...byCurrency.entries()];
+    }
+    const period = firstDate && lastDate
+      ? firstDate === lastDate ? tableDate(firstDate) : `${tableDate(firstDate)} – ${tableDate(lastDate)}`
+      : '—';
+    return {
+      totals: [...byCurrency.entries()],
+      period,
+      strategyRate: closedCount ? respectedCount / closedCount * 100 : null,
+    };
   }, [trades, accounts]);
 
   const allImages = useMemo(
@@ -287,6 +307,7 @@ const TradeTable = ({
               <tr className="bg-secondary/35 font-semibold">
                 <th scope="row" colSpan={4} className="px-4 py-4 text-left">
                   Total net
+                  <span className="mt-1 block text-xs font-normal text-muted-foreground">Période {period}</span>
                 </th>
                 <td className="px-4 py-4 text-right font-mono tabular-nums">
                   {totals.length ? totals.map(([currency, total]) => (
@@ -305,7 +326,11 @@ const TradeTable = ({
                     }) : '—'}
                   </td>
                 ))}
-                <td colSpan={6} />
+                <td colSpan={2} />
+                <td aria-label="Respect de la stratégie sur les trades clôturés" className="px-4 py-4 text-center font-mono tabular-nums">
+                  {strategyRate === null ? '—' : `${strategyRate.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} %`}
+                </td>
+                <td colSpan={3} />
               </tr>
             </tfoot>
 
