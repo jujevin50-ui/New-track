@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 const THEME_KEY = 'trading-journal-theme';
 const MODE_KEY = 'trading-journal-mode-v2';
 
-export type ThemeMode = 'light' | 'gray' | 'dark';
+export type ThemeMode = 'light' | 'dark';
 
 export interface ThemeConfig {
   primaryHue: number;
@@ -45,15 +45,12 @@ const COLOR_PRESETS = [
   { name: 'Indigo', hue: 245, sat: 70, light: 55 },
 ];
 
-function applyTheme(config: ThemeConfig, mode: ThemeMode) {
+function applyTheme(config: ThemeConfig) {
   const root = document.documentElement;
-  const vivid = mode === 'gray';
-  const hue = vivid && config.primarySat < 25 ? 215 : config.primaryHue;
-  const saturation = vivid ? Math.max(config.primarySat, 88) : config.primarySat;
-  const lightness = vivid ? 72 : config.primaryLight;
-  const hsl = `${hue} ${saturation}% ${lightness}%`;
+  const { primaryHue, primarySat, primaryLight } = config;
+  const hsl = `${primaryHue} ${primarySat}% ${primaryLight}%`;
   root.style.setProperty('--primary', hsl);
-  root.style.setProperty('--primary-foreground', foregroundForHsl(hue, saturation, lightness));
+  root.style.setProperty('--primary-foreground', foregroundForHsl(primaryHue, primarySat, primaryLight));
   root.style.setProperty('--ring', hsl);
   root.style.setProperty('--balance', hsl);
   root.style.setProperty('--chart-balance', hsl);
@@ -65,22 +62,21 @@ function applyTheme(config: ThemeConfig, mode: ThemeMode) {
 function readMode(): ThemeMode {
   try {
     const value = localStorage.getItem(MODE_KEY);
-    if (value === 'gray' || value === 'dark') return value;
+    if (value === 'dark') return value;
   } catch { /* clair */ }
   return 'light';
 }
 
 function applyMode(mode: ThemeMode) {
   const root = document.documentElement;
-  root.classList.toggle('dark', mode !== 'light');
-  root.classList.toggle('theme-gray', mode === 'gray');
+  root.classList.toggle('dark', mode === 'dark');
   root.classList.remove('light');
 }
 
 /** Applique la couleur système et le mode avant le premier rendu React. */
 export function initTheme() {
   const mode = readMode();
-  applyTheme(readTheme(), mode);
+  applyTheme(readTheme());
   applyMode(mode);
 }
 
@@ -90,7 +86,7 @@ export const useTheme = () => {
   const [mode, setMode] = useState<ThemeMode>(readMode);
 
   useEffect(() => {
-    applyTheme(theme, mode);
+    applyTheme(theme);
     applyMode(mode);
     localStorage.setItem(THEME_KEY, JSON.stringify(theme));
     localStorage.setItem(MODE_KEY, mode);

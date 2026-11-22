@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Palette, LayoutGrid, Eye, EyeOff, Sun, Contrast, Moon, User, FileText, Flag, GripVertical, Plus, X, Settings2, Check, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react';
+import { Palette, LayoutGrid, Eye, EyeOff, Sun, Moon, User, FileText, Flag, GripVertical, Plus, X, Settings2, Check, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react';
 import { NavItem } from '@/hooks/useNavConfig';
 import type { ThemeMode } from '@/hooks/useTheme';
 import { useEventColors } from '@/hooks/useEventColors';
@@ -12,7 +12,6 @@ import { PRESET_COLORS } from '@/hooks/useDashboardConfig';
 
 const displayModes = [
   { value: 'light', title: 'Clair', Icon: Sun },
-  { value: 'gray', title: 'Gris', Icon: Contrast },
   { value: 'dark', title: 'Sombre', Icon: Moon },
 ] as const;
 
@@ -78,7 +77,7 @@ export function SettingsDialog({ open, onOpenChange, theme, presets, onSetColor,
     {section === 'appearance' && <div className="space-y-6">
     <section className="settings-card">
       <h3>Mode d’affichage</h3>
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+      <div className="mt-4 grid grid-cols-2 gap-3">
         {displayModes.map(({ value, title, Icon }) => (
           <button key={value} type="button" aria-pressed={mode === value} onClick={() => onSetMode(value)} className={`settings-mode ${mode === value ? 'is-current' : ''}`}>
             <div className={`settings-mode-preview ${value}`} aria-hidden="true"><span /><div><i /><i /><i /></div></div>
