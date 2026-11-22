@@ -2,9 +2,9 @@ import type { Screenshot } from '@/types/note';
 import { shiftDay } from '@/lib/discipline';
 
 export const BANKS = ['Fed', 'BCE', 'BoE', 'RBA'] as const;
-export const ANALYSIS_PAIRS = ['EURUSD', 'GBPUSD', 'AUDUSD'] as const;
+export const ANALYSIS_INSTRUMENTS = ['EURUSD', 'GBPUSD', 'AUDUSD', 'DXY'] as const;
 
-export type AnalysisPair = typeof ANALYSIS_PAIRS[number];
+export type AnalysisInstrument = typeof ANALYSIS_INSTRUMENTS[number];
 type Currency = 'USD' | 'EUR' | 'GBP' | 'AUD';
 export type Bank = typeof BANKS[number];
 
@@ -31,7 +31,7 @@ export interface BankContext {
   tone: string;
 }
 
-export interface PairAnalysis {
+export interface InstrumentAnalysis {
   note?: string;
   screenshot?: Screenshot;
   bias?: '' | 'Haussier' | 'Baissier' | 'Neutre';
@@ -39,7 +39,7 @@ export interface PairAnalysis {
   driver?: string;
 }
 
-export type FundamentalBlocks = Record<AnalysisPair, PairAnalysis> & {
+export type FundamentalBlocks = Record<AnalysisInstrument, InstrumentAnalysis> & {
   regime: { regime: '' | 'Risk-on' | 'Risk-off'; vix: string };
   dollar: { dxy: string; us10y: string; fedBias: string };
   week: { events: string };
@@ -49,11 +49,11 @@ export type FundamentalBlocks = Record<AnalysisPair, PairAnalysis> & {
 };
 
 export type BlockKey = keyof FundamentalBlocks;
-export type EditableBlockKey = Exclude<BlockKey, 'calendar' | AnalysisPair>;
+export type EditableBlockKey = Exclude<BlockKey, 'calendar' | AnalysisInstrument>;
 export type WeekContext = Partial<FundamentalBlocks>;
 
-export function isAnalysisPair(block: BlockKey): block is AnalysisPair {
-  return ANALYSIS_PAIRS.some(pair => pair === block);
+export function isAnalysisInstrument(block: BlockKey): block is AnalysisInstrument {
+  return ANALYSIS_INSTRUMENTS.some(pair => pair === block);
 }
 
 export interface FundamentalWeek {
@@ -68,6 +68,7 @@ export const BLOCK_TITLES: Record<BlockKey, string> = {
   EURUSD: 'EURUSD',
   GBPUSD: 'GBPUSD',
   AUDUSD: 'AUDUSD',
+  DXY: 'DXY',
   calendar: 'Calendrier éco',
   banks: 'Banques centrales',
   notes: 'Notes et news clés',

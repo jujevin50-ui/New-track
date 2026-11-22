@@ -8,7 +8,7 @@ Les enregistrements sont regroupés par semaine dans la section `fundamentalWeek
 
 Dans le formulaire de modification de **Banques centrales**, **Reporter à la semaine suivante** copie les taux, réunions et biais du formulaire dans les champs encore vides de la semaine qui suit celle affichée, puis ouvre cette semaine. **Enregistrer** garde les modifications pour la semaine en cours d’édition.
 
-Dans **Analyse des paires**, le crayon de chaque paire ouvre le biais, la note et la capture d’écran. Choisis **Haussier** ou **Baissier**, puis utilise **Coller l’image** ou Ctrl+V / ⌘V. Enregistre pour la semaine affichée.
+Dans **Analyse des marchés**, les cartes EURUSD, GBPUSD, AUDUSD et DXY affichent leurs propres analyses. Le crayon de chaque carte ouvre le biais, la note et la capture d’écran. Choisis **Haussier** ou **Baissier**, puis utilise **Coller l’image** ou Ctrl+V / ⌘V. Enregistre pour la semaine affichée.
 
 Dans **Calendrier éco**, copie une image du calendrier puis clique sur **Coller l’image**. La capture s’affiche immédiatement et s’enregistre en arrière-plan pour la semaine affichée. Si le navigateur bloque l’accès au presse-papiers, sélectionne le bouton et utilise Ctrl+V ou ⌘V. Un clic sur la capture permet de l’agrandir.
 

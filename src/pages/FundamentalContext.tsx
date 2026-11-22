@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
-import { ChevronLeft, ChevronRight, Clipboard, Pencil } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clipboard, DollarSign, Pencil } from 'lucide-react';
 import { ContextEditor } from '@/components/fundamental/ContextEditor';
-import { PairAnalysisEditor } from '@/components/fundamental/PairAnalysisEditor';
+import { InstrumentAnalysisEditor } from '@/components/fundamental/InstrumentAnalysisEditor';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useData } from '@/contexts/DataContext';
@@ -11,7 +11,7 @@ import type { Screenshot } from '@/types/note';
 import { pastedImage, readClipboardImage, readScreenshot } from '@/lib/screenshots';
 import { shiftDay } from '@/lib/discipline';
 import {
-  ANALYSIS_PAIRS, BANKS, BLOCK_TITLES, contextDate, currentWeek, fillBankContext, isAnalysisPair,
+  ANALYSIS_INSTRUMENTS, BANKS, BLOCK_TITLES, contextDate, currentWeek, fillBankContext, isAnalysisInstrument,
   readCalendar, weekNumber, type BlockKey, type FundamentalBlocks, type WeekContext,
 } from '@/lib/fundamentalContext';
 
@@ -19,17 +19,39 @@ type PageEditKey = Exclude<BlockKey, 'calendar'>;
 const dateLabel = (day: string) => day ? contextDate.format(new Date(`${day}T00:00:00Z`)) : '—';
 const addUnit = (value: string | undefined, unit: string) => value ? `${value} ${unit}` : undefined;
 
+const baseCurrencyFlags = {
+  EURUSD: 'eu',
+  GBPUSD: 'gb',
+  AUDUSD: 'au',
+} as const;
+
 function Block({ block, children, onEdit, editing, editor, action }: {
   block: BlockKey; children: ReactNode; onEdit: (block: PageEditKey) => void;
   editing: PageEditKey | null; editor: ReactNode; action?: ReactNode;
 }) {
   const isEditing = editing === block;
-  const pairBlock = isAnalysisPair(block);
-  const Heading = pairBlock ? 'h3' : 'h2';
+  const analysisBlock = isAnalysisInstrument(block);
+  const Heading = analysisBlock ? 'h3' : 'h2';
+  const dollarIndex = block === 'DXY';
+  const frame = dollarIndex ? 'border-profit/50 bg-profit/10' : analysisBlock ? 'border-primary/40 bg-primary/5' : 'border-border bg-card/30';
+  const titleColor = dollarIndex ? 'text-profit' : analysisBlock ? 'text-primary' : '';
   return (
-    <section aria-labelledby={`fundamental-${block}`} className={`min-w-0 rounded-xl border p-4 2xl:p-6 ${pairBlock ? 'border-primary/40 bg-primary/5' : 'border-border bg-card/30'}`}>
+    <section aria-labelledby={`fundamental-${block}`} className={`min-w-0 rounded-xl border p-4 2xl:p-6 ${frame}`}>
       <header className="mb-4 flex min-w-0 items-center justify-between gap-2">
-        <Heading id={`fundamental-${block}`} className={`min-w-0 break-words text-sm font-semibold 2xl:text-base ${pairBlock ? 'text-primary' : ''}`}>{BLOCK_TITLES[block]}</Heading>
+        <Heading id={`fundamental-${block}`} className={`flex min-w-0 items-center gap-2 break-words text-sm font-semibold 2xl:text-base ${titleColor}`}>
+          {analysisBlock && (dollarIndex ? (
+            <span className="grid size-7 shrink-0 place-items-center rounded-full border border-profit/40 bg-profit/15" aria-hidden="true">
+              <DollarSign className="size-4" />
+            </span>
+          ) : (
+            <span className="flex shrink-0 items-center -space-x-1.5" aria-hidden="true">
+              {[baseCurrencyFlags[block], 'us'].map(flag => (
+                <img key={flag} src={`/icons/currencies/${flag}.svg`} alt="" className="size-6 rounded-full border border-background object-cover" />
+              ))}
+            </span>
+          ))}
+          {BLOCK_TITLES[block]}
+        </Heading>
         {action ?? (!isEditing && block !== 'calendar' && <Button
           type="button"
           variant="ghost"
@@ -168,9 +190,9 @@ export default function FundamentalContext() {
   const blockProps = {
     onEdit: (block: PageEditKey) => { if (!pasting) setEditing(block); },
     editing,
-    editor: editing && (isAnalysisPair(editing) ? <PairAnalysisEditor
+    editor: editing && (isAnalysisInstrument(editing) ? <InstrumentAnalysisEditor
       key={editing}
-      pair={editing}
+      instrument={editing}
       analysis={data[editing]}
       onSave={analysis => save(editing, existing => ({ ...existing[editing], ...analysis }))}
       onClose={() => setEditing(null)}
@@ -209,12 +231,12 @@ export default function FundamentalContext() {
         </Block>
       </div>
       <section aria-labelledby="fundamental-analysis-heading" className="space-y-3">
-        <h2 id="fundamental-analysis-heading" className="text-sm font-semibold 2xl:text-base">Analyse des paires</h2>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3 2xl:gap-6">
-          {ANALYSIS_PAIRS.map(pair => {
-            const analysis = data[pair];
+        <h2 id="fundamental-analysis-heading" className="text-sm font-semibold 2xl:text-base">Analyse des marchés</h2>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 2xl:gap-6">
+          {ANALYSIS_INSTRUMENTS.map(instrument => {
+            const analysis = data[instrument];
             return (
-              <Block key={pair} block={pair} {...blockProps}>
+              <Block key={instrument} block={instrument} {...blockProps}>
                 <div className="space-y-3">
                   {analysis?.bias && (
                     <span className={`inline-flex rounded-md border px-2 py-1 text-xs font-medium ${
@@ -224,7 +246,7 @@ export default function FundamentalContext() {
                     }`}>{analysis.bias}</span>
                   )}
                   {(analysis?.note || (!analysis?.screenshot && !analysis?.bias)) && <TextBlock value={analysis?.note} empty="Aucune analyse renseignée cette semaine." />}
-                  {analysis?.screenshot && <CapturePreview screenshot={analysis.screenshot} title={`Analyse ${pair}`} compact />}
+                  {analysis?.screenshot && <CapturePreview screenshot={analysis.screenshot} title={`Analyse ${instrument}`} compact />}
                 </div>
               </Block>
             );

@@ -3,17 +3,17 @@ import { Clipboard, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useSaveConfirmation } from '@/hooks/useSaveConfirmation';
-import type { AnalysisPair, PairAnalysis } from '@/lib/fundamentalContext';
+import type { AnalysisInstrument, InstrumentAnalysis } from '@/lib/fundamentalContext';
 import { pastedImage, readClipboardImage, readScreenshot } from '@/lib/screenshots';
 
 interface Props {
-  pair: AnalysisPair;
-  analysis?: PairAnalysis;
-  onSave: (analysis: Pick<PairAnalysis, 'note' | 'screenshot' | 'bias'>) => void;
+  instrument: AnalysisInstrument;
+  analysis?: InstrumentAnalysis;
+  onSave: (analysis: Pick<InstrumentAnalysis, 'note' | 'screenshot' | 'bias'>) => void;
   onClose: () => void;
 }
 
-export function PairAnalysisEditor({ pair, analysis, onSave, onClose }: Props) {
+export function InstrumentAnalysisEditor({ instrument, analysis, onSave, onClose }: Props) {
   const [note, setNote] = useState(analysis?.note ?? '');
   const [bias, setBias] = useState(analysis?.bias ?? '');
   const [screenshot, setScreenshot] = useState(analysis?.screenshot);
@@ -42,7 +42,7 @@ export function PairAnalysisEditor({ pair, analysis, onSave, onClose }: Props) {
   };
 
   return (
-    <form aria-label={`Modifier l’analyse ${pair}`} onSubmit={submit} className="min-w-0 space-y-4" onPaste={event => {
+    <form aria-label={`Modifier l’analyse ${instrument}`} onSubmit={submit} className="min-w-0 space-y-4" onPaste={event => {
       const image = pastedImage(event.clipboardData);
       if (!image) return;
       event.preventDefault();
@@ -63,7 +63,7 @@ export function PairAnalysisEditor({ pair, analysis, onSave, onClose }: Props) {
           <Textarea value={note} maxLength={6000} onChange={event => setNote(event.target.value)} />
         </label>
         <div className="space-y-2">
-          <Button type="button" variant="outline" size="sm" loading={reading} onClick={() => void attach(() => readClipboardImage(`analyse-${pair}`))}>
+          <Button type="button" variant="outline" size="sm" loading={reading} onClick={() => void attach(() => readClipboardImage(`analyse-${instrument}`))}>
             {!reading && <Clipboard aria-hidden="true" />}Coller l’image
           </Button>
           {screenshot && (
