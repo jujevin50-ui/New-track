@@ -144,18 +144,19 @@
   }
 
   :root.theme-gray {
-    --background: 220 6% 25%;
-    --card: 220 6% 30%;
-    --popover: 220 6% 31%;
-    --secondary: 220 6% 35%;
-    --muted: 220 6% 32%;
-    --muted-foreground: 220 8% 77%;
-    --accent: 220 6% 37%;
-    --border: 220 6% 44%;
-    --input: 220 6% 42%;
+    --background: 220 9% 28%;
+    --foreground: 220 14% 97%;
+    --card: 220 9% 34%;
+    --popover: 220 10% 23%;
+    --secondary: 220 9% 39%;
+    --muted: 220 8% 33%;
+    --muted-foreground: 220 12% 83%;
+    --accent: 220 10% 41%;
+    --border: 220 9% 47%;
+    --input: 220 9% 49%;
 
-    --profit: 152 55% 62%;
-    --loss: 357 80% 74%;
+    --profit: 152 57% 70%;
+    --loss: 357 88% 80%;
     --chart-profit: var(--profit);
     --chart-loss: var(--loss);
     --success-soft: 152 20% 23%;
@@ -669,6 +670,11 @@
   --glass-hi: hsl(0 0% 100% / 0.28);
   --glass-sheen: hsl(0 0% 100% / 0.07);
 }
+.theme-gray {
+  --glass-bg: hsl(var(--card) / 0.8);
+  --glass-bg-strong: hsl(var(--popover) / 0.97);
+  --glass-edge-dim: hsl(var(--border) / 0.7);
+}
 
 /* Cartes, widgets, surfaces : verre dépoli */
 html .bg-card,
@@ -1052,7 +1058,7 @@ html .app-panel { background-color: var(--glass-bg-strong); background-image: no
 .settings-mode.is-current { border-color: hsl(var(--primary) / 0.55); background: hsl(var(--primary) / 0.04); }
 .settings-mode-preview { display: flex; gap: 6px; height: 70px; padding: 8px; border: 1px solid hsl(220 10% 50% / 0.15); border-radius: 7px; }
 .settings-mode-preview.light { background: #f4f5f7; color: #d3d8e0; }
-.settings-mode-preview.gray { background: hsl(220 6% 25%); color: hsl(220 7% 52%); }
+.settings-mode-preview.gray { background: hsl(220 9% 28%); color: hsl(220 9% 58%); }
 .settings-mode-preview.dark { background: #151619; color: #363940; }
 .settings-mode-preview > span { width: 25%; border-radius: 3px; background: currentColor; opacity: 0.7; }
 .settings-mode-preview > div { display: flex; flex: 1; flex-direction: column; gap: 5px; }
@@ -1147,6 +1153,11 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 .dashboard-filter-trigger:hover { border-color: hsl(var(--foreground) / 0.3); background: hsl(var(--secondary) / 0.3); }
 .dashboard-filter-trigger[data-state=open] { border-color: hsl(var(--primary) / 0.65); background: hsl(var(--secondary) / 0.3); }
 .dashboard-filter-trigger[data-state=open] > svg { transform: rotate(180deg); }
+.theme-gray .dashboard-filter-trigger:not(:hover):not([data-state=open]),
+.theme-gray :is(.ui-input, .ui-textarea):not([aria-invalid="true"]) {
+  background-color: hsl(var(--card));
+  border-color: hsl(var(--input));
+}
 .dashboard-filter-menu { max-width: calc(100vw - 32px); max-height: min(360px, var(--radix-select-content-available-height)); border-radius: 12px; padding: 4px; border-color: hsl(var(--border)); box-shadow: 0 12px 35px -12px hsl(0 0% 0% / 0.3); }
 .dashboard-filter-menu-label { padding: 8px 10px 10px; font-size: 10px; font-weight: 400; color: hsl(var(--muted-foreground)); }
 .dashboard-filter-option { padding-top: 10px; padding-bottom: 10px; border-radius: 7px; font-size: 12px; cursor: pointer; transition: background 140ms ease; }

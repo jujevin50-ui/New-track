@@ -6,6 +6,8 @@ Connecte ton fichier Track Record comme d’habitude, puis ouvre **Contexte fond
 
 Les enregistrements sont regroupés par semaine dans la section `fundamentalWeeks` du fichier Track Record. Un ancien fichier démarre avec un contexte vide. Si l’application utilise son mode local de repli, le contexte est enregistré dans le navigateur avec les autres données du journal.
 
+Dans **Banques centrales**, **Reporter à la semaine suivante** copie les taux, réunions et biais dans les champs encore vides de la semaine suivante.
+
 Dans **Calendrier éco**, copie une image du calendrier puis clique sur **Coller l’image**. La capture s’affiche immédiatement et s’enregistre en arrière-plan pour la semaine affichée. Si le navigateur bloque l’accès au presse-papiers, sélectionne le bouton et utilise Ctrl+V ou ⌘V. Un clic sur la capture permet de l’agrandir.
 
 ## Fichiers

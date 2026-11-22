@@ -10,7 +10,7 @@ import type { Screenshot } from '@/types/note';
 import { readScreenshot } from '@/lib/screenshots';
 import { shiftDay } from '@/lib/discipline';
 import {
-  BANKS, BLOCK_TITLES, contextDate, currentWeek,
+  BANKS, BLOCK_TITLES, contextDate, currentWeek, fillBankContext,
   readCalendar, weekNumber, type BlockKey, type EditableBlockKey, type FundamentalBlocks, type WeekContext,
 } from '@/lib/fundamentalContext';
 
@@ -94,15 +94,25 @@ export default function FundamentalContext() {
   const [pasting, setPasting] = useState(false);
   const [pasteError, setPasteError] = useState('');
   const { saved: pasteAccepted, confirm: confirmPaste } = useSaveConfirmation();
+  const { saved: banksReported, confirm: confirmBankReport } = useSaveConfirmation();
   const [pending, setPending] = useState(() => new Map<string, { block: BlockKey; content: FundamentalBlocks[BlockKey] }>());
-  let data: WeekContext = appData.fundamentalWeeks.find(week => week.weekStart === monday)?.blocks ?? {};
-  for (const [key, edit] of pending) {
-    if (key.startsWith(`${monday}:`)) data = { ...data, [edit.block]: edit.content };
-  }
 
-  const save = (block: BlockKey, content: FundamentalBlocks[BlockKey]) => {
-    const key = `${monday}:${block}`;
-    const edit = { block, content };
+  const weekData = (weekStart: string) => {
+    let data: WeekContext = appData.fundamentalWeeks.find(week => week.weekStart === weekStart)?.blocks ?? {};
+    for (const [key, edit] of pending) {
+      if (key.startsWith(`${weekStart}:`)) data = { ...data, [edit.block]: edit.content };
+    }
+    return data;
+  };
+
+  const save = (
+    block: BlockKey,
+    change: FundamentalBlocks[BlockKey] | ((existing: WeekContext) => FundamentalBlocks[BlockKey]),
+    weekStart = monday,
+  ) => {
+    const key = `${weekStart}:${block}`;
+    const contentFor = (existing: WeekContext) => typeof change === 'function' ? change(existing) : change;
+    const edit = { block, content: contentFor(weekData(weekStart)) };
     setPending(current => new Map(current).set(key, edit));
     const clear = () => {
       setPending(current => {
@@ -115,12 +125,13 @@ export default function FundamentalContext() {
 
     queueBackgroundSave(async () => {
       await mutateData(current => {
-        const existing = current.fundamentalWeeks.find(week => week.weekStart === monday);
-        const week = { weekStart: monday, blocks: { ...existing?.blocks, [block]: content } };
+        const existing = current.fundamentalWeeks.find(week => week.weekStart === weekStart);
+        const blocks = existing?.blocks ?? {};
+        const week = { weekStart, blocks: { ...blocks, [block]: contentFor(blocks) } };
         return {
           ...current,
           fundamentalWeeks: existing
-            ? current.fundamentalWeeks.map(entry => entry.weekStart === monday ? week : entry)
+            ? current.fundamentalWeeks.map(entry => entry.weekStart === weekStart ? week : entry)
             : [...current.fundamentalWeeks, week],
         };
       });
@@ -128,6 +139,7 @@ export default function FundamentalContext() {
     }, `Impossible d’enregistrer le bloc « ${BLOCK_TITLES[block]} ».`, clear);
   };
 
+  const data = weekData(monday);
   const calendar = readCalendar(data.calendar);
 
   const pasteCalendar = async (getFile: () => Promise<File>) => {
@@ -163,6 +175,14 @@ export default function FundamentalContext() {
   });
 
   const banks = data.banks ?? {};
+  const nextMonday = shiftDay(monday, 7);
+  const nextBanks = weekData(nextMonday).banks ?? {};
+  const canReportBanks = fillBankContext(banks, nextBanks) !== nextBanks;
+  const reportBanks = () => {
+    if (!canReportBanks || banksReported || editing !== null) return;
+    confirmBankReport();
+    save('banks', existing => fillBankContext(banks, existing.banks ?? {}), nextMonday);
+  };
   const blockProps = {
     onEdit: (block: EditableBlockKey) => { if (!pasting) setEditing(block); },
     editing,
@@ -214,6 +234,12 @@ export default function FundamentalContext() {
               ]} />
             </div>)}
           </div>
+          {(canReportBanks || banksReported) && (
+            <Button type="button" variant="outline" size="sm" className="mt-4 h-auto min-h-11 whitespace-normal"
+              saved={banksReported} disabled={editing !== null || banksReported} onClick={reportBanks}>
+              {banksReported ? 'Pris en compte' : 'Reporter à la semaine suivante'}
+            </Button>
+          )}
         </Block>
       </div>
       <Block block="notes" {...blockProps}>

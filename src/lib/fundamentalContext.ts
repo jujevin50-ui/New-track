@@ -81,3 +81,19 @@ export function weekNumber(monday: string) {
 export function readCalendar(value: WeekContext['calendar']): EconomicCalendar {
   return Array.isArray(value) ? { events: value } : value ?? { events: [] };
 }
+
+export function fillBankContext(source: FundamentalBlocks['banks'], target: FundamentalBlocks['banks']) {
+  let result = target;
+  for (const bank of BANKS) {
+    const from = source[bank];
+    if (!from) continue;
+    const to = target[bank];
+    const rate = to?.rate?.trim() ? to.rate : from.rate?.trim() ?? '';
+    const meeting = to?.meeting || from.meeting || '';
+    const tone = to?.tone?.trim() ? to.tone : from.tone?.trim() ?? '';
+    if (rate !== (to?.rate ?? '') || meeting !== (to?.meeting ?? '') || tone !== (to?.tone ?? '')) {
+      result = { ...result, [bank]: { rate, meeting, tone } };
+    }
+  }
+  return result;
+}

@@ -1,6 +1,7 @@
 .workspace-shell > .workspace-rail,
 .ui-sheet.workspace-rail-mobile {
   --rail-accent: hsl(var(--primary));
+  --rail-shadow: black;
   --rail-tint: color-mix(in srgb, var(--rail-accent) 25%, white);
   --rail-text: white;
   --rail-highlight: hsl(var(--background));
@@ -10,14 +11,18 @@
   --rail-hover: color-mix(in srgb, var(--rail-tint) 18%, transparent);
   --rail-pressed: color-mix(in srgb, var(--rail-tint) 21%, transparent);
   color: var(--rail-text);
-  background: radial-gradient(ellipse at 15% 0%, color-mix(in srgb, var(--rail-accent) 42%, black), transparent 57%),
-    linear-gradient(165deg, color-mix(in srgb, var(--rail-accent) 36%, black),
-      color-mix(in srgb, var(--rail-accent) 23%, black) 48%,
-      color-mix(in srgb, var(--rail-accent) 8%, black) 88%);
+  background: radial-gradient(ellipse at 15% 0%, color-mix(in srgb, var(--rail-accent) 42%, var(--rail-shadow)), transparent 57%),
+    linear-gradient(165deg, color-mix(in srgb, var(--rail-accent) 36%, var(--rail-shadow)),
+      color-mix(in srgb, var(--rail-accent) 23%, var(--rail-shadow)) 48%,
+      color-mix(in srgb, var(--rail-accent) 8%, var(--rail-shadow)) 88%);
 }
 
 .dark :is(.workspace-shell > .workspace-rail, .ui-sheet.workspace-rail-mobile) {
   --rail-ink: white;
+}
+
+.theme-gray :is(.workspace-shell > .workspace-rail, .ui-sheet.workspace-rail-mobile) {
+  --rail-shadow: color-mix(in srgb, hsl(var(--background)) 55%, black);
 }
 
 .workspace-shell > .workspace-rail {
