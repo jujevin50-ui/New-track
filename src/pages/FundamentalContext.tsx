@@ -23,9 +23,9 @@ function Block({ block, children, onEdit, editing, editor, action }: {
 }) {
   const isEditing = editing === block;
   return (
-    <section aria-labelledby={`fundamental-${block}`} className="min-w-0 rounded-xl border border-border bg-card/30 p-4">
+    <section aria-labelledby={`fundamental-${block}`} className="min-w-0 rounded-xl border border-border bg-card/30 p-4 2xl:p-6">
       <header className="mb-4 flex min-w-0 items-center justify-between gap-2">
-        <h2 id={`fundamental-${block}`} className="min-w-0 break-words text-sm font-semibold">{BLOCK_TITLES[block]}</h2>
+        <h2 id={`fundamental-${block}`} className="min-w-0 break-words text-sm font-semibold 2xl:text-base">{BLOCK_TITLES[block]}</h2>
         {action ?? (!isEditing && block !== 'calendar' && <Button
           type="button"
           variant="ghost"
@@ -49,10 +49,10 @@ type Detail = [label: string, value: string | undefined, numeric?: true];
 function Details({ fields, empty = 'À renseigner' }: { fields: Detail[]; empty?: string }) {
   if (!fields.some(([, value]) => value)) return <p className="text-sm text-muted-foreground">{empty}</p>;
   return (
-    <dl className="space-y-2 text-sm">
+    <dl className="space-y-2 text-sm 2xl:text-base">
       {fields.map(([label, value, numeric]) => (
         <div key={label} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] gap-3">
-          <dt className="text-muted-foreground">{label}</dt>
+          <dt className="break-words text-muted-foreground">{label}</dt>
           <dd className="whitespace-pre-wrap break-words text-right">
             {numeric && value ? (
               <span className="inline-block max-w-full rounded-md border border-primary/40 bg-primary/10 px-2 py-0.5 font-medium tabular-nums text-primary">{value}</span>
@@ -65,7 +65,7 @@ function Details({ fields, empty = 'À renseigner' }: { fields: Detail[]; empty?
 }
 
 function TextBlock({ value, empty }: { value?: string; empty: string }) {
-  return <p className={`whitespace-pre-wrap break-words text-sm ${value ? '' : 'text-muted-foreground'}`}>{value || empty}</p>;
+  return <p className={`whitespace-pre-wrap break-words text-sm 2xl:text-base ${value ? '' : 'text-muted-foreground'}`}>{value || empty}</p>;
 }
 
 function CapturePreview({ screenshot }: { screenshot: Screenshot }) {
@@ -73,10 +73,10 @@ function CapturePreview({ screenshot }: { screenshot: Screenshot }) {
     <Dialog>
       <DialogTrigger asChild>
         <button type="button" aria-label="Agrandir la capture du calendrier" className="w-full rounded border border-border bg-muted/20">
-          <img src={screenshot.content} alt="" loading="lazy" className="mx-auto block max-h-80 max-w-full rounded object-contain" />
+          <img src={screenshot.content} alt="" loading="lazy" className="mx-auto block max-h-80 max-w-full rounded object-contain 2xl:max-h-[clamp(20rem,32vh,28rem)]" />
         </button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-7xl">
+      <DialogContent className="sm:max-w-7xl min-[1920px]:max-w-[1600px]">
         <DialogHeader className="pr-8">
           <DialogTitle>Calendrier économique de la semaine</DialogTitle>
           <DialogDescription className="sr-only">Capture du calendrier économique</DialogDescription>
@@ -197,7 +197,7 @@ export default function FundamentalContext() {
   };
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-[1440px] space-y-5 pb-10">
+    <div className="mx-auto w-full min-w-0 max-w-[1440px] space-y-5 pb-10 2xl:max-w-[1720px] 2xl:space-y-6 min-[1920px]:max-w-[1920px]">
       <h1 className="sr-only page-title-hidden">Contexte fondamental</h1>
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="outline" size="icon" disabled={editing !== null || pasting} aria-label="Semaine précédente" onClick={() => { setPasteError(''); setMonday(day => shiftDay(day, -7)); }}><ChevronLeft aria-hidden="true" /></Button>
@@ -205,7 +205,7 @@ export default function FundamentalContext() {
         <Button variant="outline" size="icon" disabled={editing !== null || pasting} aria-label="Semaine suivante" onClick={() => { setPasteError(''); setMonday(day => shiftDay(day, 7)); }}><ChevronRight aria-hidden="true" /></Button>
         <Button variant="ghost" size="sm" onClick={() => { setPasteError(''); setMonday(currentWeek()); }} disabled={editing !== null || pasting || monday === currentWeek()}>Cette semaine</Button>
       </div>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3 2xl:gap-6">
         <Block block="regime" {...blockProps}><Details fields={[[ 'Régime', data.regime?.regime ], [ 'VIX', data.regime?.vix, true ]]} /></Block>
         <Block block="dollar" {...blockProps}><Details fields={[[ 'DXY', data.dollar?.dxy, true ], [ 'US10Y', addUnit(data.dollar?.us10y, '%'), true ], [ 'Biais Fed', data.dollar?.fedBias ]]} /></Block>
         <Block block="week" {...blockProps}>
@@ -213,7 +213,7 @@ export default function FundamentalContext() {
           <TextBlock value={data.week?.events} empty="Aucun événement majeur renseigné." />
         </Block>
       </div>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] 2xl:grid-cols-[minmax(0,5fr)_minmax(0,4fr)] 2xl:gap-6">
         <Block block="calendar" {...blockProps} action={
           <Button type="button" variant="outline" size="sm" loading={pasting} saved={pasteAccepted} disabled={editing !== null || pasteAccepted}
             onClick={() => void pasteFromClipboard()}
@@ -231,9 +231,9 @@ export default function FundamentalContext() {
           {calendar.screenshot && <CapturePreview screenshot={calendar.screenshot} />}
         </Block>
         <Block block="banks" {...blockProps}>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 2xl:gap-6">
             {BANKS.map(bank => <div key={bank} className="min-w-0">
-              <h3 className="mb-2 text-sm font-medium">{bank}</h3>
+              <h3 className="mb-2 text-sm font-medium 2xl:text-base">{bank}</h3>
               <Details fields={[
                 ['Taux', addUnit(banks[bank]?.rate, '%'), true],
                 ['Prochaine réunion', banks[bank]?.meeting ? dateLabel(banks[bank].meeting) : undefined],
