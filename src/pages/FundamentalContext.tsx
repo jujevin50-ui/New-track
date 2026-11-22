@@ -8,7 +8,7 @@ import { useData } from '@/contexts/DataContext';
 import { useSaveConfirmation } from '@/hooks/useSaveConfirmation';
 import { queueBackgroundSave } from '@/lib/backgroundSaves';
 import type { Screenshot } from '@/types/note';
-import { readScreenshot } from '@/lib/screenshots';
+import { pastedImage, readClipboardImage, readScreenshot } from '@/lib/screenshots';
 import { shiftDay } from '@/lib/discipline';
 import {
   ANALYSIS_PAIRS, BANKS, BLOCK_TITLES, contextDate, currentWeek, fillBankContext, isAnalysisPair,
@@ -24,11 +24,12 @@ function Block({ block, children, onEdit, editing, editor, action }: {
   editing: PageEditKey | null; editor: ReactNode; action?: ReactNode;
 }) {
   const isEditing = editing === block;
-  const Heading = isAnalysisPair(block) ? 'h3' : 'h2';
+  const pairBlock = isAnalysisPair(block);
+  const Heading = pairBlock ? 'h3' : 'h2';
   return (
-    <section aria-labelledby={`fundamental-${block}`} className="min-w-0 rounded-xl border border-border bg-card/30 p-4 2xl:p-6">
+    <section aria-labelledby={`fundamental-${block}`} className={`min-w-0 rounded-xl border p-4 2xl:p-6 ${pairBlock ? 'border-primary/40 bg-primary/5' : 'border-border bg-card/30'}`}>
       <header className="mb-4 flex min-w-0 items-center justify-between gap-2">
-        <Heading id={`fundamental-${block}`} className="min-w-0 break-words text-sm font-semibold 2xl:text-base">{BLOCK_TITLES[block]}</Heading>
+        <Heading id={`fundamental-${block}`} className={`min-w-0 break-words text-sm font-semibold 2xl:text-base ${pairBlock ? 'text-primary' : ''}`}>{BLOCK_TITLES[block]}</Heading>
         {action ?? (!isEditing && block !== 'calendar' && <Button
           type="button"
           variant="ghost"
@@ -161,23 +162,6 @@ export default function FundamentalContext() {
     }
   };
 
-  const pasteFromClipboard = () => pasteCalendar(async () => {
-    let items: ClipboardItems;
-    try {
-      items = await navigator.clipboard.read();
-    } catch {
-      throw new Error('Sélectionne ce bouton, puis colle ton image avec Ctrl+V ou ⌘V.');
-    }
-    for (const item of items) {
-      const type = item.types.find(value => value.startsWith('image/'));
-      if (type) {
-        const blob = await item.getType(type);
-        return new File([blob], `calendrier.${type.split('/')[1]}`, { type });
-      }
-    }
-    throw new Error('Copie une image du calendrier avant de la coller.');
-  });
-
   const banks = data.banks ?? {};
   const nextMonday = shiftDay(monday, 7);
   const nextBanks = weekData(nextMonday).banks ?? {};
@@ -232,7 +216,14 @@ export default function FundamentalContext() {
             return (
               <Block key={pair} block={pair} {...blockProps}>
                 <div className="space-y-3">
-                  {(analysis?.note || !analysis?.screenshot) && <TextBlock value={analysis?.note} empty="Aucune analyse renseignée cette semaine." />}
+                  {analysis?.bias && (
+                    <span className={`inline-flex rounded-md border px-2 py-1 text-xs font-medium ${
+                      analysis.bias === 'Haussier' ? 'border-profit/40 bg-profit/10 text-profit'
+                        : analysis.bias === 'Baissier' ? 'border-loss/40 bg-loss/10 text-loss'
+                        : 'border-border text-muted-foreground'
+                    }`}>{analysis.bias}</span>
+                  )}
+                  {(analysis?.note || (!analysis?.screenshot && !analysis?.bias)) && <TextBlock value={analysis?.note} empty="Aucune analyse renseignée cette semaine." />}
                   {analysis?.screenshot && <CapturePreview screenshot={analysis.screenshot} title={`Analyse ${pair}`} compact />}
                 </div>
               </Block>
@@ -243,10 +234,9 @@ export default function FundamentalContext() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] 2xl:grid-cols-[minmax(0,5fr)_minmax(0,4fr)] 2xl:gap-6">
         <Block block="calendar" {...blockProps} action={
           <Button type="button" variant="outline" size="sm" loading={pasting} saved={pasteAccepted} disabled={editing !== null || pasteAccepted}
-            onClick={() => void pasteFromClipboard()}
+            onClick={() => void pasteCalendar(() => readClipboardImage('calendrier'))}
             onPaste={event => {
-              const file = Array.from(event.clipboardData.files).find(item => item.type.startsWith('image/'))
-                ?? Array.from(event.clipboardData.items).find(item => item.type.startsWith('image/'))?.getAsFile();
+              const file = pastedImage(event.clipboardData);
               if (!file) return;
               event.preventDefault();
               void pasteCalendar(async () => file);

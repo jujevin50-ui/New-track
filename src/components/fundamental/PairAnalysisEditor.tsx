@@ -1,32 +1,32 @@
 import { useState, type FormEvent } from 'react';
-import { Save } from 'lucide-react';
+import { Clipboard, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useSaveConfirmation } from '@/hooks/useSaveConfirmation';
 import type { AnalysisPair, PairAnalysis } from '@/lib/fundamentalContext';
-import { readScreenshot, SCREENSHOT_ACCEPT } from '@/lib/screenshots';
+import { pastedImage, readClipboardImage, readScreenshot } from '@/lib/screenshots';
 
 interface Props {
   pair: AnalysisPair;
   analysis?: PairAnalysis;
-  onSave: (analysis: Pick<PairAnalysis, 'note' | 'screenshot'>) => void;
+  onSave: (analysis: Pick<PairAnalysis, 'note' | 'screenshot' | 'bias'>) => void;
   onClose: () => void;
 }
 
 export function PairAnalysisEditor({ pair, analysis, onSave, onClose }: Props) {
   const [note, setNote] = useState(analysis?.note ?? '');
+  const [bias, setBias] = useState(analysis?.bias ?? '');
   const [screenshot, setScreenshot] = useState(analysis?.screenshot);
   const [reading, setReading] = useState(false);
   const [error, setError] = useState('');
   const { saved, confirm } = useSaveConfirmation();
 
-  const attach = async (file: File) => {
+  const attach = async (getFile: () => Promise<File>) => {
     if (reading || saved) return;
     setReading(true);
     setError('');
     try {
-      setScreenshot(await readScreenshot(file));
+      setScreenshot(await readScreenshot(await getFile()));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Impossible de lire la capture.');
     } finally {
@@ -38,32 +38,34 @@ export function PairAnalysisEditor({ pair, analysis, onSave, onClose }: Props) {
     event.preventDefault();
     if (reading || saved) return;
     confirm(onClose);
-    onSave({ note: note.trim(), screenshot });
+    onSave({ note: note.trim(), screenshot, bias });
   };
 
   return (
     <form aria-label={`Modifier l’analyse ${pair}`} onSubmit={submit} className="min-w-0 space-y-4" onPaste={event => {
-      const image = Array.from(event.clipboardData.files).find(file => file.type.startsWith('image/'))
-        ?? Array.from(event.clipboardData.items).find(item => item.type.startsWith('image/'))?.getAsFile();
+      const image = pastedImage(event.clipboardData);
       if (!image) return;
       event.preventDefault();
-      void attach(image);
+      void attach(async () => image);
     }}>
       <fieldset disabled={saved || reading} className="min-w-0 space-y-4">
+        <label className="grid gap-1 text-sm">
+          Biais
+          <select value={bias} onChange={event => setBias(event.target.value as typeof bias)} className="ui-select-trigger w-full rounded-[10px] border border-input bg-background px-3 text-sm">
+            <option value="">Non renseigné</option>
+            <option>Haussier</option>
+            <option>Baissier</option>
+            {analysis?.bias === 'Neutre' && <option>Neutre</option>}
+          </select>
+        </label>
         <label className="grid gap-1 text-sm">
           Note
           <Textarea value={note} maxLength={6000} onChange={event => setNote(event.target.value)} />
         </label>
         <div className="space-y-2">
-          <label className="grid min-w-0 gap-1 text-sm">
-            Capture d’écran
-            <Input type="file" accept={SCREENSHOT_ACCEPT} className="h-auto min-w-0 py-2" onChange={event => {
-              const file = event.currentTarget.files?.[0];
-              event.currentTarget.value = '';
-              if (file) void attach(file);
-            }} />
-          </label>
-          <p className="text-xs text-muted-foreground">Tu peux aussi coller une image dans le formulaire. 5 Mo maximum.</p>
+          <Button type="button" variant="outline" size="sm" loading={reading} onClick={() => void attach(() => readClipboardImage(`analyse-${pair}`))}>
+            {!reading && <Clipboard aria-hidden="true" />}Coller l’image
+          </Button>
           {screenshot && (
             <div className="flex flex-wrap items-center gap-2">
               <img src={screenshot.content} alt={screenshot.name} className="max-h-28 max-w-full rounded-md border border-border object-contain" />
