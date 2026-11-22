@@ -34,7 +34,7 @@ const reportNames: Record<PeriodType, string> = {
 
 export function TopNav({ sidebar = false, utilitiesOnly = false }: { sidebar?: boolean; utilitiesOnly?: boolean } = {}) {
   const location = useLocation();
-  const { theme, mode, setColor, toggleMode, presets } = useTheme();
+  const { theme, mode, setColor, setMode, presets } = useTheme();
   const { navItems, toggleNav, reorderNav, addSeparator, removeSeparator } = useNavConfig();
   const { userName, setUserName } = useUserProfile();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -90,7 +90,7 @@ export function TopNav({ sidebar = false, utilitiesOnly = false }: { sidebar?: b
         onAddSeparator={addSeparator}
         onRemoveSeparator={removeSeparator}
         mode={mode}
-        onToggleMode={toggleMode}
+        onSetMode={setMode}
         userName={userName}
         onSetUserName={setUserName}
         onOpenCsvImport={() => setCsvOpen(true)}

@@ -2,10 +2,9 @@ import { foregroundForHsl } from '@/lib/colorContrast';
 import { useState, useEffect, useCallback } from 'react';
 
 const THEME_KEY = 'trading-journal-theme';
-/** v3 : thème gris design par défaut ; le choix sombre reste mémorisé ensuite. */
 const MODE_KEY = 'trading-journal-mode-v2';
 
-export type ThemeMode = 'dark' | 'light';
+export type ThemeMode = 'light' | 'gray' | 'dark';
 
 export interface ThemeConfig {
   primaryHue: number;
@@ -59,32 +58,31 @@ function applyTheme(config: ThemeConfig) {
   root.style.setProperty('--shadow-glow-primary', `0 0 20px hsl(${hsl} / 0.15)`);
 }
 
-function applyMode(mode: ThemeMode) {
-  const root = document.documentElement;
-  if (mode === 'dark') {
-    root.classList.add('dark');
-    root.classList.remove('light');
-  } else {
-    root.classList.remove('dark');
-    root.classList.remove('light');
-  }
+function readMode(): ThemeMode {
+  try {
+    const value = localStorage.getItem(MODE_KEY);
+    if (value === 'gray' || value === 'dark') return value;
+  } catch { /* clair */ }
+  return 'light';
 }
 
-/** Applique le thème (couleur + mode) dès le démarrage de l'app, sur TOUTES les pages.
- *  Gris design par défaut ; le mode sombre reste disponible dans les réglages. */
+function applyMode(mode: ThemeMode) {
+  const root = document.documentElement;
+  root.classList.toggle('dark', mode !== 'light');
+  root.classList.toggle('theme-gray', mode === 'gray');
+  root.classList.remove('light');
+}
+
+/** Applique la couleur système et le mode avant le premier rendu React. */
 export function initTheme() {
   applyTheme(readTheme());
-  let mode: ThemeMode = 'light';
-  try { if (localStorage.getItem(MODE_KEY) === 'dark') mode = 'dark'; } catch { /* clair */ }
-  applyMode(mode);
+  applyMode(readMode());
 }
 
 export const useTheme = () => {
   const [theme, setTheme] = useState<ThemeConfig>(readTheme);
 
-  const [mode, setModeState] = useState<ThemeMode>(() => {
-    try { return localStorage.getItem(MODE_KEY) === 'dark' ? 'dark' : 'light'; } catch { return 'light'; }
-  });
+  const [mode, setMode] = useState<ThemeMode>(readMode);
 
   useEffect(() => {
     applyTheme(theme);
@@ -100,9 +98,5 @@ export const useTheme = () => {
     setTheme({ primaryHue: hue, primarySat: sat, primaryLight: light });
   }, []);
 
-  const toggleMode = useCallback(() => {
-    setModeState(prev => prev === 'dark' ? 'light' : 'dark');
-  }, []);
-
-  return { theme, mode, setColor, toggleMode, presets: COLOR_PRESETS };
+  return { theme, mode, setColor, setMode, presets: COLOR_PRESETS };
 };
