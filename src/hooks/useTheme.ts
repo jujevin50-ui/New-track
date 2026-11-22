@@ -45,11 +45,15 @@ const COLOR_PRESETS = [
   { name: 'Indigo', hue: 245, sat: 70, light: 55 },
 ];
 
-function applyTheme(config: ThemeConfig) {
+function applyTheme(config: ThemeConfig, mode: ThemeMode) {
   const root = document.documentElement;
-  const hsl = `${config.primaryHue} ${config.primarySat}% ${config.primaryLight}%`;
+  const vivid = mode === 'gray';
+  const hue = vivid && config.primarySat < 25 ? 215 : config.primaryHue;
+  const saturation = vivid ? Math.max(config.primarySat, 88) : config.primarySat;
+  const lightness = vivid ? 72 : config.primaryLight;
+  const hsl = `${hue} ${saturation}% ${lightness}%`;
   root.style.setProperty('--primary', hsl);
-  root.style.setProperty('--primary-foreground', foregroundForHsl(config.primaryHue,config.primarySat,config.primaryLight));
+  root.style.setProperty('--primary-foreground', foregroundForHsl(hue, saturation, lightness));
   root.style.setProperty('--ring', hsl);
   root.style.setProperty('--balance', hsl);
   root.style.setProperty('--chart-balance', hsl);
@@ -75,8 +79,9 @@ function applyMode(mode: ThemeMode) {
 
 /** Applique la couleur système et le mode avant le premier rendu React. */
 export function initTheme() {
-  applyTheme(readTheme());
-  applyMode(readMode());
+  const mode = readMode();
+  applyTheme(readTheme(), mode);
+  applyMode(mode);
 }
 
 export const useTheme = () => {
@@ -85,14 +90,11 @@ export const useTheme = () => {
   const [mode, setMode] = useState<ThemeMode>(readMode);
 
   useEffect(() => {
-    applyTheme(theme);
-    localStorage.setItem(THEME_KEY, JSON.stringify(theme));
-  }, [theme]);
-
-  useEffect(() => {
+    applyTheme(theme, mode);
     applyMode(mode);
+    localStorage.setItem(THEME_KEY, JSON.stringify(theme));
     localStorage.setItem(MODE_KEY, mode);
-  }, [mode]);
+  }, [theme, mode]);
 
   const setColor = useCallback((hue: number, sat: number, light: number) => {
     setTheme({ primaryHue: hue, primarySat: sat, primaryLight: light });

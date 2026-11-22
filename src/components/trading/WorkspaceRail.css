@@ -25,6 +25,10 @@
   --rail-shadow: color-mix(in srgb, hsl(var(--background)) 55%, black);
 }
 
+.theme-gray .rail-inner .rail-links .rail-link.is-current .header-nav-icon {
+  color: hsl(var(--primary));
+}
+
 .workspace-shell > .workspace-rail {
   inset: 10px auto 10px 10px;
   width: calc(var(--workspace-rail-width) - 10px);
