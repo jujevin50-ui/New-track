@@ -2,8 +2,9 @@ import type { Screenshot } from '@/types/note';
 import { shiftDay } from '@/lib/discipline';
 
 export const BANKS = ['Fed', 'BCE', 'BoE', 'RBA'] as const;
+export const ANALYSIS_PAIRS = ['EURUSD', 'GBPUSD', 'AUDUSD'] as const;
 
-type Pair = 'EURUSD' | 'GBPUSD' | 'AUDUSD';
+export type AnalysisPair = typeof ANALYSIS_PAIRS[number];
 type Currency = 'USD' | 'EUR' | 'GBP' | 'AUD';
 export type Bank = typeof BANKS[number];
 
@@ -30,13 +31,15 @@ export interface BankContext {
   tone: string;
 }
 
-interface PairContext {
-  bias: '' | 'Haussier' | 'Baissier' | 'Neutre';
-  differential: string;
-  driver: string;
+export interface PairAnalysis {
+  note?: string;
+  screenshot?: Screenshot;
+  bias?: '' | 'Haussier' | 'Baissier' | 'Neutre';
+  differential?: string;
+  driver?: string;
 }
 
-export type FundamentalBlocks = {
+export type FundamentalBlocks = Record<AnalysisPair, PairAnalysis> & {
   regime: { regime: '' | 'Risk-on' | 'Risk-off'; vix: string };
   dollar: { dxy: string; us10y: string; fedBias: string };
   week: { events: string };
@@ -46,8 +49,12 @@ export type FundamentalBlocks = {
 };
 
 export type BlockKey = keyof FundamentalBlocks;
-export type EditableBlockKey = Exclude<BlockKey, 'calendar'>;
-export type WeekContext = Partial<FundamentalBlocks & Record<Pair, PairContext>>;
+export type EditableBlockKey = Exclude<BlockKey, 'calendar' | AnalysisPair>;
+export type WeekContext = Partial<FundamentalBlocks>;
+
+export function isAnalysisPair(block: BlockKey): block is AnalysisPair {
+  return ANALYSIS_PAIRS.some(pair => pair === block);
+}
 
 export interface FundamentalWeek {
   weekStart: string;
@@ -58,6 +65,9 @@ export const BLOCK_TITLES: Record<BlockKey, string> = {
   regime: 'Régime de marché',
   dollar: 'Dollar',
   week: 'Semaine',
+  EURUSD: 'EURUSD',
+  GBPUSD: 'GBPUSD',
+  AUDUSD: 'AUDUSD',
   calendar: 'Calendrier éco',
   banks: 'Banques centrales',
   notes: 'Notes et news clés',

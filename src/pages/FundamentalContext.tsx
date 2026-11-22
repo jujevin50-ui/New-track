@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { ChevronLeft, ChevronRight, Clipboard, Pencil } from 'lucide-react';
 import { ContextEditor } from '@/components/fundamental/ContextEditor';
+import { PairAnalysisEditor } from '@/components/fundamental/PairAnalysisEditor';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useData } from '@/contexts/DataContext';
@@ -10,22 +11,24 @@ import type { Screenshot } from '@/types/note';
 import { readScreenshot } from '@/lib/screenshots';
 import { shiftDay } from '@/lib/discipline';
 import {
-  BANKS, BLOCK_TITLES, contextDate, currentWeek, fillBankContext,
-  readCalendar, weekNumber, type BlockKey, type EditableBlockKey, type FundamentalBlocks, type WeekContext,
+  ANALYSIS_PAIRS, BANKS, BLOCK_TITLES, contextDate, currentWeek, fillBankContext, isAnalysisPair,
+  readCalendar, weekNumber, type BlockKey, type FundamentalBlocks, type WeekContext,
 } from '@/lib/fundamentalContext';
 
+type PageEditKey = Exclude<BlockKey, 'calendar'>;
 const dateLabel = (day: string) => day ? contextDate.format(new Date(`${day}T00:00:00Z`)) : '—';
 const addUnit = (value: string | undefined, unit: string) => value ? `${value} ${unit}` : undefined;
 
 function Block({ block, children, onEdit, editing, editor, action }: {
-  block: BlockKey; children: ReactNode; onEdit: (block: EditableBlockKey) => void;
-  editing: EditableBlockKey | null; editor: ReactNode; action?: ReactNode;
+  block: BlockKey; children: ReactNode; onEdit: (block: PageEditKey) => void;
+  editing: PageEditKey | null; editor: ReactNode; action?: ReactNode;
 }) {
   const isEditing = editing === block;
+  const Heading = isAnalysisPair(block) ? 'h3' : 'h2';
   return (
     <section aria-labelledby={`fundamental-${block}`} className="min-w-0 rounded-xl border border-border bg-card/30 p-4 2xl:p-6">
       <header className="mb-4 flex min-w-0 items-center justify-between gap-2">
-        <h2 id={`fundamental-${block}`} className="min-w-0 break-words text-sm font-semibold 2xl:text-base">{BLOCK_TITLES[block]}</h2>
+        <Heading id={`fundamental-${block}`} className="min-w-0 break-words text-sm font-semibold 2xl:text-base">{BLOCK_TITLES[block]}</Heading>
         {action ?? (!isEditing && block !== 'calendar' && <Button
           type="button"
           variant="ghost"
@@ -68,18 +71,20 @@ function TextBlock({ value, empty }: { value?: string; empty: string }) {
   return <p className={`whitespace-pre-wrap break-words text-sm 2xl:text-base ${value ? '' : 'text-muted-foreground'}`}>{value || empty}</p>;
 }
 
-function CapturePreview({ screenshot }: { screenshot: Screenshot }) {
+function CapturePreview({ screenshot, title, label = `Agrandir la capture · ${title}`, compact = false }: {
+  screenshot: Screenshot; title: string; label?: string; compact?: boolean;
+}) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <button type="button" aria-label="Agrandir la capture du calendrier" className="w-full rounded border border-border bg-muted/20">
-          <img src={screenshot.content} alt="" loading="lazy" className="mx-auto block max-h-80 max-w-full rounded object-contain 2xl:max-h-[clamp(20rem,32vh,28rem)]" />
+        <button type="button" aria-label={label} className="w-full rounded border border-border bg-muted/20">
+          <img src={screenshot.content} alt="" loading="lazy" className={`mx-auto block max-w-full rounded object-contain ${compact ? 'max-h-56 2xl:max-h-72' : 'max-h-80 2xl:max-h-[clamp(20rem,32vh,28rem)]'}`} />
         </button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-7xl min-[1920px]:max-w-[1600px]">
         <DialogHeader className="pr-8">
-          <DialogTitle>Calendrier économique de la semaine</DialogTitle>
-          <DialogDescription className="sr-only">Capture du calendrier économique</DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription className="sr-only">Aperçu de la capture d’écran</DialogDescription>
         </DialogHeader>
         <img src={screenshot.content} alt={screenshot.name} className="mx-auto max-h-[76dvh] max-w-full object-contain" />
       </DialogContent>
@@ -90,7 +95,7 @@ function CapturePreview({ screenshot }: { screenshot: Screenshot }) {
 export default function FundamentalContext() {
   const { data: appData, mutateData } = useData();
   const [monday, setMonday] = useState(currentWeek);
-  const [editing, setEditing] = useState<EditableBlockKey | null>(null);
+  const [editing, setEditing] = useState<PageEditKey | null>(null);
   const [pasting, setPasting] = useState(false);
   const [pasteError, setPasteError] = useState('');
   const { saved: pasteAccepted, confirm: confirmPaste } = useSaveConfirmation();
@@ -177,9 +182,15 @@ export default function FundamentalContext() {
   const nextMonday = shiftDay(monday, 7);
   const nextBanks = weekData(nextMonday).banks ?? {};
   const blockProps = {
-    onEdit: (block: EditableBlockKey) => { if (!pasting) setEditing(block); },
+    onEdit: (block: PageEditKey) => { if (!pasting) setEditing(block); },
     editing,
-    editor: editing && <ContextEditor
+    editor: editing && (isAnalysisPair(editing) ? <PairAnalysisEditor
+      key={editing}
+      pair={editing}
+      analysis={data[editing]}
+      onSave={analysis => save(editing, existing => ({ ...existing[editing], ...analysis }))}
+      onClose={() => setEditing(null)}
+    /> : <ContextEditor
       block={editing}
       existing={data}
       onSave={save}
@@ -193,7 +204,7 @@ export default function FundamentalContext() {
           setMonday(nextMonday);
         },
       } : undefined}
-    />,
+    />),
   };
 
   return (
@@ -213,6 +224,22 @@ export default function FundamentalContext() {
           <TextBlock value={data.week?.events} empty="Aucun événement majeur renseigné." />
         </Block>
       </div>
+      <section aria-labelledby="fundamental-analysis-heading" className="space-y-3">
+        <h2 id="fundamental-analysis-heading" className="text-sm font-semibold 2xl:text-base">Analyse des paires</h2>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3 2xl:gap-6">
+          {ANALYSIS_PAIRS.map(pair => {
+            const analysis = data[pair];
+            return (
+              <Block key={pair} block={pair} {...blockProps}>
+                <div className="space-y-3">
+                  {(analysis?.note || !analysis?.screenshot) && <TextBlock value={analysis?.note} empty="Aucune analyse renseignée cette semaine." />}
+                  {analysis?.screenshot && <CapturePreview screenshot={analysis.screenshot} title={`Analyse ${pair}`} compact />}
+                </div>
+              </Block>
+            );
+          })}
+        </div>
+      </section>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] 2xl:grid-cols-[minmax(0,5fr)_minmax(0,4fr)] 2xl:gap-6">
         <Block block="calendar" {...blockProps} action={
           <Button type="button" variant="outline" size="sm" loading={pasting} saved={pasteAccepted} disabled={editing !== null || pasteAccepted}
@@ -228,7 +255,7 @@ export default function FundamentalContext() {
           </Button>
         }>
           {pasteError && <p role="alert" className="mb-3 text-sm text-destructive">{pasteError}</p>}
-          {calendar.screenshot && <CapturePreview screenshot={calendar.screenshot} />}
+          {calendar.screenshot && <CapturePreview screenshot={calendar.screenshot} title="Calendrier économique de la semaine" label="Agrandir la capture du calendrier" />}
         </Block>
         <Block block="banks" {...blockProps}>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 2xl:gap-6">

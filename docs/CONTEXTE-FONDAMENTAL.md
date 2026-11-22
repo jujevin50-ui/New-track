@@ -8,6 +8,8 @@ Les enregistrements sont regroupés par semaine dans la section `fundamentalWeek
 
 Dans le formulaire de modification de **Banques centrales**, **Reporter à la semaine suivante** copie les taux, réunions et biais du formulaire dans les champs encore vides de la semaine qui suit celle affichée, puis ouvre cette semaine. **Enregistrer** garde les modifications pour la semaine en cours d’édition.
 
+Dans **Analyse des paires**, le crayon de chaque paire ouvre une note et une capture d’écran. Tu peux coller la capture dans le formulaire ou choisir un fichier, puis enregistrer pour la semaine affichée.
+
 Dans **Calendrier éco**, copie une image du calendrier puis clique sur **Coller l’image**. La capture s’affiche immédiatement et s’enregistre en arrière-plan pour la semaine affichée. Si le navigateur bloque l’accès au presse-papiers, sélectionne le bouton et utilise Ctrl+V ou ⌘V. Un clic sur la capture permet de l’agrandir.
 
 ## Fichiers
