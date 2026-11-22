@@ -1176,6 +1176,45 @@ html .workspace-shell main .app-panel.border-primary\/60 { border-left: 2px soli
 .calendar-day-result { margin-top: auto; padding-top: 6px; font-size: 10px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .calendar-day-count { min-height: 14px; margin-top: 3px; font-size: 9px; color: hsl(var(--muted-foreground)); }
 .calendar-page .calendar-month header button { height: 40px; border-radius: 10px; }
+
+html:not(.dark) .calendar-page {
+  --calendar-selection: color-mix(in srgb, hsl(var(--primary)) 75%, hsl(var(--foreground)));
+}
+html:not(.dark) .calendar-page .calendar-day {
+  --calendar-day-fill: hsl(var(--card));
+  --calendar-day-edge: hsl(var(--border));
+  background: var(--calendar-day-fill);
+  box-shadow: inset 0 0 0 1px var(--calendar-day-edge);
+}
+html:not(.dark) .calendar-page .calendar-day.is-profit {
+  --calendar-day-fill: hsl(151 80% 89%);
+  --calendar-day-edge: hsl(151 42% 66%);
+}
+html:not(.dark) .calendar-page .calendar-day.is-loss {
+  --calendar-day-fill: hsl(354 91% 91%);
+  --calendar-day-edge: hsl(354 66% 74%);
+}
+html:not(.dark) .calendar-page .calendar-day:not(:disabled):hover {
+  background: color-mix(in srgb, var(--calendar-day-fill) 85%, var(--calendar-day-edge));
+}
+html:not(.dark) .calendar-page .calendar-day[aria-pressed="true"] {
+  box-shadow: inset 0 0 0 2px var(--calendar-selection);
+}
+html:not(.dark) .calendar-page .calendar-day[aria-pressed="true"]:not(.is-profit, .is-loss) {
+  background: color-mix(in srgb, var(--calendar-day-fill) 85%, var(--calendar-selection));
+}
+html:not(.dark) .calendar-page .calendar-day[aria-current="date"] .calendar-day-number {
+  color: var(--calendar-selection);
+}
+html:not(.dark) .calendar-page .calendar-weekend { color: hsl(var(--muted-foreground) / 0.72); }
+html:not(.dark) .calendar-page .calendar-journal-row[aria-pressed="true"],
+html:not(.dark) .calendar-page .calendar-missions button[aria-pressed="true"] {
+  background: color-mix(in srgb, hsl(var(--card)) 85%, var(--calendar-selection));
+}
+html:not(.dark) .calendar-page .calendar-journal-row[aria-pressed="true"] {
+  box-shadow: inset 3px 0 var(--calendar-selection);
+}
+
 @media (max-width: 639px) { .calendar-days { gap: 4px; } .calendar-day { padding: 7px 4px; border-radius: 7px; } .calendar-day-result { font-size: 9px; } }
 @media (prefers-reduced-motion: reduce) { .calendar-day { transition: none; } }
 

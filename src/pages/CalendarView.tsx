@@ -142,7 +142,7 @@ export default function CalendarView({ activeAccount, accounts, onSelectAccount 
             pendingReviews.current.set(value.date, value);
             dirty.current = false;
           }} onDiscard={clearPending}>
-            <section aria-labelledby="calendar-missions-title" className="overflow-hidden rounded-xl border border-border/70 bg-background/50">
+            <section aria-labelledby="calendar-missions-title" className="calendar-missions overflow-hidden rounded-xl border border-border/70 bg-background/50">
               <div className="bg-primary/[.04] px-3.5 py-3 sm:px-4">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                   <h3 id="calendar-missions-title" className="text-sm font-semibold">Mes missions du jour</h3>
