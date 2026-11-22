@@ -27,19 +27,26 @@ const fields: Record<Exclude<EditableBlockKey, 'banks'>, Field[]> = {
 };
 
 type SaveBlock = (block: EditableBlockKey, content: FundamentalBlocks[EditableBlockKey]) => void;
+type BankFields = FundamentalBlocks['banks'];
 
 interface EditorProps {
   block: EditableBlockKey;
   existing: WeekContext;
   onSave: SaveBlock;
   onClose: () => void;
+  bankReport?: {
+    canCopy: (banks: BankFields) => boolean;
+    copy: (banks: BankFields) => void;
+    openNextWeek: () => void;
+  };
 }
 
-export function ContextEditor({ block, existing, onSave, onClose }: EditorProps) {
+export function ContextEditor({ block, existing, onSave, onClose, bankReport }: EditorProps) {
   const [values, setValues] = useState<Record<string, string>>(
     () => block === 'banks' ? {} : { ...(existing[block] as Record<string, string> | undefined) },
   );
   const [banks, setBanks] = useState(() => existing.banks ?? {});
+  const [reporting, setReporting] = useState(false);
   const { saved, confirm } = useSaveConfirmation();
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -49,6 +56,13 @@ export function ContextEditor({ block, existing, onSave, onClose }: EditorProps)
     const content = block === 'banks' ? banks : clean as FundamentalBlocks[EditableBlockKey];
     confirm(onClose);
     onSave(block, content);
+  };
+
+  const report = () => {
+    if (!bankReport?.canCopy(banks) || saved) return;
+    setReporting(true);
+    confirm(bankReport.openNextWeek);
+    bankReport.copy(banks);
   };
 
   return (
@@ -78,9 +92,15 @@ export function ContextEditor({ block, existing, onSave, onClose }: EditorProps)
         ))}
       </fieldset>
       <div className="ui-form-footer flex flex-wrap justify-end gap-2">
+        {bankReport && (
+          <Button type="button" variant="outline" className="h-auto whitespace-normal" onClick={report}
+            saved={saved && reporting} disabled={saved || !bankReport.canCopy(banks)}>
+            {saved && reporting ? 'Pris en compte' : 'Reporter à la semaine suivante'}
+          </Button>
+        )}
         <Button type="button" variant="outline" disabled={saved} onClick={onClose}>Annuler</Button>
-        <Button type="submit" saved={saved} disabled={saved}>
-          {!saved && <Save aria-hidden="true" />}{saved ? 'Pris en compte' : 'Enregistrer'}
+        <Button type="submit" saved={saved && !reporting} disabled={saved}>
+          {saved && !reporting ? 'Pris en compte' : <><Save aria-hidden="true" />Enregistrer</>}
         </Button>
       </div>
     </form>

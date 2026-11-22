@@ -94,7 +94,6 @@ export default function FundamentalContext() {
   const [pasting, setPasting] = useState(false);
   const [pasteError, setPasteError] = useState('');
   const { saved: pasteAccepted, confirm: confirmPaste } = useSaveConfirmation();
-  const { saved: banksReported, confirm: confirmBankReport } = useSaveConfirmation();
   const [pending, setPending] = useState(() => new Map<string, { block: BlockKey; content: FundamentalBlocks[BlockKey] }>());
 
   const weekData = (weekStart: string) => {
@@ -177,16 +176,24 @@ export default function FundamentalContext() {
   const banks = data.banks ?? {};
   const nextMonday = shiftDay(monday, 7);
   const nextBanks = weekData(nextMonday).banks ?? {};
-  const canReportBanks = fillBankContext(banks, nextBanks) !== nextBanks;
-  const reportBanks = () => {
-    if (!canReportBanks || banksReported || editing !== null) return;
-    confirmBankReport();
-    save('banks', existing => fillBankContext(banks, existing.banks ?? {}), nextMonday);
-  };
   const blockProps = {
     onEdit: (block: EditableBlockKey) => { if (!pasting) setEditing(block); },
     editing,
-    editor: editing && <ContextEditor block={editing} existing={data} onSave={save} onClose={() => setEditing(null)} />,
+    editor: editing && <ContextEditor
+      block={editing}
+      existing={data}
+      onSave={save}
+      onClose={() => setEditing(null)}
+      bankReport={editing === 'banks' ? {
+        canCopy: draft => fillBankContext(draft, nextBanks) !== nextBanks,
+        copy: draft => save('banks', existing => fillBankContext(draft, existing.banks ?? {}), nextMonday),
+        openNextWeek: () => {
+          setEditing(null);
+          setPasteError('');
+          setMonday(nextMonday);
+        },
+      } : undefined}
+    />,
   };
 
   return (
@@ -234,12 +241,6 @@ export default function FundamentalContext() {
               ]} />
             </div>)}
           </div>
-          {(canReportBanks || banksReported) && (
-            <Button type="button" variant="outline" size="sm" className="mt-4 h-auto min-h-11 whitespace-normal"
-              saved={banksReported} disabled={editing !== null || banksReported} onClick={reportBanks}>
-              {banksReported ? 'Pris en compte' : 'Reporter à la semaine suivante'}
-            </Button>
-          )}
         </Block>
       </div>
       <Block block="notes" {...blockProps}>
