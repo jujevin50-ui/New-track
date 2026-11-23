@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  BANKS, BLOCK_TITLES, type EditableBlockKey, type FundamentalBlocks, type WeekContext,
+  BANKS, BLOCK_TITLES, INFLATION_INDICATORS, type EditableBlockKey, type FundamentalBlocks, type WeekContext,
 } from '@/lib/fundamentalContext';
 
 const selectClass = 'ui-select-trigger w-full rounded-[10px] border border-input bg-background px-3 text-sm';
@@ -35,14 +35,7 @@ const fields: Record<Exclude<EditableBlockKey, 'banks'>, Field[]> = {
     { key: 'us2yDe2y', label: 'US2Y – DE2Y (pb)', decimal: true },
     { key: 'us10yUk10y', label: 'US10Y – UK10Y (pb)', decimal: true },
   ],
-  inflation: [
-    { key: 'usCorePce', label: 'US Core PCE – dernier (%)', decimal: true },
-    { key: 'usCorePceForecast', label: 'US Core PCE – anticipé (%)', decimal: true },
-    { key: 'euroCore', label: 'Zone euro – inflation sous-jacente (%)', decimal: true },
-    { key: 'ukCore', label: 'Royaume-Uni – inflation sous-jacente (%)', decimal: true },
-    { key: 'ukServices', label: 'Royaume-Uni – inflation des services (%)', decimal: true },
-    { key: 'stickiest', label: 'Où l’inflation est-elle la plus persistante ?', multiline: true },
-  ],
+  inflation: INFLATION_INDICATORS.map(({ key, label }) => ({ key, label: `${label} (%)`, decimal: true })),
   cot: [
     { key: 'eurNet', label: 'EUR – position nette', decimal: true },
     { key: 'gbpNet', label: 'GBP – position nette', decimal: true },
@@ -105,7 +98,7 @@ export function ContextEditor({ block, existing, onSave, onClose, bankReport }: 
   return (
     <form aria-label={`Modifier ${BLOCK_TITLES[block]}`} onSubmit={submit} className="min-w-0 space-y-4">
       <fieldset disabled={saved} className={macroBlock
-        ? 'grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,9rem),1fr))] gap-4'
+        ? `grid min-w-0 gap-4 ${block === 'inflation' ? 'grid-cols-2' : 'grid-cols-[repeat(auto-fit,minmax(min(100%,9rem),1fr))]'}`
         : 'min-w-0 space-y-4'}>
         {block === 'banks' ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">

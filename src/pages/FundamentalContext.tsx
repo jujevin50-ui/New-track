@@ -11,7 +11,7 @@ import type { Screenshot } from '@/types/note';
 import { pastedImage, readClipboardImage, readScreenshot } from '@/lib/screenshots';
 import { shiftDay } from '@/lib/discipline';
 import {
-  ANALYSIS_INSTRUMENTS, BANKS, BLOCK_TITLES, contextDate, currentWeek, fillBankContext, isAnalysisInstrument,
+  ANALYSIS_INSTRUMENTS, BANKS, BLOCK_TITLES, INFLATION_INDICATORS, contextDate, currentWeek, fillBankContext, isAnalysisInstrument,
   readCalendar, weekNumber, type BlockKey, type FundamentalBlocks, type WeekContext,
 } from '@/lib/fundamentalContext';
 
@@ -73,10 +73,17 @@ function Block({ block, children, onEdit, editing, editor, action, embedded = fa
 
 type Detail = [label: string, value: string | undefined, numeric?: true];
 
-function Details({ fields, empty = 'À renseigner', metrics = false }: { fields: Detail[]; empty?: string; metrics?: boolean }) {
+const detailLayouts = {
+  rows: 'space-y-2',
+  metrics: 'grid grid-cols-[repeat(auto-fit,minmax(min(100%,8rem),1fr))] gap-x-4 gap-y-3',
+  pairs: 'grid grid-cols-2 gap-x-4 gap-y-3',
+};
+
+function Details({ fields, empty = 'À renseigner', layout = 'rows' }: { fields: Detail[]; empty?: string; layout?: keyof typeof detailLayouts }) {
   if (!fields.some(([, value]) => value)) return <p className="text-sm text-muted-foreground">{empty}</p>;
+  const metrics = layout !== 'rows';
   return (
-    <dl className={`text-sm 2xl:text-base ${metrics ? 'grid grid-cols-[repeat(auto-fit,minmax(min(100%,8rem),1fr))] gap-x-4 gap-y-3' : 'space-y-2'}`}>
+    <dl className={`text-sm 2xl:text-base ${detailLayouts[layout]}`}>
       {fields.map(([label, value, numeric]) => (
         <div key={label} className={metrics ? 'flex min-w-0 flex-col justify-between gap-1' : 'grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] gap-3'}>
           <dt className={`break-words text-muted-foreground ${metrics ? 'text-xs 2xl:text-sm' : ''}`}>{label}</dt>
@@ -236,7 +243,7 @@ export default function FundamentalContext() {
       <div className="grid min-w-0 grid-cols-1 items-start gap-4 xl:grid-cols-2 2xl:gap-6">
         <div className={groupedCard}>
           <Block block="regime" {...blockProps} embedded>
-            <Details metrics fields={[
+            <Details layout="metrics" fields={[
               ['Régime', data.regime?.regime],
               ['VIX', data.regime?.vix, true],
             ]} />
@@ -248,7 +255,7 @@ export default function FundamentalContext() {
         </div>
         <div className={groupedCard}>
           <Block block="dollar" {...blockProps} embedded>
-            <Details metrics fields={[
+            <Details layout="metrics" fields={[
               ['DXY', data.dollar?.dxy, true],
               ['US10Y', addUnit(data.dollar?.us10y, '%'), true],
               ['US2Y', addUnit(data.dollar?.us2y, '%'), true],
@@ -256,7 +263,7 @@ export default function FundamentalContext() {
             <Narrative label="Biais Fed et anticipations du marché" value={data.dollar?.fedBias} />
           </Block>
           <Block block="bondSpreads" {...blockProps} embedded>
-            <Details metrics fields={[
+            <Details layout="metrics" fields={[
               ['US10Y – DE10Y', addUnit(data.bondSpreads?.us10yDe10y, 'pb'), true],
               ['US2Y – DE2Y', addUnit(data.bondSpreads?.us2yDe2y, 'pb'), true],
               ['US10Y – UK10Y', addUnit(data.bondSpreads?.us10yUk10y, 'pb'), true],
@@ -264,19 +271,15 @@ export default function FundamentalContext() {
           </Block>
         </div>
         <Block block="inflation" {...blockProps}>
-          <Details metrics fields={[
-            ['US Core PCE – dernier', addUnit(data.inflation?.usCorePce, '%'), true],
-            ['US Core PCE – anticipé', addUnit(data.inflation?.usCorePceForecast, '%'), true],
-            ['Zone euro – sous-jacente', addUnit(data.inflation?.euroCore, '%'), true],
-            ['Royaume-Uni – sous-jacente', addUnit(data.inflation?.ukCore, '%'), true],
-            ['Royaume-Uni – services', addUnit(data.inflation?.ukServices, '%'), true],
-          ]} empty="Aucun chiffre d’inflation renseigné." />
-          <Narrative label="Inflation la plus persistante" value={data.inflation?.stickiest} />
+          <p className="mb-3 text-xs text-muted-foreground">Derniers chiffres publiés, en glissement annuel.</p>
+          <Details layout="pairs" fields={INFLATION_INDICATORS.map(({ key, label }) => [
+            label, addUnit(data.inflation?.[key], '%'), true,
+          ])} empty="Aucun chiffre d’inflation renseigné." />
         </Block>
         <Block block="cot" {...blockProps}>
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">Positions nettes des Non-Commercials, en contrats.</p>
-            <Details metrics fields={[
+            <Details layout="metrics" fields={[
               ['EUR', data.cot?.eurNet, true],
               ['GBP', data.cot?.gbpNet, true],
               ['USD Index', data.cot?.dxyNet, true],

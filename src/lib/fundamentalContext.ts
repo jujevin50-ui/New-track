@@ -3,6 +3,12 @@ import { shiftDay } from '@/lib/discipline';
 
 export const BANKS = ['Fed', 'BCE', 'BoE', 'RBA'] as const;
 export const ANALYSIS_INSTRUMENTS = ['EURUSD', 'GBPUSD', 'AUDUSD', 'DXY'] as const;
+export const INFLATION_INDICATORS = [
+  { key: 'usCorePce', label: 'USD · Core PCE' },
+  { key: 'euroCore', label: 'EUR · Core HICP' },
+  { key: 'ukCore', label: 'GBP · Core CPI' },
+  { key: 'audTrimmedMean', label: 'AUD · Trimmed Mean CPI' },
+] as const;
 
 export type AnalysisInstrument = typeof ANALYSIS_INSTRUMENTS[number];
 type Currency = 'USD' | 'EUR' | 'GBP' | 'AUD';
@@ -44,7 +50,15 @@ export type FundamentalBlocks = Record<AnalysisInstrument, InstrumentAnalysis> &
   dollar: { dxy: string; us10y: string; us2y?: string; fedBias: string };
   week: { events: string };
   bondSpreads: { us10yDe10y: string; us2yDe2y: string; us10yUk10y: string; comment?: string };
-  inflation: { usCorePce: string; usCorePceForecast: string; euroCore: string; ukCore: string; ukServices: string; stickiest: string };
+  inflation: {
+    usCorePce: string;
+    euroCore: string;
+    ukCore: string;
+    audTrimmedMean?: string;
+    usCorePceForecast?: string;
+    ukServices?: string;
+    stickiest?: string;
+  };
   cot: { eurNet: string; gbpNet: string; dxyNet: string; comment: string };
   calendar: EconomicCalendar | EconomicEvent[];
   banks: Partial<Record<Bank, BankContext>>;
