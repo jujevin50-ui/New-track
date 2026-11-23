@@ -71,7 +71,7 @@ function Block({ block, children, onEdit, editing, editor, action, embedded = fa
   );
 }
 
-type Detail = [label: string, value: string | undefined, numeric?: true];
+type Detail = [label: string, value: string | undefined, badge?: true | 'green'];
 
 const detailLayouts = {
   rows: 'space-y-2',
@@ -84,12 +84,14 @@ function Details({ fields, empty = 'À renseigner', layout = 'rows' }: { fields:
   const metrics = layout !== 'rows';
   return (
     <dl className={`text-sm 2xl:text-base ${detailLayouts[layout]}`}>
-      {fields.map(([label, value, numeric]) => (
+      {fields.map(([label, value, badge]) => (
         <div key={label} className={metrics ? 'flex min-w-0 flex-col justify-between gap-1' : 'grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] gap-3'}>
           <dt className={`break-words text-muted-foreground ${metrics ? 'text-xs 2xl:text-sm' : ''}`}>{label}</dt>
           <dd className={`whitespace-pre-wrap [overflow-wrap:anywhere] ${metrics ? 'font-medium' : 'text-right'}`}>
-            {numeric && value ? (
-              <span className="inline-block max-w-full rounded-md border border-primary/40 bg-primary/10 px-2 py-0.5 font-medium tabular-nums text-primary">{value}</span>
+            {badge && value ? (
+              <span className={`inline-block max-w-full rounded-md border px-2 py-0.5 font-medium tabular-nums ${
+                badge === 'green' ? 'border-profit/60 bg-profit/10 text-profit' : 'border-primary/40 bg-primary/10 text-primary'
+              }`}>{value}</span>
             ) : value || '—'}
           </dd>
         </div>
@@ -256,7 +258,7 @@ export default function FundamentalContext() {
         <div className={groupedCard}>
           <Block block="dollar" {...blockProps} embedded>
             <Details layout="metrics" fields={[
-              ['DXY', data.dollar?.dxy, true],
+              ['DXY', data.dollar?.dxy, 'green'],
               ['US10Y', addUnit(data.dollar?.us10y, '%'), true],
               ['US2Y', addUnit(data.dollar?.us2y, '%'), true],
             ]} />
