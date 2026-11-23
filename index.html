@@ -2,11 +2,11 @@
 <html lang="en">
   <head>
     <script>
-      // Thème sombre par défaut (appliqué avant le premier affichage : pas de flash blanc).
-      try { if (localStorage.getItem('trading-journal-mode') !== 'light') document.documentElement.classList.add('dark'); }
-      catch (e) { document.documentElement.classList.add('dark'); }
+      // Applique le mode enregistré avant le premier affichage.
+      try { if (localStorage.getItem('trading-journal-mode-v2') === 'dark') document.documentElement.classList.add('dark'); }
+      catch {}
     </script>
-    <style>html.dark { background: #000; color-scheme: dark; }</style>
+    <style>html.dark { background-color: hsl(var(--background, 0 3.33% 11.765%)); color-scheme: dark; }</style>
     <script>
       // When a new service worker takes over (skipWaiting + clientsClaim on
       // deploy), reload so the page picks up the freshly built assets instead

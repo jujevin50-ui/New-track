@@ -80,33 +80,33 @@
   }
 
   .dark {
-    /* Noir profond — plus de gris */
-    --background: 0 0% 0%;
+    /* Gris anthracite */
+    --background: 0 3.33% 11.765%;
     --foreground: 0 0% 96%;
 
-    --card: 0 0% 10%;
+    --card: 0 3% 15%;
     --card-foreground: 0 0% 96%;
 
-    --popover: 0 0% 10%;
+    --popover: var(--card);
     --popover-foreground: 0 0% 96%;
 
     --primary: 0 0% 92%;
     --primary-foreground: 0 0% 4%;
 
-    --secondary: 0 0% 16%;
+    --secondary: 0 3% 18%;
     --secondary-foreground: 0 0% 92%;
 
-    --muted: 0 0% 14%;
+    --muted: 0 3% 16%;
     --muted-foreground: 0 0% 68%;
 
-    --accent: 0 0% 18%;
+    --accent: 0 3% 20%;
     --accent-foreground: 0 0% 96%;
 
     --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 22%;
-    --input: 0 0% 18%;
+    --border: 0 3% 24%;
+    --input: 0 3% 22%;
     --ring: 0 0% 70%;
 
     --profit: 152 55% 48%;
@@ -1028,7 +1028,7 @@ html .app-panel { background-color: var(--glass-bg-strong); background-image: no
 .settings-mode.is-current { border-color: hsl(var(--primary) / 0.55); background: hsl(var(--primary) / 0.04); }
 .settings-mode-preview { display: flex; gap: 6px; height: 70px; padding: 8px; border: 1px solid hsl(220 10% 50% / 0.15); border-radius: 7px; }
 .settings-mode-preview.light { background: hsl(42 18% 95%); color: #d3d8e0; }
-.settings-mode-preview.dark { background: #151619; color: #363940; }
+.settings-mode-preview.dark { background: hsl(var(--background)); color: #464242; }
 .settings-mode-preview > span { width: 25%; border-radius: 3px; background: currentColor; opacity: 0.7; }
 .settings-mode-preview > div { display: flex; flex: 1; flex-direction: column; gap: 5px; }
 .settings-mode-preview i { display: block; flex: 1; border-radius: 3px; background: currentColor; opacity: 0.5; }
