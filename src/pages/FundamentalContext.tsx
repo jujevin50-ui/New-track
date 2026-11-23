@@ -18,7 +18,7 @@ import {
 type PageEditKey = Exclude<BlockKey, 'calendar'>;
 const dateLabel = (day: string) => day ? contextDate.format(new Date(`${day}T00:00:00Z`)) : '—';
 const addUnit = (value: string | undefined, unit: string) => value ? `${value} ${unit}` : undefined;
-const groupedCard = 'min-w-0 space-y-4 rounded-xl border border-border bg-card/30 p-4 [&>section+section]:border-t [&>section+section]:pt-4 2xl:p-6';
+const groupedCard = 'min-w-0 space-y-4 rounded-xl border border-border bg-card/30 p-4 [&>section+section]:border-t [&>section+section]:pt-4 xl:self-stretch 2xl:p-6';
 
 const baseCurrencyFlags = {
   EURUSD: 'eu',
