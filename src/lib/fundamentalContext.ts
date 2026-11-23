@@ -43,7 +43,7 @@ export type FundamentalBlocks = Record<AnalysisInstrument, InstrumentAnalysis> &
   regime: { regime: '' | 'Risk-on' | 'Risk-off'; vix: string };
   dollar: { dxy: string; us10y: string; us2y?: string; fedBias: string };
   week: { events: string };
-  bondSpreads: { us10yDe10y: string; us2yDe2y: string; us10yUk10y: string; comment: string };
+  bondSpreads: { us10yDe10y: string; us2yDe2y: string; us10yUk10y: string; comment?: string };
   inflation: { usCorePce: string; usCorePceForecast: string; euroCore: string; ukCore: string; ukServices: string; stickiest: string };
   cot: { eurNet: string; gbpNet: string; dxyNet: string; comment: string };
   calendar: EconomicCalendar | EconomicEvent[];

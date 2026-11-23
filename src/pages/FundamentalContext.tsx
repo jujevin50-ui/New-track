@@ -239,15 +239,11 @@ export default function FundamentalContext() {
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3 2xl:gap-6">
         <Block block="bondSpreads" {...blockProps}>
-          <div className="space-y-3">
-            <Details fields={[
-              ['US10Y – DE10Y', addUnit(data.bondSpreads?.us10yDe10y, 'pb'), true],
-              ['US2Y – DE2Y', addUnit(data.bondSpreads?.us2yDe2y, 'pb'), true],
-              ['US10Y – UK10Y', addUnit(data.bondSpreads?.us10yUk10y, 'pb'), true],
-              ['Commentaire', data.bondSpreads?.comment],
-            ]} empty="Aucun écart de taux renseigné." />
-            <p className="text-xs text-muted-foreground">Un écart qui se creuse en faveur des États-Unis peut soutenir le dollar.</p>
-          </div>
+          <Details fields={[
+            ['US10Y – DE10Y', addUnit(data.bondSpreads?.us10yDe10y, 'pb'), true],
+            ['US2Y – DE2Y', addUnit(data.bondSpreads?.us2yDe2y, 'pb'), true],
+            ['US10Y – UK10Y', addUnit(data.bondSpreads?.us10yUk10y, 'pb'), true],
+          ]} empty="Aucun écart de taux renseigné." />
         </Block>
         <Block block="inflation" {...blockProps}>
           <Details fields={[

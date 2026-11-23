@@ -34,7 +34,6 @@ const fields: Record<Exclude<EditableBlockKey, 'banks'>, Field[]> = {
     { key: 'us10yDe10y', label: 'US10Y – DE10Y (pb)', decimal: true },
     { key: 'us2yDe2y', label: 'US2Y – DE2Y (pb)', decimal: true },
     { key: 'us10yUk10y', label: 'US10Y – UK10Y (pb)', decimal: true },
-    { key: 'comment', label: 'Commentaire rapide', multiline: true, placeholder: 'Ex. : L’écart se creuse en faveur des États-Unis, ce qui peut soutenir le dollar.' },
   ],
   inflation: [
     { key: 'usCorePce', label: 'US Core PCE – dernier (%)', decimal: true },
