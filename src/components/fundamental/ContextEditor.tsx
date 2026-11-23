@@ -10,6 +10,7 @@ import {
 
 const selectClass = 'ui-select-trigger w-full rounded-[10px] border border-input bg-background px-3 text-sm';
 const blankBank = { rate: '', meeting: '', tone: '' };
+const bankBiasExamples = { Fed: 'Très hawkish', BCE: 'Neutre-hawkish', BoE: 'Hawkish', RBA: 'Hawkish' };
 
 interface Field {
   key: string;
@@ -17,13 +18,44 @@ interface Field {
   options?: string[];
   decimal?: boolean;
   multiline?: boolean;
+  placeholder?: string;
 }
 
 const fields: Record<Exclude<EditableBlockKey, 'banks'>, Field[]> = {
   regime: [{ key: 'regime', label: 'Régime', options: ['Risk-on', 'Risk-off'] }, { key: 'vix', label: 'VIX', decimal: true }],
-  dollar: [{ key: 'dxy', label: 'DXY', decimal: true }, { key: 'us10y', label: 'US10Y (%)', decimal: true }, { key: 'fedBias', label: 'Biais Fed' }],
+  dollar: [
+    { key: 'dxy', label: 'DXY', decimal: true },
+    { key: 'us10y', label: 'US10Y (%)', decimal: true },
+    { key: 'us2y', label: 'US2Y (%)', decimal: true },
+    { key: 'fedBias', label: 'Biais Fed et anticipations du marché', multiline: true, placeholder: 'Ex. : Hawkish – le marché anticipe encore +25 à +50 pb d’ici mars' },
+  ],
   week: [{ key: 'events', label: 'Événements majeurs', multiline: true }],
-  notes: [{ key: 'text', label: 'Notes et news clés', multiline: true }],
+  bondSpreads: [
+    { key: 'us10yDe10y', label: 'US10Y – DE10Y (pb)', decimal: true },
+    { key: 'us2yDe2y', label: 'US2Y – DE2Y (pb)', decimal: true },
+    { key: 'us10yUk10y', label: 'US10Y – UK10Y (pb)', decimal: true },
+    { key: 'comment', label: 'Commentaire rapide', multiline: true, placeholder: 'Ex. : L’écart se creuse en faveur des États-Unis, ce qui peut soutenir le dollar.' },
+  ],
+  inflation: [
+    { key: 'usCorePce', label: 'US Core PCE – dernier (%)', decimal: true },
+    { key: 'usCorePceForecast', label: 'US Core PCE – anticipé (%)', decimal: true },
+    { key: 'euroCore', label: 'Zone euro – inflation sous-jacente (%)', decimal: true },
+    { key: 'ukCore', label: 'Royaume-Uni – inflation sous-jacente (%)', decimal: true },
+    { key: 'ukServices', label: 'Royaume-Uni – inflation des services (%)', decimal: true },
+    { key: 'stickiest', label: 'Où l’inflation est-elle la plus persistante ?', multiline: true },
+  ],
+  cot: [
+    { key: 'eurNet', label: 'EUR – position nette', decimal: true },
+    { key: 'gbpNet', label: 'GBP – position nette', decimal: true },
+    { key: 'dxyNet', label: 'USD Index – position nette', decimal: true },
+    { key: 'comment', label: 'Commentaire sur le positionnement', multiline: true, placeholder: 'Ex. : EUR et GBP toujours fortement short → rebond potentiel si les shorts se rachètent, ou poursuite de la baisse si les ventes continuent.' },
+  ],
+  notes: [
+    { key: 'drivers', label: '1. Drivers principaux', multiline: true },
+    { key: 'dataToWatch', label: '2. Données à surveiller', multiline: true },
+    { key: 'primaryScenario', label: '3. Scénario principal', multiline: true },
+    { key: 'alternativeScenario', label: 'Scénario alternatif', multiline: true },
+  ],
 };
 
 type SaveBlock = (block: EditableBlockKey, content: FundamentalBlocks[EditableBlockKey]) => void;
@@ -42,9 +74,14 @@ interface EditorProps {
 }
 
 export function ContextEditor({ block, existing, onSave, onClose, bankReport }: EditorProps) {
-  const [values, setValues] = useState<Record<string, string>>(
-    () => block === 'banks' ? {} : { ...(existing[block] as Record<string, string> | undefined) },
-  );
+  const [values, setValues] = useState<Record<string, string>>(() => {
+    if (block === 'banks') return {};
+    if (block === 'notes') {
+      const { text, ...notes } = existing.notes ?? {};
+      return { ...notes, drivers: notes.drivers ?? text ?? '' };
+    }
+    return { ...existing[block] };
+  });
   const [banks, setBanks] = useState(() => existing.banks ?? {});
   const [reporting, setReporting] = useState(false);
   const { saved, confirm } = useSaveConfirmation();
@@ -76,17 +113,17 @@ export function ContextEditor({ block, existing, onSave, onClose, bankReport }: 
                 <legend className="px-1 text-sm font-medium">{bank}</legend>
                 <label className="grid gap-1 text-sm">Taux (%)<Input inputMode="decimal" maxLength={24} value={entry.rate} onChange={e => setBanks(current => ({ ...current, [bank]: { ...entry, rate: e.target.value } }))} /></label>
                 <label className="grid gap-1 text-sm">Prochaine réunion<Input type="date" value={entry.meeting} onChange={e => setBanks(current => ({ ...current, [bank]: { ...entry, meeting: e.target.value } }))} /></label>
-                <label className="grid gap-1 text-sm">Biais<Input maxLength={120} value={entry.tone} onChange={e => setBanks(current => ({ ...current, [bank]: { ...entry, tone: e.target.value } }))} /></label>
+                <label className="grid gap-1 text-sm">Biais relatif<Input placeholder={`Ex. : ${bankBiasExamples[bank]}`} maxLength={120} value={entry.tone} onChange={e => setBanks(current => ({ ...current, [bank]: { ...entry, tone: e.target.value } }))} /></label>
               </fieldset>;
             })}
           </div>
-        ) : fields[block].map(({ key, label, options, decimal, multiline }) => (
+        ) : fields[block].map(({ key, label, options, decimal, multiline, placeholder }) => (
           <label key={key} className="grid gap-1 text-sm">
             {label}
             {options ? <select className={selectClass} value={values[key] ?? ''} onChange={e => setValues(current => ({ ...current, [key]: e.target.value }))}>
               <option value="">Non renseigné</option>
               {options.map(option => <option key={option}>{option}</option>)}
-            </select> : multiline ? <Textarea maxLength={6000} value={values[key] ?? ''} onChange={e => setValues(current => ({ ...current, [key]: e.target.value }))} />
+            </select> : multiline ? <Textarea placeholder={placeholder} maxLength={6000} value={values[key] ?? ''} onChange={e => setValues(current => ({ ...current, [key]: e.target.value }))} />
             : <Input inputMode={decimal ? 'decimal' : undefined} maxLength={120} value={values[key] ?? ''} onChange={e => setValues(current => ({ ...current, [key]: e.target.value }))} />}
           </label>
         ))}

@@ -224,10 +224,51 @@ export default function FundamentalContext() {
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3 2xl:gap-6">
         <Block block="regime" {...blockProps}><Details fields={[[ 'Régime', data.regime?.regime ], [ 'VIX', data.regime?.vix, true ]]} /></Block>
-        <Block block="dollar" {...blockProps}><Details fields={[[ 'DXY', data.dollar?.dxy, true ], [ 'US10Y', addUnit(data.dollar?.us10y, '%'), true ], [ 'Biais Fed', data.dollar?.fedBias ]]} /></Block>
+        <Block block="dollar" {...blockProps}>
+          <Details fields={[
+            ['DXY', data.dollar?.dxy, true],
+            ['US10Y', addUnit(data.dollar?.us10y, '%'), true],
+            ['US2Y', addUnit(data.dollar?.us2y, '%'), true],
+            ['Biais Fed et anticipations du marché', data.dollar?.fedBias],
+          ]} />
+        </Block>
         <Block block="week" {...blockProps}>
           <p className="mb-2 text-sm font-medium">Semaine {weekNumber(monday)}</p>
           <TextBlock value={data.week?.events} empty="Aucun événement majeur renseigné." />
+        </Block>
+      </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3 2xl:gap-6">
+        <Block block="bondSpreads" {...blockProps}>
+          <div className="space-y-3">
+            <Details fields={[
+              ['US10Y – DE10Y', addUnit(data.bondSpreads?.us10yDe10y, 'pb'), true],
+              ['US2Y – DE2Y', addUnit(data.bondSpreads?.us2yDe2y, 'pb'), true],
+              ['US10Y – UK10Y', addUnit(data.bondSpreads?.us10yUk10y, 'pb'), true],
+              ['Commentaire', data.bondSpreads?.comment],
+            ]} empty="Aucun écart de taux renseigné." />
+            <p className="text-xs text-muted-foreground">Un écart qui se creuse en faveur des États-Unis peut soutenir le dollar.</p>
+          </div>
+        </Block>
+        <Block block="inflation" {...blockProps}>
+          <Details fields={[
+            ['US Core PCE – dernier', addUnit(data.inflation?.usCorePce, '%'), true],
+            ['US Core PCE – anticipé', addUnit(data.inflation?.usCorePceForecast, '%'), true],
+            ['Zone euro – sous-jacente', addUnit(data.inflation?.euroCore, '%'), true],
+            ['Royaume-Uni – sous-jacente', addUnit(data.inflation?.ukCore, '%'), true],
+            ['Royaume-Uni – services', addUnit(data.inflation?.ukServices, '%'), true],
+            ['Inflation la plus persistante', data.inflation?.stickiest],
+          ]} empty="Aucun chiffre d’inflation renseigné." />
+        </Block>
+        <Block block="cot" {...blockProps}>
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">Positions nettes des Non-Commercials, en contrats.</p>
+            <Details fields={[
+              ['EUR', data.cot?.eurNet, true],
+              ['GBP', data.cot?.gbpNet, true],
+              ['USD Index', data.cot?.dxyNet, true],
+              ['Commentaire', data.cot?.comment],
+            ]} empty="Aucune position nette renseignée." />
+          </div>
         </Block>
       </div>
       <section aria-labelledby="fundamental-analysis-heading" className="space-y-3">
@@ -276,14 +317,36 @@ export default function FundamentalContext() {
               <Details fields={[
                 ['Taux', addUnit(banks[bank]?.rate, '%'), true],
                 ['Prochaine réunion', banks[bank]?.meeting ? dateLabel(banks[bank].meeting) : undefined],
-                ['Biais', banks[bank]?.tone],
+                ['Biais relatif', banks[bank]?.tone],
               ]} />
             </div>)}
           </div>
         </Block>
       </div>
       <Block block="notes" {...blockProps}>
-        <TextBlock value={data.notes?.text} empty="Aucune note pour cette semaine." />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3 2xl:gap-6">
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium">1. Drivers principaux</h3>
+            <TextBlock value={data.notes?.drivers ?? data.notes?.text} empty="Aucun driver renseigné." />
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium">2. Données à surveiller</h3>
+            <TextBlock value={data.notes?.dataToWatch} empty="Aucune donnée renseignée." />
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium">3. Scénarios</h3>
+            <dl className="space-y-3">
+              <div>
+                <dt className="text-sm font-medium text-muted-foreground">Principal</dt>
+                <dd><TextBlock value={data.notes?.primaryScenario} empty="À renseigner" /></dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-muted-foreground">Alternatif</dt>
+                <dd><TextBlock value={data.notes?.alternativeScenario} empty="À renseigner" /></dd>
+              </div>
+            </dl>
+          </div>
+        </div>
       </Block>
     </div>
   );

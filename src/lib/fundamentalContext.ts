@@ -41,11 +41,14 @@ export interface InstrumentAnalysis {
 
 export type FundamentalBlocks = Record<AnalysisInstrument, InstrumentAnalysis> & {
   regime: { regime: '' | 'Risk-on' | 'Risk-off'; vix: string };
-  dollar: { dxy: string; us10y: string; fedBias: string };
+  dollar: { dxy: string; us10y: string; us2y?: string; fedBias: string };
   week: { events: string };
+  bondSpreads: { us10yDe10y: string; us2yDe2y: string; us10yUk10y: string; comment: string };
+  inflation: { usCorePce: string; usCorePceForecast: string; euroCore: string; ukCore: string; ukServices: string; stickiest: string };
+  cot: { eurNet: string; gbpNet: string; dxyNet: string; comment: string };
   calendar: EconomicCalendar | EconomicEvent[];
   banks: Partial<Record<Bank, BankContext>>;
-  notes: { text: string };
+  notes: { text?: string; drivers?: string; dataToWatch?: string; primaryScenario?: string; alternativeScenario?: string };
 };
 
 export type BlockKey = keyof FundamentalBlocks;
@@ -65,6 +68,9 @@ export const BLOCK_TITLES: Record<BlockKey, string> = {
   regime: 'Régime de marché',
   dollar: 'Dollar',
   week: 'Semaine',
+  bondSpreads: 'Divergences obligataires',
+  inflation: 'Inflation comparative',
+  cot: 'COT Report – Positionnement',
   EURUSD: 'EURUSD',
   GBPUSD: 'GBPUSD',
   AUDUSD: 'AUDUSD',
