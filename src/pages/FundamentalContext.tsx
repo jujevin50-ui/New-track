@@ -18,6 +18,7 @@ import {
 type PageEditKey = Exclude<BlockKey, 'calendar'>;
 const dateLabel = (day: string) => day ? contextDate.format(new Date(`${day}T00:00:00Z`)) : '—';
 const addUnit = (value: string | undefined, unit: string) => value ? `${value} ${unit}` : undefined;
+const groupedCard = 'min-w-0 space-y-4 rounded-xl border border-border bg-card/30 p-4 [&>section+section]:border-t [&>section+section]:pt-4 2xl:p-6';
 
 const baseCurrencyFlags = {
   EURUSD: 'eu',
@@ -25,9 +26,9 @@ const baseCurrencyFlags = {
   AUDUSD: 'au',
 } as const;
 
-function Block({ block, children, onEdit, editing, editor, action }: {
+function Block({ block, children, onEdit, editing, editor, action, embedded = false }: {
   block: BlockKey; children: ReactNode; onEdit: (block: PageEditKey) => void;
-  editing: PageEditKey | null; editor: ReactNode; action?: ReactNode;
+  editing: PageEditKey | null; editor: ReactNode; action?: ReactNode; embedded?: boolean;
 }) {
   const isEditing = editing === block;
   const analysisBlock = isAnalysisInstrument(block);
@@ -36,7 +37,7 @@ function Block({ block, children, onEdit, editing, editor, action }: {
   const frame = dollarIndex ? 'border-profit/50 bg-profit/10' : analysisBlock ? 'border-primary/40 bg-primary/5' : 'border-border bg-card/30';
   const titleColor = dollarIndex ? 'text-profit' : analysisBlock ? 'text-primary' : '';
   return (
-    <section aria-labelledby={`fundamental-${block}`} className={`min-w-0 rounded-xl border p-4 2xl:p-6 ${frame}`}>
+    <section aria-labelledby={`fundamental-${block}`} className={embedded ? 'min-w-0' : `min-w-0 rounded-xl border p-4 2xl:p-6 ${frame}`}>
       <header className="mb-4 flex min-w-0 items-center justify-between gap-2">
         <Heading id={`fundamental-${block}`} className={`flex min-w-0 items-center gap-2 break-words text-sm font-semibold 2xl:text-base ${titleColor}`}>
           {analysisBlock && (dollarIndex ? (
@@ -72,14 +73,14 @@ function Block({ block, children, onEdit, editing, editor, action }: {
 
 type Detail = [label: string, value: string | undefined, numeric?: true];
 
-function Details({ fields, empty = 'À renseigner' }: { fields: Detail[]; empty?: string }) {
+function Details({ fields, empty = 'À renseigner', metrics = false }: { fields: Detail[]; empty?: string; metrics?: boolean }) {
   if (!fields.some(([, value]) => value)) return <p className="text-sm text-muted-foreground">{empty}</p>;
   return (
-    <dl className="space-y-2 text-sm 2xl:text-base">
+    <dl className={`text-sm 2xl:text-base ${metrics ? 'grid grid-cols-[repeat(auto-fit,minmax(min(100%,8rem),1fr))] gap-x-4 gap-y-3' : 'space-y-2'}`}>
       {fields.map(([label, value, numeric]) => (
-        <div key={label} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] gap-3">
-          <dt className="break-words text-muted-foreground">{label}</dt>
-          <dd className="whitespace-pre-wrap break-words text-right">
+        <div key={label} className={metrics ? 'flex min-w-0 flex-col justify-between gap-1' : 'grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] gap-3'}>
+          <dt className={`break-words text-muted-foreground ${metrics ? 'text-xs 2xl:text-sm' : ''}`}>{label}</dt>
+          <dd className={`whitespace-pre-wrap [overflow-wrap:anywhere] ${metrics ? 'font-medium' : 'text-right'}`}>
             {numeric && value ? (
               <span className="inline-block max-w-full rounded-md border border-primary/40 bg-primary/10 px-2 py-0.5 font-medium tabular-nums text-primary">{value}</span>
             ) : value || '—'}
@@ -91,7 +92,17 @@ function Details({ fields, empty = 'À renseigner' }: { fields: Detail[]; empty?
 }
 
 function TextBlock({ value, empty }: { value?: string; empty: string }) {
-  return <p className={`whitespace-pre-wrap break-words text-sm 2xl:text-base ${value ? '' : 'text-muted-foreground'}`}>{value || empty}</p>;
+  return <p className={`whitespace-pre-wrap text-sm leading-relaxed [overflow-wrap:anywhere] 2xl:text-base ${value ? '' : 'text-muted-foreground'}`}>{value || empty}</p>;
+}
+
+function Narrative({ label, value }: { label: string; value?: string }) {
+  if (!value) return null;
+  return (
+    <div className="mt-4 space-y-1.5 rounded-lg bg-muted/50 px-3 py-2.5">
+      <h3 className="text-xs font-semibold text-muted-foreground 2xl:text-sm">{label}</h3>
+      <TextBlock value={value} empty="" />
+    </div>
+  );
 }
 
 function CapturePreview({ screenshot, title, label = `Agrandir la capture · ${title}`, compact = false }: {
@@ -222,49 +233,56 @@ export default function FundamentalContext() {
         <Button variant="outline" size="icon" disabled={editing !== null || pasting} aria-label="Semaine suivante" onClick={() => { setPasteError(''); setMonday(day => shiftDay(day, 7)); }}><ChevronRight aria-hidden="true" /></Button>
         <Button variant="ghost" size="sm" onClick={() => { setPasteError(''); setMonday(currentWeek()); }} disabled={editing !== null || pasting || monday === currentWeek()}>Cette semaine</Button>
       </div>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3 2xl:gap-6">
-        <Block block="regime" {...blockProps}><Details fields={[[ 'Régime', data.regime?.regime ], [ 'VIX', data.regime?.vix, true ]]} /></Block>
-        <Block block="dollar" {...blockProps}>
-          <Details fields={[
-            ['DXY', data.dollar?.dxy, true],
-            ['US10Y', addUnit(data.dollar?.us10y, '%'), true],
-            ['US2Y', addUnit(data.dollar?.us2y, '%'), true],
-            ['Biais Fed et anticipations du marché', data.dollar?.fedBias],
-          ]} />
-        </Block>
-        <Block block="week" {...blockProps}>
-          <p className="mb-2 text-sm font-medium">Semaine {weekNumber(monday)}</p>
-          <TextBlock value={data.week?.events} empty="Aucun événement majeur renseigné." />
-        </Block>
-      </div>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3 2xl:gap-6">
-        <Block block="bondSpreads" {...blockProps}>
-          <Details fields={[
-            ['US10Y – DE10Y', addUnit(data.bondSpreads?.us10yDe10y, 'pb'), true],
-            ['US2Y – DE2Y', addUnit(data.bondSpreads?.us2yDe2y, 'pb'), true],
-            ['US10Y – UK10Y', addUnit(data.bondSpreads?.us10yUk10y, 'pb'), true],
-          ]} empty="Aucun écart de taux renseigné." />
-        </Block>
+      <div className="grid min-w-0 grid-cols-1 items-start gap-4 xl:grid-cols-2 2xl:gap-6">
+        <div className={groupedCard}>
+          <Block block="regime" {...blockProps} embedded>
+            <Details metrics fields={[
+              ['Régime', data.regime?.regime],
+              ['VIX', data.regime?.vix, true],
+            ]} />
+          </Block>
+          <Block block="week" {...blockProps} embedded>
+            <p className="mb-2 text-xs font-semibold text-muted-foreground 2xl:text-sm">Semaine {weekNumber(monday)}</p>
+            <TextBlock value={data.week?.events} empty="Aucun événement majeur renseigné." />
+          </Block>
+        </div>
+        <div className={groupedCard}>
+          <Block block="dollar" {...blockProps} embedded>
+            <Details metrics fields={[
+              ['DXY', data.dollar?.dxy, true],
+              ['US10Y', addUnit(data.dollar?.us10y, '%'), true],
+              ['US2Y', addUnit(data.dollar?.us2y, '%'), true],
+            ]} />
+            <Narrative label="Biais Fed et anticipations du marché" value={data.dollar?.fedBias} />
+          </Block>
+          <Block block="bondSpreads" {...blockProps} embedded>
+            <Details metrics fields={[
+              ['US10Y – DE10Y', addUnit(data.bondSpreads?.us10yDe10y, 'pb'), true],
+              ['US2Y – DE2Y', addUnit(data.bondSpreads?.us2yDe2y, 'pb'), true],
+              ['US10Y – UK10Y', addUnit(data.bondSpreads?.us10yUk10y, 'pb'), true],
+            ]} empty="Aucun écart de taux renseigné." />
+          </Block>
+        </div>
         <Block block="inflation" {...blockProps}>
-          <Details fields={[
+          <Details metrics fields={[
             ['US Core PCE – dernier', addUnit(data.inflation?.usCorePce, '%'), true],
             ['US Core PCE – anticipé', addUnit(data.inflation?.usCorePceForecast, '%'), true],
             ['Zone euro – sous-jacente', addUnit(data.inflation?.euroCore, '%'), true],
             ['Royaume-Uni – sous-jacente', addUnit(data.inflation?.ukCore, '%'), true],
             ['Royaume-Uni – services', addUnit(data.inflation?.ukServices, '%'), true],
-            ['Inflation la plus persistante', data.inflation?.stickiest],
           ]} empty="Aucun chiffre d’inflation renseigné." />
+          <Narrative label="Inflation la plus persistante" value={data.inflation?.stickiest} />
         </Block>
         <Block block="cot" {...blockProps}>
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">Positions nettes des Non-Commercials, en contrats.</p>
-            <Details fields={[
+            <Details metrics fields={[
               ['EUR', data.cot?.eurNet, true],
               ['GBP', data.cot?.gbpNet, true],
               ['USD Index', data.cot?.dxyNet, true],
-              ['Commentaire', data.cot?.comment],
             ]} empty="Aucune position nette renseignée." />
           </div>
+          <Narrative label="Commentaire sur le positionnement" value={data.cot?.comment} />
         </Block>
       </div>
       <section aria-labelledby="fundamental-analysis-heading" className="space-y-3">

@@ -84,6 +84,7 @@ export function ContextEditor({ block, existing, onSave, onClose, bankReport }: 
   const [banks, setBanks] = useState(() => existing.banks ?? {});
   const [reporting, setReporting] = useState(false);
   const { saved, confirm } = useSaveConfirmation();
+  const macroBlock = block !== 'banks' && block !== 'notes';
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -103,7 +104,9 @@ export function ContextEditor({ block, existing, onSave, onClose, bankReport }: 
 
   return (
     <form aria-label={`Modifier ${BLOCK_TITLES[block]}`} onSubmit={submit} className="min-w-0 space-y-4">
-      <fieldset disabled={saved} className="min-w-0 space-y-4">
+      <fieldset disabled={saved} className={macroBlock
+        ? 'grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,9rem),1fr))] gap-4'
+        : 'min-w-0 space-y-4'}>
         {block === 'banks' ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
             {BANKS.map(bank => {
@@ -117,12 +120,12 @@ export function ContextEditor({ block, existing, onSave, onClose, bankReport }: 
             })}
           </div>
         ) : fields[block].map(({ key, label, options, decimal, multiline, placeholder }) => (
-          <label key={key} className="grid gap-1 text-sm">
+          <label key={key} className={`grid min-w-0 content-between gap-1 text-sm ${macroBlock && multiline ? 'col-span-full' : ''}`}>
             {label}
             {options ? <select className={selectClass} value={values[key] ?? ''} onChange={e => setValues(current => ({ ...current, [key]: e.target.value }))}>
               <option value="">Non renseigné</option>
               {options.map(option => <option key={option}>{option}</option>)}
-            </select> : multiline ? <Textarea placeholder={placeholder} maxLength={6000} value={values[key] ?? ''} onChange={e => setValues(current => ({ ...current, [key]: e.target.value }))} />
+            </select> : multiline ? <Textarea className={macroBlock ? 'min-h-36 resize-y' : undefined} placeholder={placeholder} maxLength={6000} value={values[key] ?? ''} onChange={e => setValues(current => ({ ...current, [key]: e.target.value }))} />
             : <Input inputMode={decimal ? 'decimal' : undefined} maxLength={120} value={values[key] ?? ''} onChange={e => setValues(current => ({ ...current, [key]: e.target.value }))} />}
           </label>
         ))}
